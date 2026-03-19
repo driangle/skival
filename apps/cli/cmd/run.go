@@ -6,6 +6,7 @@ import (
 
 	"github.com/driangle/agent-runner/go/claudecode"
 	"github.com/driangle/skival/internal/executor"
+	"github.com/driangle/skival/internal/report"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/spf13/cobra"
 )
@@ -28,8 +29,8 @@ var runCmd = &cobra.Command{
 			return fmt.Errorf("executing suite: %w", err)
 		}
 
-		executor.PrintResults(os.Stdout, sr)
-		return nil
+		format, _ := cmd.Flags().GetString("format")
+		return report.Write(os.Stdout, sr, format)
 	},
 }
 

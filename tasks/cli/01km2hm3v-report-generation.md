@@ -1,7 +1,7 @@
 ---
 title: "Markdown and JSON report generation"
 id: "01km2hm3v"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-3", "reporting"]
