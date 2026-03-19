@@ -1,0 +1,202 @@
+package suite
+
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestLoad_MinimalSuite(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "do the thing"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Version != 1 {
+		t.Errorf("expected version 1, got %d", s.Version)
+	}
+	if len(s.Evals) != 1 {
+		t.Fatalf("expected 1 eval, got %d", len(s.Evals))
+	}
+	if s.Evals[0].ID != "eval-1" {
+		t.Errorf("expected eval ID %q, got %q", "eval-1", s.Evals[0].ID)
+	}
+}
+
+func TestLoad_FileReference(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create the eval file in a subdirectory
+	evalsDir := filepath.Join(dir, "evals")
+	if err := os.MkdirAll(evalsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSuiteFile(t, evalsDir, "my-eval.yaml", `
+id: file-eval
+prompt: "from file"
+treatments:
+  control:
+    name: baseline
+`)
+
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - file: evals/my-eval.yaml
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(s.Evals) != 1 {
+		t.Fatalf("expected 1 eval, got %d", len(s.Evals))
+	}
+	if s.Evals[0].ID != "file-eval" {
+		t.Errorf("expected eval ID %q, got %q", "file-eval", s.Evals[0].ID)
+	}
+	if s.Evals[0].File != "" {
+		t.Error("expected File field to be cleared after resolution")
+	}
+}
+
+func TestLoad_MissingFileReference(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - file: nonexistent.yaml
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for missing file reference")
+	}
+}
+
+func TestLoad_DefaultsMerge(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  samples: 5
+  timeout: 120
+  model: "claude-sonnet"
+evals:
+  - id: eval-1
+    prompt: "task"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Samples == nil || *e.Samples != 5 {
+		t.Errorf("expected samples=5 from defaults, got %v", e.Samples)
+	}
+	if e.Timeout == nil || *e.Timeout != 120 {
+		t.Errorf("expected timeout=120 from defaults, got %v", e.Timeout)
+	}
+	if e.Model != "claude-sonnet" {
+		t.Errorf("expected model=%q from defaults, got %q", "claude-sonnet", e.Model)
+	}
+}
+
+func TestLoad_EvalOverridesDefaults(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  samples: 5
+  timeout: 120
+  model: "claude-sonnet"
+evals:
+  - id: eval-1
+    prompt: "task"
+    samples: 10
+    timeout: 30
+    model: "claude-opus"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Samples == nil || *e.Samples != 10 {
+		t.Errorf("expected samples=10, got %v", e.Samples)
+	}
+	if e.Timeout == nil || *e.Timeout != 30 {
+		t.Errorf("expected timeout=30, got %v", e.Timeout)
+	}
+	if e.Model != "claude-opus" {
+		t.Errorf("expected model=%q, got %q", "claude-opus", e.Model)
+	}
+}
+
+func TestLoad_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals: [[[invalid
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+}
+
+func TestLoad_ValidationErrors(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 0
+evals: []
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
+	}
+}
+
+func TestLoad_MissingSuiteFile(t *testing.T) {
+	_, err := Load("/nonexistent/path/suite.yaml")
+	if err == nil {
+		t.Fatal("expected error for missing suite file")
+	}
+}
+
+func writeSuiteFile(t *testing.T, dir, name, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}

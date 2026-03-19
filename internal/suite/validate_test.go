@@ -1,0 +1,161 @@
+package suite
+
+import (
+	"errors"
+	"testing"
+)
+
+func TestValidate_ValidSuite(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID:     "eval-1",
+				Prompt: "do something",
+				Treatments: Treatments{
+					Control: Treatment{Name: "baseline"},
+				},
+			},
+		},
+	}
+
+	if err := validate(s); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidate_VersionRequired(t *testing.T) {
+	s := &Suite{
+		Version: 0,
+		Evals: []Eval{
+			{ID: "e1", Prompt: "p", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, "version must be greater than 0")
+}
+
+func TestValidate_AtLeastOneEval(t *testing.T) {
+	s := &Suite{Version: 1, Evals: nil}
+
+	err := validate(s)
+	assertValidationContains(t, err, "at least one eval is required")
+}
+
+func TestValidate_EvalIDRequired(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals:   []Eval{{Prompt: "p", Treatments: Treatments{Control: Treatment{Name: "c"}}}},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, "id is required")
+}
+
+func TestValidate_EvalPromptRequired(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals:   []Eval{{ID: "e1", Treatments: Treatments{Control: Treatment{Name: "c"}}}},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, "prompt is required")
+}
+
+func TestValidate_DuplicateEvalIDs(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{ID: "dup", Prompt: "p1", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+			{ID: "dup", Prompt: "p2", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `duplicate id "dup"`)
+}
+
+func TestValidate_InvalidComplexity(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{ID: "e1", Prompt: "p", Complexity: "extreme", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `invalid complexity "extreme"`)
+}
+
+func TestValidate_ValidComplexities(t *testing.T) {
+	for _, c := range []string{"", "low", "medium", "high"} {
+		s := &Suite{
+			Version: 1,
+			Evals: []Eval{
+				{ID: "e1", Prompt: "p", Complexity: c, Treatments: Treatments{Control: Treatment{Name: "c"}}},
+			},
+		}
+		if err := validate(s); err != nil {
+			t.Errorf("complexity %q should be valid, got: %v", c, err)
+		}
+	}
+}
+
+func TestValidate_ControlTreatmentNameRequired(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals:   []Eval{{ID: "e1", Prompt: "p"}},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, "control treatment name is required")
+}
+
+func TestValidate_MultipleErrors(t *testing.T) {
+	s := &Suite{
+		Version: 0,
+		Evals:   []Eval{{Complexity: "wrong"}},
+	}
+
+	var ve *ValidationError
+	err := validate(s)
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected ValidationError, got: %v", err)
+	}
+
+	if len(ve.Errors) < 4 {
+		t.Errorf("expected at least 4 errors (version, id, prompt, complexity, control), got %d: %v",
+			len(ve.Errors), ve.Errors)
+	}
+}
+
+func assertValidationContains(t *testing.T, err error, substr string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected validation error containing %q, got nil", substr)
+	}
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
+	}
+	for _, e := range ve.Errors {
+		if contains(e, substr) {
+			return
+		}
+	}
+	t.Errorf("expected error containing %q, got: %v", substr, ve.Errors)
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && searchString(s, substr)
+}
+
+func searchString(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

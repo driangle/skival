@@ -1,7 +1,7 @@
 ---
 title: "Suite YAML types and loader"
 id: "01km2hkvf"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["phase-1", "config"]
@@ -18,11 +18,11 @@ Define Go types for the suite configuration schema (Suite, Eval, Treatment, Corr
 
 ## Tasks
 
-- [ ] Define types in `internal/suite/suite.go`: Suite, Eval, Treatment, Correctness, Setup, StateAssertion
-- [ ] Implement YAML loader in `internal/suite/loader.go` that reads a suite file and unmarshals into Suite struct
-- [ ] Implement defaults merging — suite-level defaults (samples, timeout, model) applied to evals unless overridden
-- [ ] Implement validation in `internal/suite/validate.go`: required fields, unique eval IDs, at least one treatment per eval, valid complexity values
-- [ ] Write unit tests for loading, defaults merging, and validation errors
+- [x] Define types in `internal/suite/suite.go`: Suite, Eval, Treatment, Correctness, Setup, StateAssertion
+- [x] Implement YAML loader in `internal/suite/loader.go` that reads a suite file and unmarshals into Suite struct
+- [x] Implement defaults merging — suite-level defaults (samples, timeout, model) applied to evals unless overridden
+- [x] Implement validation in `internal/suite/validate.go`: required fields, unique eval IDs, at least one treatment per eval, valid complexity values
+- [x] Write unit tests for loading, defaults merging, and validation errors
 
 ## Acceptance Criteria
 
