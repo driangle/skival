@@ -1,7 +1,7 @@
 ---
 title: "Weighted ranking"
 id: "01km2hm2y"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-3", "reporting"]
