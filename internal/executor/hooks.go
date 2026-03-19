@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 
@@ -57,6 +58,9 @@ func runHook(ctx context.Context, script, dir string) *HookResult {
 // runSetupHooks manages the before/reset/after lifecycle for an eval.
 // Returns a function to execute treatments, handling reset between them and after at the end.
 func runBeforeHook(ctx context.Context, setup suite.Setup, dir string) error {
+	if setup.Before != "" {
+		slog.Debug("Running before hook", "script", setup.Before, "dir", dir)
+	}
 	if hr := runHook(ctx, setup.Before, dir); hr != nil && hr.Err != nil {
 		return fmt.Errorf("setup.before: %w", hr.Err)
 	}
@@ -64,6 +68,9 @@ func runBeforeHook(ctx context.Context, setup suite.Setup, dir string) error {
 }
 
 func runResetHook(ctx context.Context, setup suite.Setup, dir string) error {
+	if setup.Reset != "" {
+		slog.Debug("Running reset hook", "script", setup.Reset, "dir", dir)
+	}
 	if hr := runHook(ctx, setup.Reset, dir); hr != nil && hr.Err != nil {
 		return fmt.Errorf("setup.reset: %w", hr.Err)
 	}
@@ -71,6 +78,12 @@ func runResetHook(ctx context.Context, setup suite.Setup, dir string) error {
 }
 
 func runAfterHook(ctx context.Context, setup suite.Setup, dir string) {
+	if setup.After != "" {
+		slog.Debug("Running after hook", "script", setup.After, "dir", dir)
+	}
 	// After hook failures are warnings only — we don't propagate the error.
-	runHook(ctx, setup.After, dir)
+	hr := runHook(ctx, setup.After, dir)
+	if hr != nil && hr.Err != nil {
+		slog.Debug("After hook failed", "err", hr.Err)
+	}
 }

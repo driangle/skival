@@ -36,11 +36,21 @@ func (p *progress) sampleStart(evalName, treatName string, sample, totalSamples 
 		p.elapsed(), evalName, treatName, sample, totalSamples, p.totalCost)
 }
 
-func (p *progress) sampleDone(costUSD float64) {
+func (p *progress) sampleDone(costUSD float64, pass *bool) {
 	if p == nil {
 		return
 	}
 	p.totalCost += costUSD
+	status := "done"
+	if pass != nil {
+		if *pass {
+			status = "PASS"
+		} else {
+			status = "FAIL"
+		}
+	}
+	fmt.Fprintf(p.w, "\r\033[K[%s] sample done: %s (cost: $%.4f)\n",
+		p.elapsed(), status, costUSD)
 }
 
 func (p *progress) finish() {

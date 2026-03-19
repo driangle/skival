@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	agentrunner "github.com/driangle/agent-runner/go"
@@ -113,16 +114,27 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 
 	for i := 0; i < samples; i++ {
 		prog.sampleStart(eval.Name, t.Name, i+1, samples)
+		slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "total", samples)
 		run := executeSingleRun(ctx, eval, t, i+1, runner)
+		if run.Err != nil {
+			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "err", run.Err)
+		} else {
+			slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", i+1,
+				"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
+		}
 		if pipeline != nil && run.Err == nil {
+			slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", i+1)
 			input := verifier.VerifyInput{
 				RunOutput: run.Text,
 				ExitCode:  run.ExitCode,
 			}
 			pr := pipeline.Run(ctx, input)
 			run.Pass = &pr.Pass
+			for _, step := range pr.Steps {
+				slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
+			}
 		}
-		prog.sampleDone(run.CostUSD)
+		prog.sampleDone(run.CostUSD, run.Pass)
 		tr.Runs = append(tr.Runs, run)
 	}
 

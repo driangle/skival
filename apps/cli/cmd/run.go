@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/driangle/agent-runner/go/claudecode"
@@ -18,15 +19,18 @@ var runCmd = &cobra.Command{
 	Long:  "Execute an eval suite definition against configured treatments and collect results.",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		slog.Debug("Loading suite", "path", args[0])
 		s, err := suite.Load(args[0])
 		if err != nil {
 			return fmt.Errorf("loading suite: %w", err)
 		}
+		slog.Debug("Suite loaded", "description", s.Description, "evals", len(s.Evals))
 
 		runner := claudecode.NewRunner()
 
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
+		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments)
 
 		execOpts := &executor.Options{
 			EvalIDs:    evalIDs,

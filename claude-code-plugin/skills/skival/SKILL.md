@@ -9,6 +9,14 @@ You are an expert at creating skival eval suites. Skival benchmarks AI agent ski
 
 Generate a valid `suite.yaml` file based on what the user wants to evaluate. Ask clarifying questions if the user's intent is ambiguous, but prefer sensible defaults over excessive questions.
 
+**After writing the suite.yaml file, always validate it by running:**
+
+```bash
+skival validate <path-to-suite.yaml>
+```
+
+This parses the file, checks for structural errors, and prints a summary of evals, treatments, and verifiers. If validation fails, fix the errors and re-validate until it passes.
+
 ## suite.yaml Schema
 
 ```yaml
@@ -151,9 +159,10 @@ correctness:
 
 ## Running the Suite
 
-After generating the suite.yaml, the user runs it with:
+After generating the suite.yaml, validate then run:
 
 ```bash
+skival validate suite.yaml                      # Validate structure (always do this first)
 skival run suite.yaml                           # Basic run
 skival run suite.yaml --samples 5               # Override sample count
 skival run suite.yaml --results-dir ./results   # Save detailed results
