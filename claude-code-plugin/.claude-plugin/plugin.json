@@ -1,0 +1,12 @@
+{
+  "name": "skival",
+  "version": "1.0.0",
+  "description": "Create and manage skival eval suites for benchmarking AI agent skills",
+  "author": {
+    "name": "skival"
+  },
+  "repository": "https://github.com/anthropics/skival",
+  "license": "MIT",
+  "keywords": ["eval", "benchmark", "testing", "ai-agents"],
+  "skills": "./skills/"
+}

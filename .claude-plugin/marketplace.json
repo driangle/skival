@@ -1,0 +1,19 @@
+{
+  "name": "skival-marketplace",
+  "owner": {
+    "name": "skival"
+  },
+  "metadata": {
+    "description": "Skival plugins for AI agent skill evaluation and benchmarking",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "skival",
+      "source": "./claude-code-plugin",
+      "description": "Create and manage skival eval suites for benchmarking AI agent skills",
+      "version": "1.0.0",
+      "keywords": ["eval", "benchmark", "testing", "ai-agents"]
+    }
+  ]
+}
