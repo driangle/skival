@@ -1,6 +1,7 @@
 package verifier
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -10,7 +11,7 @@ type OutputVerifier struct {
 	ExpectedSubstrings []string
 }
 
-func (v *OutputVerifier) Verify(input VerifyInput) VerifyResult {
+func (v *OutputVerifier) Verify(_ context.Context, input VerifyInput) VerifyResult {
 	for _, sub := range v.ExpectedSubstrings {
 		if !strings.Contains(input.RunOutput, sub) {
 			return VerifyResult{

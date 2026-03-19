@@ -1,5 +1,7 @@
 package verifier
 
+import "context"
+
 // VerifyInput holds the data a verifier needs to check correctness.
 type VerifyInput struct {
 	// RunOutput is the text output produced by the run.
@@ -18,5 +20,5 @@ type VerifyResult struct {
 
 // Verifier checks whether a run's output meets correctness criteria.
 type Verifier interface {
-	Verify(input VerifyInput) VerifyResult
+	Verify(ctx context.Context, input VerifyInput) VerifyResult
 }

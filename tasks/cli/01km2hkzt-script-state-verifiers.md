@@ -1,7 +1,7 @@
 ---
 title: "Script and state assertion verifiers"
 id: "01km2hkzt"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-2", "verifier"]
@@ -18,10 +18,10 @@ Implement two additional verifiers: ScriptVerifier (runs a user-provided shell s
 
 ## Tasks
 
-- [ ] Implement ScriptVerifier in `internal/verifier/script.go` — runs correctness.script as a shell command, passes run output via stdin or env, exit 0 = pass
-- [ ] Implement StateVerifier in `internal/verifier/state.go` — iterates correctness.state assertions, makes HTTP requests, checks response body contains expect string
-- [ ] Handle timeouts for both script execution and HTTP requests
-- [ ] Unit tests with mock script and mock HTTP server
+- [x] Implement ScriptVerifier in `internal/verifier/script.go` — runs correctness.script as a shell command, passes run output via stdin or env, exit 0 = pass
+- [x] Implement StateVerifier in `internal/verifier/state.go` — iterates correctness.state assertions, makes HTTP requests, checks response body contains expect string
+- [x] Handle timeouts for both script execution and HTTP requests
+- [x] Unit tests with mock script and mock HTTP server
 
 ## Acceptance Criteria
 
