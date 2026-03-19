@@ -88,7 +88,11 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		samples = *eval.Samples
 	}
 
-	pipeline := verifier.BuildPipeline(eval.Correctness, eval.Dir)
+	var pipelineOpts []verifier.PipelineOption
+	if len(eval.Correctness.Judge) > 0 {
+		pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, eval.Prompt))
+	}
+	pipeline := verifier.BuildPipeline(eval.Correctness, eval.Dir, pipelineOpts...)
 
 	for i := 0; i < samples; i++ {
 		prog.sampleStart(eval.Name, t.Name, i+1, samples)

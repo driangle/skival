@@ -1,0 +1,95 @@
+package verifier
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	agentrunner "github.com/driangle/agent-runner/go"
+)
+
+const judgeModel = "claude-haiku-4-5-20251001"
+
+const judgePromptTemplate = `You are an evaluation judge. Determine whether the agent's output satisfies the given criteria.
+
+## Eval Prompt
+%s
+
+## Agent Output
+%s
+
+## Criteria
+%s
+
+## Instructions
+Evaluate whether the agent's output satisfies ALL of the criteria above.
+Respond with exactly one of these formats:
+PASS: <brief reason>
+FAIL: <brief reason explaining which criteria were not met>
+`
+
+// JudgeVerifier uses an LLM to evaluate subjective correctness criteria.
+type JudgeVerifier struct {
+	Runner   agentrunner.Runner
+	Criteria []string
+	Prompt   string
+}
+
+func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyResult {
+	criteria := strings.Join(v.Criteria, "\n- ")
+	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.Prompt, input.RunOutput, "- "+criteria)
+
+	res, err := v.Runner.Run(ctx, judgePrompt,
+		agentrunner.WithModel(judgeModel),
+		agentrunner.WithSkipPermissions(true),
+	)
+	if err != nil {
+		return VerifyResult{
+			Pass:   false,
+			Reason: fmt.Sprintf("judge invocation failed: %v", err),
+		}
+	}
+
+	return parseJudgeResponse(res.Text)
+}
+
+func parseJudgeResponse(text string) VerifyResult {
+	text = strings.TrimSpace(text)
+
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		upper := strings.ToUpper(line)
+
+		if strings.HasPrefix(upper, "PASS") {
+			reason := strings.TrimSpace(strings.TrimPrefix(line, line[:4]))
+			reason = strings.TrimPrefix(reason, ":")
+			reason = strings.TrimSpace(reason)
+			if reason == "" {
+				reason = "judge passed"
+			}
+			return VerifyResult{Pass: true, Reason: reason}
+		}
+
+		if strings.HasPrefix(upper, "FAIL") {
+			reason := strings.TrimSpace(strings.TrimPrefix(line, line[:4]))
+			reason = strings.TrimPrefix(reason, ":")
+			reason = strings.TrimSpace(reason)
+			if reason == "" {
+				reason = "judge failed"
+			}
+			return VerifyResult{Pass: false, Reason: reason}
+		}
+	}
+
+	return VerifyResult{
+		Pass:   false,
+		Reason: fmt.Sprintf("judge response could not be parsed: %s", truncate(text, 200)),
+	}
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}

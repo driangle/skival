@@ -45,6 +45,7 @@ type Correctness struct {
 	ExpectedOutput []string         `yaml:"expected_output"`
 	Script         string           `yaml:"script"`
 	State          []StateAssertion `yaml:"state"`
+	Judge          []string         `yaml:"judge"`
 }
 
 // StateAssertion defines an HTTP assertion to check after execution.

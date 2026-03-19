@@ -3,6 +3,7 @@ package verifier
 import (
 	"context"
 
+	agentrunner "github.com/driangle/agent-runner/go"
 	"github.com/driangle/skival/internal/suite"
 )
 
@@ -31,7 +32,12 @@ type namedVerifier struct {
 // BuildPipeline assembles a verification pipeline from the eval's correctness config.
 // Only verifiers whose config fields are present are included.
 // Returns nil if no verifiers are configured.
-func BuildPipeline(c suite.Correctness, evalDir string) *Pipeline {
+// The runner and prompt are only needed when judge criteria are configured.
+func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) *Pipeline {
+	var cfg pipelineConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
 	var steps []namedVerifier
 
 	if c.Execute != nil && *c.Execute {
@@ -70,11 +76,38 @@ func BuildPipeline(c suite.Correctness, evalDir string) *Pipeline {
 		})
 	}
 
+	if len(c.Judge) > 0 && cfg.runner != nil {
+		steps = append(steps, namedVerifier{
+			name: "judge",
+			verifier: &JudgeVerifier{
+				Runner:   cfg.runner,
+				Criteria: c.Judge,
+				Prompt:   cfg.evalPrompt,
+			},
+		})
+	}
+
 	if len(steps) == 0 {
 		return nil
 	}
 
 	return &Pipeline{steps: steps}
+}
+
+// PipelineOption configures optional pipeline behavior.
+type PipelineOption func(*pipelineConfig)
+
+type pipelineConfig struct {
+	runner     agentrunner.Runner
+	evalPrompt string
+}
+
+// WithJudge provides a runner and eval prompt for the judge verifier.
+func WithJudge(runner agentrunner.Runner, evalPrompt string) PipelineOption {
+	return func(c *pipelineConfig) {
+		c.runner = runner
+		c.evalPrompt = evalPrompt
+	}
 }
 
 // Run executes all verifiers in order, stopping on the first failure.
