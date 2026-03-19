@@ -1,7 +1,7 @@
 ---
 title: "Verifier interface and output substring verifier"
 id: "01km2hkyh"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-2", "verifier"]
@@ -18,10 +18,10 @@ Define the Verifier interface and implement the first concrete verifier: output 
 
 ## Tasks
 
-- [ ] Define Verifier interface in `internal/verifier/verifier.go` with VerifyInput/VerifyResult types
-- [ ] Implement OutputVerifier in `internal/verifier/output.go` that checks RunOutput.Text contains all expected_output substrings
-- [ ] Return clear reasons on failure (which substring was missing)
-- [ ] Unit tests for match, partial match, no match, empty expected_output cases
+- [x] Define Verifier interface in `internal/verifier/verifier.go` with VerifyInput/VerifyResult types
+- [x] Implement OutputVerifier in `internal/verifier/output.go` that checks RunOutput.Text contains all expected_output substrings
+- [x] Return clear reasons on failure (which substring was missing)
+- [x] Unit tests for match, partial match, no match, empty expected_output cases
 
 ## Acceptance Criteria
 
