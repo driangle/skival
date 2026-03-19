@@ -6,6 +6,7 @@ import (
 
 	"github.com/driangle/agent-runner/go/claudecode"
 	"github.com/driangle/skival/internal/executor"
+	"github.com/driangle/skival/internal/persist"
 	"github.com/driangle/skival/internal/report"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/spf13/cobra"
@@ -27,6 +28,15 @@ var runCmd = &cobra.Command{
 		sr, err := executor.Execute(cmd.Context(), s, runner)
 		if err != nil {
 			return fmt.Errorf("executing suite: %w", err)
+		}
+
+		resultsDir, _ := cmd.Flags().GetString("results-dir")
+		if resultsDir != "" {
+			outDir, err := persist.Save(resultsDir, sr)
+			if err != nil {
+				return fmt.Errorf("saving results: %w", err)
+			}
+			fmt.Fprintf(os.Stderr, "Results saved to %s\n", outDir)
 		}
 
 		format, _ := cmd.Flags().GetString("format")

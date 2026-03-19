@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/driangle/skival/internal/persist"
+	"github.com/driangle/skival/internal/report"
 	"github.com/spf13/cobra"
 )
 
@@ -12,8 +15,13 @@ var reportCmd = &cobra.Command{
 	Long:  "Generate markdown or JSON reports from previously collected eval results.",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("Generating report from: %s\n", args[0])
-		return nil
+		sr, err := persist.Load(args[0])
+		if err != nil {
+			return fmt.Errorf("loading results: %w", err)
+		}
+
+		format, _ := cmd.Flags().GetString("format")
+		return report.Write(os.Stdout, sr, format)
 	},
 }
 

@@ -1,7 +1,7 @@
 ---
 title: "Results directory persistence"
 id: "01km2hm4s"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-3", "reporting"]
