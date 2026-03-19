@@ -1,0 +1,4 @@
+dir: ./tasks
+id:
+  strategy: ulid
+  length: 9
