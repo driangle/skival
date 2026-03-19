@@ -17,6 +17,7 @@ type RunResult struct {
 	Usage      agentrunner.Usage
 	SessionID  string
 	Err        error
+	Pass       *bool
 }
 
 // TreatmentResult groups runs for one treatment.
@@ -24,6 +25,7 @@ type TreatmentResult struct {
 	Name      string
 	IsControl bool
 	Runs      []RunResult
+	Aggregate *Aggregate
 }
 
 // EvalResult groups treatments for one eval.

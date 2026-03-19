@@ -37,8 +37,37 @@ func PrintResults(w io.Writer, sr *result.SuiteResult) {
 				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\n",
 					eval.EvalName, treat.Name, run.Sample, status, cost, duration)
 			}
+
+			if agg := treat.Aggregate; agg != nil && len(treat.Runs) >= 2 {
+				printAggregate(tw, eval.EvalName, treat.Name, agg)
+			}
 		}
 	}
 
 	tw.Flush()
+}
+
+func printAggregate(tw *tabwriter.Writer, evalName, treatName string, agg *result.Aggregate) {
+	costRange := fmt.Sprintf("$%.4f [$%.4f–$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
+	durationRange := fmt.Sprintf("%s [%s–%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs))
+
+	passStr := "—"
+	if agg.Pass != nil {
+		if *agg.Pass {
+			passStr = "PASS"
+		} else {
+			passStr = "FAIL"
+		}
+	}
+
+	cvInfo := ""
+	if agg.CostCV != nil {
+		cvInfo += fmt.Sprintf(" cost_cv=%.1f%%", *agg.CostCV*100)
+	}
+	if agg.DurationCV != nil {
+		cvInfo += fmt.Sprintf(" dur_cv=%.1f%%", *agg.DurationCV*100)
+	}
+
+	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\n",
+		evalName, treatName, passStr, costRange, durationRange, cvInfo)
 }

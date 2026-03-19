@@ -1,7 +1,7 @@
 ---
 title: "Multi-sample aggregation"
 id: "01km2hm2h"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-3", "reporting"]

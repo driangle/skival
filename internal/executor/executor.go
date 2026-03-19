@@ -61,6 +61,8 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		tr.Runs = append(tr.Runs, run)
 	}
 
+	tr.Aggregate = result.ComputeAggregate(tr.Runs)
+
 	return tr
 }
 
