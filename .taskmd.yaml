@@ -2,3 +2,16 @@ dir: ./tasks
 id:
   strategy: ulid
   length: 9
+phases:
+  - id: phase-1
+    name: "Core Pipeline"
+    description: "Suite loading, runner, execution flow — end-to-end single run"
+  - id: phase-2
+    name: "Verification"
+    description: "Verifier interface, output/script/state verifiers, pipeline composition"
+  - id: phase-3
+    name: "Aggregation & Reporting"
+    description: "Multi-sample runs, weighted ranking, markdown/JSON reports, persistence"
+  - id: phase-4
+    name: "UX & Extensibility"
+    description: "CLI filtering, progress display, LLM judge, lifecycle hooks"
