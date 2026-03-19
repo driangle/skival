@@ -1,0 +1,42 @@
+package result
+
+import (
+	"time"
+
+	agentrunner "github.com/driangle/agent-runner/go"
+)
+
+// RunResult captures the outcome of a single sample run.
+type RunResult struct {
+	Sample     int
+	Text       string
+	IsError    bool
+	ExitCode   int
+	CostUSD    float64
+	DurationMs int64
+	Usage      agentrunner.Usage
+	SessionID  string
+	Err        error
+}
+
+// TreatmentResult groups runs for one treatment.
+type TreatmentResult struct {
+	Name      string
+	IsControl bool
+	Runs      []RunResult
+}
+
+// EvalResult groups treatments for one eval.
+type EvalResult struct {
+	EvalID     string
+	EvalName   string
+	Treatments []TreatmentResult
+}
+
+// SuiteResult is the top-level result for an entire suite execution.
+type SuiteResult struct {
+	Description string
+	StartedAt   time.Time
+	FinishedAt  time.Time
+	Evals       []EvalResult
+}

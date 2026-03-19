@@ -1,7 +1,7 @@
 ---
 title: "Result types and basic execution flow"
 id: "01km2hkxn"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["phase-1", "core"]
@@ -18,11 +18,11 @@ Define result types (EvalResult, TreatmentResult) and implement the core executi
 
 ## Tasks
 
-- [ ] Define result types in `internal/result/result.go`: EvalResult, TreatmentResult, RunResult, SuiteResult
-- [ ] Implement execution orchestrator that iterates evals → treatments → samples and calls the runner
-- [ ] Print raw results to console (treatment name, pass/fail placeholder, cost, duration)
-- [ ] Wire the orchestrator into `apps/cli/cmd/run.go` so `skival run suite.yaml` loads and executes
-- [ ] Test with a minimal suite.yaml against a real Claude Code CLI invocation
+- [x] Define result types in `internal/result/result.go`: EvalResult, TreatmentResult, RunResult, SuiteResult
+- [x] Implement execution orchestrator that iterates evals → treatments → samples and calls the runner
+- [x] Print raw results to console (treatment name, pass/fail placeholder, cost, duration)
+- [x] Wire the orchestrator into `apps/cli/cmd/run.go` so `skival run suite.yaml` loads and executes
+- [x] Test with a minimal suite.yaml against a real Claude Code CLI invocation
 
 ## Acceptance Criteria
 
