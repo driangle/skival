@@ -1,7 +1,7 @@
 ---
 title: "Verifier pipeline composition"
 id: "01km2hm1r"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-2", "verifier"]

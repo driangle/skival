@@ -8,6 +8,7 @@ import (
 	"github.com/driangle/agent-runner/go/claudecode"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
+	"github.com/driangle/skival/internal/verifier"
 )
 
 // Execute runs all evals in the suite, returning collected results.
@@ -56,8 +57,18 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		samples = *eval.Samples
 	}
 
+	pipeline := verifier.BuildPipeline(eval.Correctness, eval.Dir)
+
 	for i := 0; i < samples; i++ {
 		run := executeSingleRun(ctx, eval, t, i+1, runner)
+		if pipeline != nil && run.Err == nil {
+			input := verifier.VerifyInput{
+				RunOutput: run.Text,
+				ExitCode:  run.ExitCode,
+			}
+			pr := pipeline.Run(ctx, input)
+			run.Pass = &pr.Pass
+		}
 		tr.Runs = append(tr.Runs, run)
 	}
 
