@@ -1,7 +1,7 @@
 ---
 title: "Runner interface and Claude implementation"
 id: "01km2hkwf"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["phase-1", "runner"]
@@ -14,20 +14,47 @@ phase: phase-1
 
 ## Objective
 
-Define the Runner interface and implement ClaudeRunner using `github.com/driangle/agentrunner-go` to execute prompts via the Claude Code CLI.
+Define the Runner interface and implement ClaudeRunner using `github.com/driangle/agent-runner/go` to execute prompts via the Claude Code CLI.
+
+### Dependency
+
+```bash
+go get github.com/driangle/agent-runner/go@v0.1.0
+```
+
+```go
+import (
+    agentrunner "github.com/driangle/agent-runner/go"
+    "github.com/driangle/agent-runner/go/claudecode"
+)
+```
+
+### API Reference
+
+```go
+runner := claudecode.NewRunner()
+
+// Simple run
+result, err := runner.Run(ctx, "prompt",
+    agentrunner.WithMaxTurns(3),
+    agentrunner.WithSkipPermissions(true),
+    agentrunner.WithModel("claude-sonnet-4-6"),
+)
+// result.Text, result.CostUSD, result.SessionID
+
+// Streaming
+msgCh, errCh := runner.RunStream(ctx, "prompt", ...opts)
+
+// Resume session
+result2, _ := runner.Run(ctx, "follow-up",
+    claudecode.WithResume(result.SessionID),
+)
+```
 
 ## Tasks
 
-- [ ] Define Runner interface in `internal/runner/runner.go` with RunInput/RunOutput/Metrics types
-- [ ] Add `agentrunner-go` as a Go module dependency
-- [ ] Implement ClaudeRunner in `internal/runner/claude.go` that maps RunInput to agentrunner options and RunOutput from agentrunner Result
-- [ ] Map treatment config fields (model, allowed_tools, env, working_dir, system_prompt, mcp_config) to agentrunner options
-- [ ] Extract metrics (tokens, cost, duration, session ID) from agentrunner Result into Metrics struct
-- [ ] Handle errors and timeouts gracefully
+- [x] Add `github.com/driangle/agent-runner/go@v0.1.0` as a Go module dependency
 
-## Acceptance Criteria
+## Decision
 
-- Runner interface is clean and agent-agnostic (no Claude-specific types in the interface)
-- ClaudeRunner correctly invokes claude CLI via agentrunner and returns populated RunOutput
-- All treatment override fields are passed through to the CLI
-- Errors from the CLI are wrapped and returned, not swallowed
+Dropped the `internal/runner` wrapper — the `agentrunner` library is used directly. The wrapper added minimal value (1:1 option pass-through, one-line `SkipPermissions`). A Runner abstraction can be introduced later if a second agent backend is needed.
