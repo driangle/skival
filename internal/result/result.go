@@ -33,6 +33,7 @@ type EvalResult struct {
 	EvalID     string
 	EvalName   string
 	Treatments []TreatmentResult
+	Err        error
 }
 
 // SuiteResult is the top-level result for an entire suite execution.

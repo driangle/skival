@@ -44,9 +44,26 @@ func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runne
 		EvalName: eval.Name,
 	}
 
+	// Always run after hook, even on error.
+	defer runAfterHook(ctx, eval.Setup, eval.Dir)
+
+	// Run before hook once before any treatment.
+	if err := runBeforeHook(ctx, eval.Setup, eval.Dir); err != nil {
+		er.Err = err
+		return er
+	}
+
 	treatments := collectTreatments(eval, opts.Treatments)
 
 	for i := range treatments {
+		// Run reset between treatments (not before the first one).
+		if i > 0 {
+			if err := runResetHook(ctx, eval.Setup, eval.Dir); err != nil {
+				er.Err = err
+				return er
+			}
+		}
+
 		t := treatments[i]
 		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, runner, prog)
 		er.Treatments = append(er.Treatments, tr)

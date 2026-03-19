@@ -1,7 +1,7 @@
 ---
 title: "Setup lifecycle hooks"
 id: "01km2hm7g"
-status: pending
+status: completed
 priority: low
 type: feature
 tags: ["phase-4", "core"]
