@@ -1,7 +1,7 @@
 ---
 title: "Code executor for generated output"
 id: "01km2hm0t"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["phase-2", "verifier"]
@@ -18,11 +18,11 @@ Implement a code executor that runs generated code from the agent's output when 
 
 ## Tasks
 
-- [ ] Implement executor in `internal/executor/executor.go` — extracts code from RunOutput, writes to temp file, executes it
-- [ ] Support configurable timeout from correctness.timeout (default 30s)
-- [ ] Capture stdout, stderr, and exit code in an ExecutionResult struct
-- [ ] Detect language/runtime from the eval config or code fencing (e.g., go run, node, python)
-- [ ] Clean up temp files after execution
+- [x] Implement executor in `internal/executor/code.go` — extracts code from RunOutput, writes to temp file, executes it
+- [x] Support configurable timeout from correctness.timeout (default 30s)
+- [x] Capture stdout, stderr, and exit code in an ExecutionResult struct
+- [x] Detect language/runtime from the eval config or code fencing (e.g., go run, node, python)
+- [x] Clean up temp files after execution
 
 ## Acceptance Criteria
 
