@@ -2,7 +2,9 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	agentrunner "github.com/driangle/agent-runner/go"
@@ -144,7 +146,13 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 }
 
 func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner) result.RunResult {
-	opts := buildRunOptions(eval, t)
+	opts, err := buildRunOptions(eval, t)
+	if err != nil {
+		return result.RunResult{
+			Sample: sample,
+			Err:    err,
+		}
+	}
 
 	res, err := runner.Run(ctx, eval.Prompt, opts...)
 	if err != nil {
@@ -166,7 +174,7 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	}
 }
 
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment) []agentrunner.Option {
+func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
 	// Model: treatment overrides eval.
@@ -202,10 +210,19 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) []agentrunner.Option 
 		opts = append(opts, claudecode.WithAllowedTools(t.AllowedTools...))
 	}
 
+	// Skill file as appended system prompt.
+	if t.Skill != "" {
+		content, err := os.ReadFile(t.Skill)
+		if err != nil {
+			return nil, fmt.Errorf("reading skill file %q: %w", t.Skill, err)
+		}
+		opts = append(opts, agentrunner.WithAppendSystemPrompt(string(content)))
+	}
+
 	// Always skip permissions for automated runs.
 	opts = append(opts, agentrunner.WithSkipPermissions(true))
 
-	return opts
+	return opts, nil
 }
 
 func filterEvals(evals []suite.Eval, ids []string) []suite.Eval {

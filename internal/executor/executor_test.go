@@ -3,6 +3,8 @@ package executor
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -320,5 +322,54 @@ func TestFilterTreatments(t *testing.T) {
 	}
 	if treatments[0].Name != "with-skill" {
 		t.Errorf("expected 'with-skill', got %q", treatments[0].Name)
+	}
+}
+
+func TestSkillFilePassedAsSystemPrompt(t *testing.T) {
+	dir := t.TempDir()
+	skillPath := filepath.Join(dir, "skill.md")
+	if err := os.WriteFile(skillPath, []byte("You are a helpful assistant."), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:  "control",
+		Skill: skillPath,
+	}
+
+	Execute(context.Background(), s, runner, nil)
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(runner.calls))
+	}
+	if runner.calls[0].Opts.AppendSystemPrompt != "You are a helpful assistant." {
+		t.Errorf("expected skill content as system prompt, got %q", runner.calls[0].Opts.AppendSystemPrompt)
+	}
+}
+
+func TestSkillFileMissing(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:  "control",
+		Skill: "/nonexistent/skill.md",
+	}
+
+	sr, err := Execute(context.Background(), s, runner, nil)
+	if err != nil {
+		t.Fatalf("suite should not abort, got: %v", err)
+	}
+
+	run := sr.Evals[0].Treatments[0].Runs[0]
+	if run.Err == nil {
+		t.Fatal("expected error for missing skill file")
 	}
 }
