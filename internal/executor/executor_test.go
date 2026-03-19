@@ -77,7 +77,7 @@ func TestSingleEvalTreatmentSample(t *testing.T) {
 		},
 	}
 
-	sr, err := Execute(context.Background(), newMinimalSuite(), runner)
+	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestControlBeforeVariations(t *testing.T) {
 		{Name: "variation-1"},
 	}
 
-	sr, err := Execute(context.Background(), s, runner)
+	sr, err := Execute(context.Background(), s, runner, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestMultipleSamples(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Samples = intPtr(3)
 
-	sr, err := Execute(context.Background(), s, runner)
+	sr, err := Execute(context.Background(), s, runner, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestRunnerErrorCaptured(t *testing.T) {
 		errs: []error{runErr},
 	}
 
-	sr, err := Execute(context.Background(), newMinimalSuite(), runner)
+	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
 	if err != nil {
 		t.Fatalf("suite should not fail on runner error, got: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestOptionsMapping(t *testing.T) {
 		AllowedTools: []string{"Read", "Write"},
 	}
 
-	Execute(context.Background(), s, runner)
+	Execute(context.Background(), s, runner, nil)
 
 	if len(runner.calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(runner.calls))
@@ -256,9 +256,69 @@ func TestTreatmentModelOverridesEval(t *testing.T) {
 		Model: "claude-opus-4-6",
 	}
 
-	Execute(context.Background(), s, runner)
+	Execute(context.Background(), s, runner, nil)
 
 	if runner.calls[0].Opts.Model != "claude-opus-4-6" {
 		t.Errorf("treatment model should override eval model, got %q", runner.calls[0].Opts.Model)
+	}
+}
+
+func TestFilterEvals(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{
+			{Text: "result-1"},
+		},
+	}
+
+	s := &suite.Suite{
+		Evals: []suite.Eval{
+			{ID: "e1", Name: "Eval 1", Prompt: "p1", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl"}}},
+			{ID: "e2", Name: "Eval 2", Prompt: "p2", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl"}}},
+			{ID: "e3", Name: "Eval 3", Prompt: "p3", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl"}}},
+		},
+	}
+
+	sr, err := Execute(context.Background(), s, runner, &Options{EvalIDs: []string{"e2"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sr.Evals) != 1 {
+		t.Fatalf("expected 1 eval, got %d", len(sr.Evals))
+	}
+	if sr.Evals[0].EvalID != "e2" {
+		t.Errorf("expected eval e2, got %q", sr.Evals[0].EvalID)
+	}
+}
+
+func TestFilterTreatments(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{
+			{Text: "var-result"},
+		},
+	}
+
+	s := &suite.Suite{
+		Evals: []suite.Eval{
+			{
+				ID: "e1", Name: "Eval 1", Prompt: "p1",
+				Treatments: suite.Treatments{
+					Control:    suite.Treatment{Name: "control"},
+					Variations: []suite.Treatment{{Name: "with-skill"}},
+				},
+			},
+		},
+	}
+
+	sr, err := Execute(context.Background(), s, runner, &Options{Treatments: []string{"with-skill"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	treatments := sr.Evals[0].Treatments
+	if len(treatments) != 1 {
+		t.Fatalf("expected 1 treatment, got %d", len(treatments))
+	}
+	if treatments[0].Name != "with-skill" {
+		t.Errorf("expected 'with-skill', got %q", treatments[0].Name)
 	}
 }

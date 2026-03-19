@@ -13,40 +13,71 @@ import (
 
 // Execute runs all evals in the suite, returning collected results.
 // Runner errors are captured per-run and do not abort the suite.
-func Execute(ctx context.Context, s *suite.Suite, runner agentrunner.Runner) (*result.SuiteResult, error) {
+func Execute(ctx context.Context, s *suite.Suite, runner agentrunner.Runner, opts *Options) (*result.SuiteResult, error) {
+	if opts == nil {
+		opts = &Options{}
+	}
+
+	prog := newProgress(opts.Progress)
+
 	sr := &result.SuiteResult{
 		Description: s.Description,
 		StartedAt:   time.Now(),
 	}
 
-	for i := range s.Evals {
-		evalResult := executeEval(ctx, &s.Evals[i], runner)
+	evals := filterEvals(s.Evals, opts.EvalIDs)
+
+	for i := range evals {
+		prog.evalStart(i+1, len(evals), evals[i].Name)
+		evalResult := executeEval(ctx, &evals[i], runner, opts, prog)
 		sr.Evals = append(sr.Evals, evalResult)
 	}
 
 	sr.FinishedAt = time.Now()
+	prog.finish()
 	return sr, nil
 }
 
-func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runner) result.EvalResult {
+func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runner, opts *Options, prog *progress) result.EvalResult {
 	er := result.EvalResult{
 		EvalID:   eval.ID,
 		EvalName: eval.Name,
 	}
 
-	// Control first, then variations.
-	control := executeTreatment(ctx, eval, &eval.Treatments.Control, true, runner)
-	er.Treatments = append(er.Treatments, control)
+	treatments := collectTreatments(eval, opts.Treatments)
 
-	for i := range eval.Treatments.Variations {
-		variation := executeTreatment(ctx, eval, &eval.Treatments.Variations[i], false, runner)
-		er.Treatments = append(er.Treatments, variation)
+	for i := range treatments {
+		t := treatments[i]
+		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, runner, prog)
+		er.Treatments = append(er.Treatments, tr)
 	}
 
 	return er
 }
 
-func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, runner agentrunner.Runner) result.TreatmentResult {
+type treatmentEntry struct {
+	treatment *suite.Treatment
+	isControl bool
+}
+
+func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
+	filterSet := toSet(filter)
+
+	var entries []treatmentEntry
+
+	if shouldInclude(eval.Treatments.Control.Name, filterSet) {
+		entries = append(entries, treatmentEntry{&eval.Treatments.Control, true})
+	}
+	for i := range eval.Treatments.Variations {
+		if shouldInclude(eval.Treatments.Variations[i].Name, filterSet) {
+			entries = append(entries, treatmentEntry{&eval.Treatments.Variations[i], false})
+		}
+	}
+
+	return entries
+}
+
+func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, runner agentrunner.Runner, prog *progress) result.TreatmentResult {
 	tr := result.TreatmentResult{
 		Name:      t.Name,
 		IsControl: isControl,
@@ -60,6 +91,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	pipeline := verifier.BuildPipeline(eval.Correctness, eval.Dir)
 
 	for i := 0; i < samples; i++ {
+		prog.sampleStart(eval.Name, t.Name, i+1, samples)
 		run := executeSingleRun(ctx, eval, t, i+1, runner)
 		if pipeline != nil && run.Err == nil {
 			input := verifier.VerifyInput{
@@ -69,6 +101,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 			pr := pipeline.Run(ctx, input)
 			run.Pass = &pr.Pass
 		}
+		prog.sampleDone(run.CostUSD)
 		tr.Runs = append(tr.Runs, run)
 	}
 
@@ -142,3 +175,34 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) []agentrunner.Option 
 	return opts
 }
 
+func filterEvals(evals []suite.Eval, ids []string) []suite.Eval {
+	if len(ids) == 0 {
+		return evals
+	}
+	idSet := toSet(ids)
+	var filtered []suite.Eval
+	for i := range evals {
+		if idSet[evals[i].ID] {
+			filtered = append(filtered, evals[i])
+		}
+	}
+	return filtered
+}
+
+func toSet(items []string) map[string]bool {
+	if len(items) == 0 {
+		return nil
+	}
+	s := make(map[string]bool, len(items))
+	for _, item := range items {
+		s[item] = true
+	}
+	return s
+}
+
+func shouldInclude(name string, filterSet map[string]bool) bool {
+	if filterSet == nil {
+		return true
+	}
+	return filterSet[name]
+}

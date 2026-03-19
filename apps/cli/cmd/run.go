@@ -25,7 +25,16 @@ var runCmd = &cobra.Command{
 
 		runner := claudecode.NewRunner()
 
-		sr, err := executor.Execute(cmd.Context(), s, runner)
+		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
+		treatments, _ := cmd.Flags().GetStringSlice("treatments")
+
+		execOpts := &executor.Options{
+			EvalIDs:    evalIDs,
+			Treatments: treatments,
+			Progress:   os.Stderr,
+		}
+
+		sr, err := executor.Execute(cmd.Context(), s, runner, execOpts)
 		if err != nil {
 			return fmt.Errorf("executing suite: %w", err)
 		}

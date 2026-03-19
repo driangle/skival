@@ -1,7 +1,7 @@
 ---
 title: "CLI filtering and progress display"
 id: "01km2hm5p"
-status: pending
+status: completed
 priority: low
 type: feature
 tags: ["phase-4", "ux"]
