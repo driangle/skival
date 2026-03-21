@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	agentrunner "github.com/driangle/agent-runner/go"
+	agentrunner "github.com/driangle/agent-runner/agentrunner"
 	"github.com/driangle/skival/internal/suite"
 )
 
@@ -46,11 +46,7 @@ func (f *fakeRunner) Run(_ context.Context, prompt string, opts ...agentrunner.O
 	return res, err
 }
 
-func (f *fakeRunner) Start(_ context.Context, _ string, _ ...agentrunner.Option) *agentrunner.Session {
-	return nil
-}
-
-func (f *fakeRunner) RunStream(_ context.Context, _ string, _ ...agentrunner.Option) (<-chan agentrunner.Message, <-chan error) {
+func (f *fakeRunner) Start(_ context.Context, _ string, _ ...agentrunner.Option) (*agentrunner.Session, error) {
 	return nil, nil
 }
 
@@ -75,7 +71,7 @@ func newMinimalSuite() *suite.Suite {
 func TestSingleEvalTreatmentSample(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{
-			{Text: "done", CostUSD: 0.05, DurationMs: 1500, SessionID: "sess-1"},
+			{Text: "done", CostUSD: 0.05, Duration: 1500 * time.Millisecond, SessionID: "sess-1"},
 		},
 	}
 

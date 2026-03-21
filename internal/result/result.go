@@ -3,7 +3,7 @@ package result
 import (
 	"time"
 
-	agentrunner "github.com/driangle/agent-runner/go"
+	agentrunner "github.com/driangle/agent-runner/agentrunner"
 )
 
 // RunResult captures the outcome of a single sample run.

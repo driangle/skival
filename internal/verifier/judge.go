@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	agentrunner "github.com/driangle/agent-runner/go"
+	agentrunner "github.com/driangle/agent-runner/agentrunner"
 )
 
 const judgeModel = "claude-haiku-4-5-20251001"
@@ -41,7 +41,7 @@ func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyRes
 
 	res, err := v.Runner.Run(ctx, judgePrompt,
 		agentrunner.WithModel(judgeModel),
-		agentrunner.WithSkipPermissions(true),
+		agentrunner.WithSkipPermissions(),
 	)
 	if err != nil {
 		return VerifyResult{
