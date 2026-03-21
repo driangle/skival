@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	agentrunner "github.com/driangle/agent-runner/go"
-	"github.com/driangle/agent-runner/go/claudecode"
+	agentrunner "github.com/driangle/agent-runner/agentrunner"
+	"github.com/driangle/agent-runner/agentrunner/claudecode"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/driangle/skival/internal/verifier"
@@ -168,7 +168,7 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		IsError:    res.IsError,
 		ExitCode:   res.ExitCode,
 		CostUSD:    res.CostUSD,
-		DurationMs: res.DurationMs,
+		DurationMs: res.Duration.Milliseconds(),
 		Usage:      res.Usage,
 		SessionID:  res.SessionID,
 	}
@@ -220,7 +220,7 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option
 	}
 
 	// Always skip permissions for automated runs.
-	opts = append(opts, agentrunner.WithSkipPermissions(true))
+	opts = append(opts, agentrunner.WithSkipPermissions())
 
 	return opts, nil
 }

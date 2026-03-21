@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/driangle/agent-runner/go/claudecode"
+	"github.com/driangle/agent-runner/agentrunner/claudecode"
 	"github.com/driangle/skival/internal/executor"
 	"github.com/driangle/skival/internal/persist"
 	"github.com/driangle/skival/internal/report"

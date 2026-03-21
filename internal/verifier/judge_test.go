@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	agentrunner "github.com/driangle/agent-runner/go"
+	agentrunner "github.com/driangle/agent-runner/agentrunner"
 	"github.com/driangle/skival/internal/suite"
 )
 
@@ -21,11 +21,7 @@ func (f *fakeRunner) Run(_ context.Context, _ string, _ ...agentrunner.Option) (
 	return &agentrunner.Result{Text: f.text}, nil
 }
 
-func (f *fakeRunner) Start(_ context.Context, _ string, _ ...agentrunner.Option) *agentrunner.Session {
-	return nil
-}
-
-func (f *fakeRunner) RunStream(_ context.Context, _ string, _ ...agentrunner.Option) (<-chan agentrunner.Message, <-chan error) {
+func (f *fakeRunner) Start(_ context.Context, _ string, _ ...agentrunner.Option) (*agentrunner.Session, error) {
 	return nil, nil
 }
 
