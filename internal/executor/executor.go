@@ -54,6 +54,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runne
 	// Run before hook once before any treatment.
 	if err := runBeforeHook(ctx, eval.Setup, eval.Dir); err != nil {
 		er.Err = err
+		prog.evalError(eval.Name, err)
 		return er
 	}
 
@@ -64,6 +65,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runne
 		if i > 0 {
 			if err := runResetHook(ctx, eval.Setup, eval.Dir); err != nil {
 				er.Err = err
+				prog.evalError(eval.Name, err)
 				return er
 			}
 		}

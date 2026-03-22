@@ -20,6 +20,7 @@ type jsonReport struct {
 type jsonEval struct {
 	ID         string          `json:"id"`
 	Name       string          `json:"name"`
+	Error      string          `json:"error,omitempty"`
 	Treatments []jsonTreatment `json:"treatments"`
 }
 
@@ -81,6 +82,9 @@ func buildJSONReport(sr *result.SuiteResult) jsonReport {
 
 	for _, eval := range sr.Evals {
 		je := jsonEval{ID: eval.EvalID, Name: eval.EvalName}
+		if eval.Err != nil {
+			je.Error = eval.Err.Error()
+		}
 		for _, treat := range eval.Treatments {
 			jt := jsonTreatment{
 				Name:      treat.Name,

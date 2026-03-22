@@ -28,6 +28,13 @@ func (p *progress) evalStart(evalNum, totalEvals int, evalName string) {
 		p.elapsed(), evalNum, totalEvals, evalName)
 }
 
+func (p *progress) evalError(evalName string, err error) {
+	if p == nil {
+		return
+	}
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s: ERROR: %v\n", p.elapsed(), evalName, err)
+}
+
 func (p *progress) sampleStart(evalName, treatName string, sample, totalSamples int) {
 	if p == nil {
 		return

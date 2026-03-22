@@ -3,6 +3,7 @@ package report
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -76,6 +77,41 @@ func TestWriteJSON_Rankings(t *testing.T) {
 	rankings, ok := parsed["rankings"].([]interface{})
 	if !ok || len(rankings) != 2 {
 		t.Fatalf("expected 2 rankings, got %v", parsed["rankings"])
+	}
+}
+
+func TestWriteJSON_EvalError(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "broken",
+			EvalName: "broken eval",
+			Err:      fmt.Errorf("setup.before: hook failed: no such directory"),
+		}},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		Evals []struct {
+			ID    string `json:"id"`
+			Error string `json:"error"`
+		} `json:"evals"`
+	}
+	json.Unmarshal(buf.Bytes(), &parsed)
+
+	if len(parsed.Evals) != 1 {
+		t.Fatalf("expected 1 eval, got %d", len(parsed.Evals))
+	}
+	if parsed.Evals[0].Error == "" {
+		t.Error("expected error field to be populated")
+	}
+	if parsed.Evals[0].ID != "broken" {
+		t.Errorf("expected id 'broken', got %q", parsed.Evals[0].ID)
 	}
 }
 

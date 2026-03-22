@@ -2,6 +2,7 @@ package suite
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -191,6 +192,144 @@ func TestLoad_MissingSuiteFile(t *testing.T) {
 	_, err := Load("/nonexistent/path/suite.yaml")
 	if err == nil {
 		t.Fatal("expected error for missing suite file")
+	}
+}
+
+func TestLoad_ResolvesEvalDirToSuiteDir(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Dir != dir {
+		t.Errorf("expected eval dir to default to suite dir %q, got %q", dir, s.Evals[0].Dir)
+	}
+}
+
+func TestLoad_ResolvesRelativeEvalDir(t *testing.T) {
+	dir := t.TempDir()
+	subDir := filepath.Join(dir, "workdir")
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    dir: workdir
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Dir != subDir {
+		t.Errorf("expected eval dir %q, got %q", subDir, s.Evals[0].Dir)
+	}
+}
+
+func TestLoad_ResolvesRelativePaths(t *testing.T) {
+	dir := t.TempDir()
+	skillsDir := filepath.Join(dir, "skills")
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSuiteFile(t, skillsDir, "my-skill.md", "skill content")
+	writeSuiteFile(t, dir, "verify.sh", "#!/bin/bash\nexit 0")
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    correctness:
+      script: "./verify.sh"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: with-skill
+          skill: "./skills/my-skill.md"
+          dir: "skills"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	expectedScript := filepath.Join(dir, "verify.sh")
+	if e.Correctness.Script != expectedScript {
+		t.Errorf("expected script path %q, got %q", expectedScript, e.Correctness.Script)
+	}
+
+	expectedSkill := filepath.Join(dir, "skills", "my-skill.md")
+	if e.Treatments.Variations[0].Skill != expectedSkill {
+		t.Errorf("expected skill path %q, got %q", expectedSkill, e.Treatments.Variations[0].Skill)
+	}
+
+	expectedTreatDir := filepath.Join(dir, "skills")
+	if e.Treatments.Variations[0].Dir != expectedTreatDir {
+		t.Errorf("expected treatment dir %q, got %q", expectedTreatDir, e.Treatments.Variations[0].Dir)
+	}
+}
+
+func TestLoad_PreservesAbsolutePaths(t *testing.T) {
+	dir := t.TempDir()
+	absDir := "/absolute/path"
+	absScript := "/absolute/verify.sh"
+	absSkill := "/absolute/skill.md"
+
+	writeSuiteFile(t, dir, "suite.yaml", fmt.Sprintf(`
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    dir: "%s"
+    correctness:
+      script: "%s"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: v1
+          skill: "%s"
+          dir: "%s"
+`, absDir, absScript, absSkill, absDir))
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Dir != absDir {
+		t.Errorf("expected eval dir %q preserved, got %q", absDir, e.Dir)
+	}
+	if e.Correctness.Script != absScript {
+		t.Errorf("expected script %q preserved, got %q", absScript, e.Correctness.Script)
+	}
+	if e.Treatments.Variations[0].Skill != absSkill {
+		t.Errorf("expected skill %q preserved, got %q", absSkill, e.Treatments.Variations[0].Skill)
+	}
+	if e.Treatments.Variations[0].Dir != absDir {
+		t.Errorf("expected treatment dir %q preserved, got %q", absDir, e.Treatments.Variations[0].Dir)
 	}
 }
 

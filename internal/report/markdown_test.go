@@ -2,6 +2,7 @@ package report
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -104,6 +105,54 @@ func TestWriteMarkdown_NoRankingForSingleTreatment(t *testing.T) {
 
 	if strings.Contains(out, "## Rankings") {
 		t.Error("should not show rankings for single treatment")
+	}
+}
+
+func TestWriteMarkdown_EvalError(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "broken",
+			EvalName: "broken eval",
+			Err:      fmt.Errorf("setup.before: hook failed: no such directory"),
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if !strings.Contains(out, "broken eval") {
+		t.Error("missing eval name in results table")
+	}
+	if !strings.Contains(out, "ERROR") {
+		t.Error("missing ERROR status in results table")
+	}
+	if !strings.Contains(out, "## Errors") {
+		t.Error("missing errors section")
+	}
+	if !strings.Contains(out, "no such directory") {
+		t.Error("missing error message in errors section")
+	}
+}
+
+func TestWriteMarkdown_NoErrorsSectionWhenAllPass(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "good",
+			Treatments: []result.TreatmentResult{{
+				Name: "ctrl",
+				Runs: []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100}},
+			}},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+
+	if strings.Contains(buf.String(), "## Errors") {
+		t.Error("should not show errors section when there are no eval errors")
 	}
 }
 

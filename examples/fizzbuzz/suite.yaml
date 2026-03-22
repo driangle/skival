@@ -18,11 +18,6 @@ evals:
       reset: "rm -f fizzbuzz.sh"
     correctness:
       execute: true
-      expected_output:
-        - "1"
-        - "Fizz"
-        - "Buzz"
-        - "FizzBuzz"
       script: "./verify.sh"
     treatments:
       control:

@@ -19,6 +19,7 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintf(w, "**Finished:** %s  \n\n", sr.FinishedAt.Format("2006-01-02 15:04:05"))
 
 	writeResultsTable(w, sr)
+	writeErrorsSection(w, sr)
 	writeRankingTable(w, sr)
 }
 
@@ -30,6 +31,10 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintf(tw, "----\t---------\t------\t------\t----\t--------\n")
 
 	for _, eval := range sr.Evals {
+		if eval.Err != nil {
+			fmt.Fprintf(tw, "%s\t—\t—\tERROR\t—\t—\n", eval.EvalName)
+			continue
+		}
 		for _, treat := range eval.Treatments {
 			for _, run := range treat.Runs {
 				status := runStatus(run)
@@ -77,6 +82,24 @@ func writeAggregateRow(tw *tabwriter.Writer, evalName, treatName string, agg *re
 
 	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\n",
 		evalName, treatName, passStr, costRange, durationRange, cvInfo)
+}
+
+func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
+	var errors []result.EvalResult
+	for _, eval := range sr.Evals {
+		if eval.Err != nil {
+			errors = append(errors, eval)
+		}
+	}
+	if len(errors) == 0 {
+		return
+	}
+
+	fmt.Fprintf(w, "## Errors\n\n")
+	for _, eval := range errors {
+		fmt.Fprintf(w, "- **%s** (`%s`): %v\n", eval.EvalName, eval.EvalID, eval.Err)
+	}
+	fmt.Fprintln(w)
 }
 
 func writeRankingTable(w io.Writer, sr *result.SuiteResult) {
