@@ -10,4 +10,8 @@ type Options struct {
 	Treatments []string
 	// Progress receives live progress updates. Nil disables progress.
 	Progress io.Writer
+	// Samples overrides the per-eval sample count when set (> 0).
+	Samples int
+	// Model overrides the model for all treatments when non-empty.
+	Model string
 }

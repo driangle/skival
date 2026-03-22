@@ -30,12 +30,16 @@ var runCmd = &cobra.Command{
 
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
-		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments)
+		samples, _ := cmd.Flags().GetInt("samples")
+		model, _ := cmd.Flags().GetString("model")
+		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "model", model)
 
 		execOpts := &executor.Options{
 			EvalIDs:    evalIDs,
 			Treatments: treatments,
 			Progress:   os.Stderr,
+			Samples:    samples,
+			Model:      model,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, runner, execOpts)
