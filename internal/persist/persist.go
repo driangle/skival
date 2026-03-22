@@ -110,7 +110,54 @@ func writeRunJSON(treatDir string, run result.RunResult) error {
 	}
 
 	filename := fmt.Sprintf("run-%d.json", run.Sample)
-	return writeAtomicJSON(filepath.Join(treatDir, filename), r)
+	if err := writeAtomicJSON(filepath.Join(treatDir, filename), r); err != nil {
+		return err
+	}
+
+	if len(run.Conversation) > 0 {
+		convPath := filepath.Join(treatDir, fmt.Sprintf("run-%d.conversation.jsonl", run.Sample))
+		if err := writeConversationJSONL(convPath, run.Conversation); err != nil {
+			return err
+		}
+	}
+
+	if len(run.JudgeConversation) > 0 {
+		judgePath := filepath.Join(treatDir, fmt.Sprintf("run-%d.judge.jsonl", run.Sample))
+		if err := writeConversationJSONL(judgePath, run.JudgeConversation); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// writeConversationJSONL writes raw JSON messages as JSONL via atomic temp+rename.
+func writeConversationJSONL(path string, messages []json.RawMessage) error {
+	dir := filepath.Dir(path)
+	f, err := os.CreateTemp(dir, ".tmp-*.jsonl")
+	if err != nil {
+		return fmt.Errorf("creating temp file: %w", err)
+	}
+
+	for _, raw := range messages {
+		if _, err := f.Write(raw); err != nil {
+			f.Close()
+			os.Remove(f.Name())
+			return fmt.Errorf("writing JSONL line: %w", err)
+		}
+		if _, err := f.Write([]byte("\n")); err != nil {
+			f.Close()
+			os.Remove(f.Name())
+			return fmt.Errorf("writing newline: %w", err)
+		}
+	}
+	f.Close()
+
+	if err := os.Rename(f.Name(), path); err != nil {
+		os.Remove(f.Name())
+		return err
+	}
+	return nil
 }
 
 type summaryJSON struct {

@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -68,7 +69,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runne
 		}
 
 		t := treatments[i]
-		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, runner, prog)
+		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, runner, opts, prog)
 		er.Treatments = append(er.Treatments, tr)
 	}
 
@@ -97,7 +98,7 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 	return entries
 }
 
-func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, runner agentrunner.Runner, prog *progress) result.TreatmentResult {
+func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, runner agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
 	tr := result.TreatmentResult{
 		Name:      t.Name,
 		IsControl: isControl,
@@ -106,6 +107,9 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	samples := 1
 	if eval.Samples != nil {
 		samples = *eval.Samples
+	}
+	if opts.Samples > 0 {
+		samples = opts.Samples
 	}
 
 	var pipelineOpts []verifier.PipelineOption
@@ -117,7 +121,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	for i := 0; i < samples; i++ {
 		prog.sampleStart(eval.Name, t.Name, i+1, samples)
 		slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "total", samples)
-		run := executeSingleRun(ctx, eval, t, i+1, runner)
+		run := executeSingleRun(ctx, eval, t, i+1, runner, opts.Model)
 		if run.Err != nil {
 			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "err", run.Err)
 		} else {
@@ -134,6 +138,9 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 			run.Pass = &pr.Pass
 			for _, step := range pr.Steps {
 				slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
+				if step.Name == "judge" && step.Result.Conversation != nil {
+					run.JudgeConversation = step.Result.Conversation
+				}
 			}
 		}
 		prog.sampleDone(run.CostUSD, run.Pass)
@@ -145,8 +152,8 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	return tr
 }
 
-func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner) result.RunResult {
-	opts, err := buildRunOptions(eval, t)
+func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner, modelOverride string) result.RunResult {
+	opts, err := buildRunOptions(eval, t, modelOverride)
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -154,7 +161,22 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		}
 	}
 
-	res, err := runner.Run(ctx, eval.Prompt, opts...)
+	session, err := runner.Start(ctx, eval.Prompt, opts...)
+	if err != nil {
+		return result.RunResult{
+			Sample: sample,
+			Err:    err,
+		}
+	}
+
+	var conversation []json.RawMessage
+	for msg := range session.Messages {
+		if msg.Raw != nil {
+			conversation = append(conversation, msg.Raw)
+		}
+	}
+
+	res, err := session.Result()
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -163,24 +185,28 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	}
 
 	return result.RunResult{
-		Sample:     sample,
-		Text:       res.Text,
-		IsError:    res.IsError,
-		ExitCode:   res.ExitCode,
-		CostUSD:    res.CostUSD,
-		DurationMs: res.Duration.Milliseconds(),
-		Usage:      res.Usage,
-		SessionID:  res.SessionID,
+		Sample:       sample,
+		Text:         res.Text,
+		IsError:      res.IsError,
+		ExitCode:     res.ExitCode,
+		CostUSD:      res.CostUSD,
+		DurationMs:   res.Duration.Milliseconds(),
+		Usage:        res.Usage,
+		SessionID:    res.SessionID,
+		Conversation: conversation,
 	}
 }
 
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option, error) {
+func buildRunOptions(eval *suite.Eval, t *suite.Treatment, modelOverride string) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
-	// Model: treatment overrides eval.
+	// Model: CLI override > treatment > eval.
 	model := eval.Model
 	if t.Model != "" {
 		model = t.Model
+	}
+	if modelOverride != "" {
+		model = modelOverride
 	}
 	if model != "" {
 		opts = append(opts, agentrunner.WithModel(model))

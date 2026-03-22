@@ -166,6 +166,111 @@ func TestLoad_NonExistentDir(t *testing.T) {
 	}
 }
 
+func TestSave_WithConversations(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+	sr.Evals[0].Treatments[0].Runs[0].Conversation = []json.RawMessage{
+		json.RawMessage(`{"role":"assistant","text":"hello"}`),
+		json.RawMessage(`{"role":"user","text":"hi"}`),
+	}
+	sr.Evals[0].Treatments[0].Runs[0].JudgeConversation = []json.RawMessage{
+		json.RawMessage(`{"role":"assistant","text":"PASS: ok"}`),
+	}
+
+	outDir, err := Save(tmpDir, sr)
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	convPath := filepath.Join(outDir, "evals", "eval1", "control", "run-1.conversation.jsonl")
+	if _, err := os.Stat(convPath); err != nil {
+		t.Errorf("missing conversation.jsonl: %v", err)
+	}
+	judgePath := filepath.Join(outDir, "evals", "eval1", "control", "run-1.judge.jsonl")
+	if _, err := os.Stat(judgePath); err != nil {
+		t.Errorf("missing judge.jsonl: %v", err)
+	}
+
+	// run-2 has no conversations — files should not exist.
+	noConvPath := filepath.Join(outDir, "evals", "eval1", "control", "run-2.conversation.jsonl")
+	if _, err := os.Stat(noConvPath); err == nil {
+		t.Error("run-2.conversation.jsonl should not exist")
+	}
+}
+
+func TestSave_WithoutConversations_NoJSONLFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+
+	outDir, err := Save(tmpDir, sr)
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	convPath := filepath.Join(outDir, "evals", "eval1", "control", "run-1.conversation.jsonl")
+	if _, err := os.Stat(convPath); err == nil {
+		t.Error("conversation.jsonl should not exist when no conversations")
+	}
+}
+
+func TestSaveAndLoad_ConversationRoundTrip(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+	sr.Evals[0].Treatments[0].Runs[0].Conversation = []json.RawMessage{
+		json.RawMessage(`{"role":"assistant","text":"hello"}`),
+	}
+	sr.Evals[0].Treatments[0].Runs[0].JudgeConversation = []json.RawMessage{
+		json.RawMessage(`{"role":"assistant","text":"PASS"}`),
+	}
+
+	outDir, err := Save(tmpDir, sr)
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	loaded, err := Load(outDir)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+
+	run := loaded.Evals[0].Treatments[0].Runs[0]
+	if len(run.Conversation) != 1 {
+		t.Fatalf("expected 1 conversation message, got %d", len(run.Conversation))
+	}
+	if string(run.Conversation[0]) != `{"role":"assistant","text":"hello"}` {
+		t.Errorf("conversation mismatch: %s", run.Conversation[0])
+	}
+	if len(run.JudgeConversation) != 1 {
+		t.Fatalf("expected 1 judge conversation message, got %d", len(run.JudgeConversation))
+	}
+	if string(run.JudgeConversation[0]) != `{"role":"assistant","text":"PASS"}` {
+		t.Errorf("judge conversation mismatch: %s", run.JudgeConversation[0])
+	}
+}
+
+func TestLoad_BackwardsCompat_NoJSONLFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+
+	outDir, err := Save(tmpDir, sr)
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	loaded, err := Load(outDir)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+
+	run := loaded.Evals[0].Treatments[0].Runs[0]
+	if run.Conversation != nil {
+		t.Error("expected nil conversation for legacy data")
+	}
+	if run.JudgeConversation != nil {
+		t.Error("expected nil judge conversation for legacy data")
+	}
+}
+
 func TestSave_EmptySuite(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := &result.SuiteResult{

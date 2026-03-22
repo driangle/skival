@@ -1,6 +1,7 @@
 package result
 
 import (
+	"encoding/json"
 	"time"
 
 	agentrunner "github.com/driangle/agent-runner/agentrunner"
@@ -16,8 +17,10 @@ type RunResult struct {
 	DurationMs int64
 	Usage      agentrunner.Usage
 	SessionID  string
-	Err        error
-	Pass       *bool
+	Err                error
+	Pass               *bool
+	Conversation       []json.RawMessage
+	JudgeConversation  []json.RawMessage
 }
 
 // TreatmentResult groups runs for one treatment.

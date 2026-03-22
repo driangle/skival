@@ -1,6 +1,9 @@
 package verifier
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 // VerifyInput holds the data a verifier needs to check correctness.
 type VerifyInput struct {
@@ -16,6 +19,8 @@ type VerifyResult struct {
 	Pass bool
 	// Reason explains the result, especially useful on failure.
 	Reason string
+	// Conversation holds the raw JSON messages from the judge run, if any.
+	Conversation []json.RawMessage
 }
 
 // Verifier checks whether a run's output meets correctness criteria.

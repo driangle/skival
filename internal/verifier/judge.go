@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -39,7 +40,7 @@ func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyRes
 	criteria := strings.Join(v.Criteria, "\n- ")
 	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.Prompt, input.RunOutput, "- "+criteria)
 
-	res, err := v.Runner.Run(ctx, judgePrompt,
+	session, err := v.Runner.Start(ctx, judgePrompt,
 		agentrunner.WithModel(judgeModel),
 		agentrunner.WithSkipPermissions(),
 	)
@@ -50,7 +51,24 @@ func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyRes
 		}
 	}
 
-	return parseJudgeResponse(res.Text)
+	var conversation []json.RawMessage
+	for msg := range session.Messages {
+		if msg.Raw != nil {
+			conversation = append(conversation, msg.Raw)
+		}
+	}
+
+	res, err := session.Result()
+	if err != nil {
+		return VerifyResult{
+			Pass:   false,
+			Reason: fmt.Sprintf("judge invocation failed: %v", err),
+		}
+	}
+
+	vr := parseJudgeResponse(res.Text)
+	vr.Conversation = conversation
+	return vr
 }
 
 func parseJudgeResponse(text string) VerifyResult {

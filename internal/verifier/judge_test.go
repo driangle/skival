@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -22,7 +23,15 @@ func (f *fakeRunner) Run(_ context.Context, _ string, _ ...agentrunner.Option) (
 }
 
 func (f *fakeRunner) Start(_ context.Context, _ string, _ ...agentrunner.Option) (*agentrunner.Session, error) {
-	return nil, nil
+	if f.err != nil {
+		return nil, f.err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	result := &agentrunner.Result{Text: f.text}
+	return agentrunner.NewSession(ctx, cancel, func(_ context.Context, messages chan<- agentrunner.Message) (*agentrunner.Result, error) {
+		messages <- agentrunner.Message{Raw: json.RawMessage(`{"type":"assistant","text":"` + f.text + `"}`)}
+		return result, nil
+	}), nil
 }
 
 func TestJudgeVerifier_Pass(t *testing.T) {
@@ -76,6 +85,36 @@ func TestJudgeVerifier_UnparseableResponse(t *testing.T) {
 	r := v.Verify(context.Background(), VerifyInput{})
 	if r.Pass {
 		t.Error("expected fail on unparseable response")
+	}
+}
+
+func TestJudgeVerifier_ConversationPopulated(t *testing.T) {
+	v := &JudgeVerifier{
+		Runner:   &fakeRunner{text: "PASS: looks good"},
+		Criteria: []string{"output is correct"},
+		Prompt:   "do something",
+	}
+	r := v.Verify(context.Background(), VerifyInput{RunOutput: "hello"})
+	if !r.Pass {
+		t.Fatalf("expected pass, got fail: %s", r.Reason)
+	}
+	if len(r.Conversation) == 0 {
+		t.Error("expected non-empty conversation")
+	}
+}
+
+func TestJudgeVerifier_ConversationNilOnError(t *testing.T) {
+	v := &JudgeVerifier{
+		Runner:   &fakeRunner{err: errors.New("api error")},
+		Criteria: []string{"something"},
+		Prompt:   "do something",
+	}
+	r := v.Verify(context.Background(), VerifyInput{})
+	if r.Pass {
+		t.Error("expected fail on runner error")
+	}
+	if r.Conversation != nil {
+		t.Error("expected nil conversation on error")
 	}
 }
 

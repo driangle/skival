@@ -1,7 +1,9 @@
 package persist
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -114,6 +116,18 @@ func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
 		if rj.Error != "" {
 			run.Err = fmt.Errorf("%s", rj.Error)
 		}
+
+		// Load conversation JSONL files if they exist.
+		baseName := strings.TrimSuffix(entry.Name(), ".json")
+		run.Conversation, err = loadConversationJSONL(filepath.Join(treatDir, baseName+".conversation.jsonl"))
+		if err != nil {
+			return tr, fmt.Errorf("loading conversation for %s: %w", entry.Name(), err)
+		}
+		run.JudgeConversation, err = loadConversationJSONL(filepath.Join(treatDir, baseName+".judge.jsonl"))
+		if err != nil {
+			return tr, fmt.Errorf("loading judge conversation for %s: %w", entry.Name(), err)
+		}
+
 		tr.Runs = append(tr.Runs, run)
 	}
 
@@ -127,4 +141,33 @@ func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
 	}
 
 	return tr, nil
+}
+
+// loadConversationJSONL reads a JSONL file and returns each line as json.RawMessage.
+// Returns nil, nil if the file doesn't exist (backwards compatible).
+func loadConversationJSONL(path string) ([]json.RawMessage, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+
+	var messages []json.RawMessage
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		raw := make(json.RawMessage, len(line))
+		copy(raw, line)
+		messages = append(messages, raw)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return messages, nil
 }

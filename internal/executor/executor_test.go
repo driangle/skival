@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -14,10 +15,11 @@ import (
 
 // fakeRunner records calls and returns canned results.
 type fakeRunner struct {
-	calls   []fakeCall
-	results []*agentrunner.Result
-	errs    []error
-	callIdx int
+	calls    []fakeCall
+	results  []*agentrunner.Result
+	errs     []error
+	messages [][]agentrunner.Message // per-call messages to emit
+	callIdx  int
 }
 
 type fakeCall struct {
@@ -46,8 +48,41 @@ func (f *fakeRunner) Run(_ context.Context, prompt string, opts ...agentrunner.O
 	return res, err
 }
 
-func (f *fakeRunner) Start(_ context.Context, _ string, _ ...agentrunner.Option) (*agentrunner.Session, error) {
-	return nil, nil
+func (f *fakeRunner) Start(_ context.Context, prompt string, opts ...agentrunner.Option) (*agentrunner.Session, error) {
+	var o agentrunner.Options
+	for _, opt := range opts {
+		opt(&o)
+	}
+	f.calls = append(f.calls, fakeCall{Prompt: prompt, Opts: o})
+
+	idx := f.callIdx
+	f.callIdx++
+
+	var err error
+	if idx < len(f.errs) {
+		err = f.errs[idx]
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var res *agentrunner.Result
+	if idx < len(f.results) {
+		res = f.results[idx]
+	}
+
+	var msgs []agentrunner.Message
+	if idx < len(f.messages) {
+		msgs = f.messages[idx]
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	return agentrunner.NewSession(ctx, cancel, func(_ context.Context, ch chan<- agentrunner.Message) (*agentrunner.Result, error) {
+		for _, m := range msgs {
+			ch <- m
+		}
+		return res, nil
+	}), nil
 }
 
 func intPtr(n int) *int { return &n }
@@ -367,5 +402,115 @@ func TestSkillFileMissing(t *testing.T) {
 	run := sr.Evals[0].Treatments[0].Runs[0]
 	if run.Err == nil {
 		t.Fatal("expected error for missing skill file")
+	}
+}
+
+func TestSamplesOverride(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{
+			{Text: "r1"}, {Text: "r2"}, {Text: "r3"}, {Text: "r4"}, {Text: "r5"},
+		},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Samples = intPtr(2) // YAML says 2
+
+	sr, err := Execute(context.Background(), s, runner, &Options{Samples: 5})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	runs := sr.Evals[0].Treatments[0].Runs
+	if len(runs) != 5 {
+		t.Fatalf("expected 5 runs (CLI override), got %d", len(runs))
+	}
+}
+
+func TestModelOverride(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}, {}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Model = "claude-sonnet-4-6"
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:  "control",
+		Model: "claude-opus-4-6", // treatment-level override
+	}
+	s.Evals[0].Treatments.Variations = []suite.Treatment{
+		{Name: "variation"}, // inherits eval model
+	}
+
+	Execute(context.Background(), s, runner, &Options{Model: "claude-haiku-4-5-20251001"})
+
+	if len(runner.calls) != 2 {
+		t.Fatalf("expected 2 calls, got %d", len(runner.calls))
+	}
+	// CLI override should win over both treatment and eval model.
+	for i, call := range runner.calls {
+		if call.Opts.Model != "claude-haiku-4-5-20251001" {
+			t.Errorf("call %d: expected CLI model override 'claude-haiku-4-5-20251001', got %q", i, call.Opts.Model)
+		}
+	}
+}
+
+func TestNoOverrideUsesYAML(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "r1"}, {Text: "r2"}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Samples = intPtr(2)
+	s.Evals[0].Model = "claude-sonnet-4-6"
+
+	sr, err := Execute(context.Background(), s, runner, &Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Samples from YAML should apply.
+	if len(sr.Evals[0].Treatments[0].Runs) != 2 {
+		t.Fatalf("expected 2 runs (YAML), got %d", len(sr.Evals[0].Treatments[0].Runs))
+	}
+	// Model from YAML should apply.
+	if runner.calls[0].Opts.Model != "claude-sonnet-4-6" {
+		t.Errorf("expected YAML model 'claude-sonnet-4-6', got %q", runner.calls[0].Opts.Model)
+	}
+}
+
+func TestConversationPopulated(t *testing.T) {
+	msg := agentrunner.Message{Raw: json.RawMessage(`{"role":"assistant","text":"done"}`)}
+	runner := &fakeRunner{
+		results:  []*agentrunner.Result{{Text: "done", CostUSD: 0.05, Duration: time.Second}},
+		messages: [][]agentrunner.Message{{msg}},
+	}
+
+	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	run := sr.Evals[0].Treatments[0].Runs[0]
+	if len(run.Conversation) != 1 {
+		t.Fatalf("expected 1 conversation message, got %d", len(run.Conversation))
+	}
+	if string(run.Conversation[0]) != `{"role":"assistant","text":"done"}` {
+		t.Errorf("unexpected conversation content: %s", run.Conversation[0])
+	}
+}
+
+func TestConversationNilOnError(t *testing.T) {
+	runner := &fakeRunner{
+		errs: []error{errors.New("boom")},
+	}
+
+	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	run := sr.Evals[0].Treatments[0].Runs[0]
+	if run.Conversation != nil {
+		t.Error("expected nil conversation on error")
 	}
 }
