@@ -26,7 +26,7 @@ var runCmd = &cobra.Command{
 		}
 		slog.Debug("Suite loaded", "description", s.Description, "evals", len(s.Evals))
 
-		runner := claudecode.NewRunner()
+		runner := claudecode.NewRunner(claudecode.WithLogger(slog.Default()))
 
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")

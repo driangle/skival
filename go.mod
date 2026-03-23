@@ -3,7 +3,7 @@ module github.com/driangle/skival
 go 1.22.0
 
 require (
-	github.com/driangle/agent-runner/agentrunner v0.0.0-20260320214205-1370f00eb458
+	github.com/driangle/agent-runner/agentrunner v0.0.0-20260322143928-feed6e45ba4d
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
 )
