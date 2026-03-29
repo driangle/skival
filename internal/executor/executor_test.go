@@ -253,7 +253,7 @@ func TestOptionsMapping(t *testing.T) {
 		AllowedTools: []string{"Read", "Write"},
 	}
 
-	Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, runner, nil)
 
 	if len(runner.calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(runner.calls))
@@ -289,7 +289,7 @@ func TestTreatmentModelOverridesEval(t *testing.T) {
 		Model: "claude-opus-4-6",
 	}
 
-	Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, runner, nil)
 
 	if runner.calls[0].Opts.Model != "claude-opus-4-6" {
 		t.Errorf("treatment model should override eval model, got %q", runner.calls[0].Opts.Model)
@@ -373,7 +373,7 @@ func TestSkillFilePassedAsSystemPrompt(t *testing.T) {
 		Skill: skillPath,
 	}
 
-	Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, runner, nil)
 
 	if len(runner.calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(runner.calls))
@@ -441,7 +441,7 @@ func TestModelOverride(t *testing.T) {
 		{Name: "variation"}, // inherits eval model
 	}
 
-	Execute(context.Background(), s, runner, &Options{Model: "claude-haiku-4-5-20251001"})
+	_, _ = Execute(context.Background(), s, runner, &Options{Model: "claude-haiku-4-5-20251001"})
 
 	if len(runner.calls) != 2 {
 		t.Fatalf("expected 2 calls, got %d", len(runner.calls))

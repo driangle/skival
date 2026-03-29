@@ -10,7 +10,7 @@ import (
 
 func TestStateVerifier_PassWhenAllAssertionsMatch(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"status":"ok","count":42}`))
+		_, _ = w.Write([]byte(`{"status":"ok","count":42}`))
 	}))
 	defer srv.Close()
 
@@ -28,7 +28,7 @@ func TestStateVerifier_PassWhenAllAssertionsMatch(t *testing.T) {
 
 func TestStateVerifier_FailWhenSubstringMissing(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"status":"error"}`))
+		_, _ = w.Write([]byte(`{"status":"error"}`))
 	}))
 	defer srv.Close()
 
@@ -50,7 +50,7 @@ func TestStateVerifier_DefaultsToGET(t *testing.T) {
 	var gotMethod string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	}))
 	defer srv.Close()
 
@@ -69,7 +69,7 @@ func TestStateVerifier_SupportsPostMethod(t *testing.T) {
 	var gotMethod string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
-		w.Write([]byte("created"))
+		_, _ = w.Write([]byte("created"))
 	}))
 	defer srv.Close()
 
@@ -102,7 +102,7 @@ func TestStateVerifier_FailOnConnectionError(t *testing.T) {
 func TestStateVerifier_RespectsContextCancellation(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(5 * time.Second)
-		w.Write([]byte("late"))
+		_, _ = w.Write([]byte("late"))
 	}))
 	defer srv.Close()
 

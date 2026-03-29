@@ -72,7 +72,9 @@ func TestWriteJSON_Rankings(t *testing.T) {
 	}
 
 	var parsed map[string]interface{}
-	json.Unmarshal(buf.Bytes(), &parsed)
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
 
 	rankings, ok := parsed["rankings"].([]interface{})
 	if !ok || len(rankings) != 2 {
@@ -102,7 +104,9 @@ func TestWriteJSON_EvalError(t *testing.T) {
 			Error string `json:"error"`
 		} `json:"evals"`
 	}
-	json.Unmarshal(buf.Bytes(), &parsed)
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
 
 	if len(parsed.Evals) != 1 {
 		t.Fatalf("expected 1 eval, got %d", len(parsed.Evals))
@@ -132,7 +136,9 @@ func TestWriteJSON_RunStatus(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	WriteJSON(&buf, sr)
+	if err := WriteJSON(&buf, sr); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
 
 	var parsed struct {
 		Evals []struct {
@@ -143,7 +149,9 @@ func TestWriteJSON_RunStatus(t *testing.T) {
 			} `json:"treatments"`
 		} `json:"evals"`
 	}
-	json.Unmarshal(buf.Bytes(), &parsed)
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
 
 	runs := parsed.Evals[0].Treatments[0].Runs
 	if runs[0].Status != "pass" {

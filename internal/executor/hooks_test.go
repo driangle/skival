@@ -192,7 +192,7 @@ func TestExecuteEval_AfterHookRunsOnError(t *testing.T) {
 		}},
 	}
 
-	Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, runner, nil)
 
 	if _, err := os.Stat(marker); err != nil {
 		t.Error("after hook should run even when before hook fails")
