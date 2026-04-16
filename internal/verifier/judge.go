@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	agentrunner "github.com/driangle/agent-runner/agentrunner"
+	agentrunner "github.com/driangle/agentrunner/go"
 )
 
 const judgeModel = "claude-haiku-4-5-20251001"

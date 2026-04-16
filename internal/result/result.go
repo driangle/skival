@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	agentrunner "github.com/driangle/agent-runner/agentrunner"
+	agentrunner "github.com/driangle/agentrunner/go"
 )
 
 // RunResult captures the outcome of a single sample run.

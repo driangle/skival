@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	agentrunner "github.com/driangle/agent-runner/agentrunner"
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/suite"
 )
 

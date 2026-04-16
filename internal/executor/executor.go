@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	agentrunner "github.com/driangle/agent-runner/agentrunner"
-	"github.com/driangle/agent-runner/agentrunner/claudecode"
+	agentrunner "github.com/driangle/agentrunner/go"
+	"github.com/driangle/agentrunner/go/claudecode"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/driangle/skival/internal/verifier"
