@@ -20,14 +20,13 @@ This depends on multi-runner support being implemented first.
 
 - [ ] Define how `model` interacts with `runner` — validate that the model is compatible with the selected runner, or treat it as an opaque string passed through
 - [ ] Update validation to warn (not error) if model doesn't match known patterns for the runner
-- [ ] Ensure model precedence chain (CLI > treatment > eval > defaults) works correctly when different treatments use different runners
+- [ ] Ensure model precedence chain (treatment > eval > defaults) works correctly when different treatments use different runners
 - [ ] Add reporting metadata to show which runner+model combination was used per treatment
 - [ ] Add tests for model resolution across runner types
 
 ## Acceptance Criteria
 
 - Model field is passed through to the selected runner without modification
-- CLI `--model` override works across all runner types
 - Report output includes both runner and model for each treatment
 - Validation produces a warning if a model ID doesn't look valid for the selected runner
 - Existing suites with model fields continue to work unchanged

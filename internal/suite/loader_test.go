@@ -960,6 +960,39 @@ evals:
 	}
 }
 
+func TestLoad_IsolateField(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "do the thing"
+    model: "claude-sonnet-4-6"
+    isolate: true
+    treatments:
+      control:
+        name: baseline
+  - id: eval-2
+    prompt: "another thing"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !s.Evals[0].Isolate {
+		t.Error("expected eval-1 isolate to be true")
+	}
+	if s.Evals[1].Isolate {
+		t.Error("expected eval-2 isolate to be false (default)")
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

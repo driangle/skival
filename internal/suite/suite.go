@@ -24,6 +24,7 @@ type Eval struct {
 	Name         string         `yaml:"name"`
 	Prompt       string         `yaml:"prompt"`
 	Dir          string         `yaml:"dir"`
+	Isolate      bool           `yaml:"isolate"`
 	Complexity   string         `yaml:"complexity"`
 	Samples      *int           `yaml:"samples"`
 	Timeout      *int           `yaml:"timeout"`

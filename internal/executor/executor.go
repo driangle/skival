@@ -139,22 +139,40 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		samples = opts.Samples
 	}
 
-	var pipelineOpts []verifier.PipelineOption
-	if len(eval.Correctness.Judge) > 0 {
-		pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, eval.Prompt))
-	}
-	pipeline := verifier.BuildPipeline(eval.Correctness, eval.Dir, pipelineOpts...)
-
 	for i := 0; i < samples; i++ {
 		prog.sampleStart(eval.Name, t.Name, i+1, samples)
 		slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "total", samples)
-		run := executeSingleRun(ctx, eval, t, i+1, runner)
+
+		sampleDir := ""
+		if eval.Isolate {
+			var err error
+			sampleDir, err = createIsolatedDir(eval, t)
+			if err != nil {
+				tr.Runs = append(tr.Runs, result.RunResult{Sample: i + 1, Err: fmt.Errorf("creating isolated dir: %w", err)})
+				prog.sampleDone(0, nil)
+				continue
+			}
+			defer os.RemoveAll(sampleDir)
+		}
+
+		run := executeSingleRun(ctx, eval, t, i+1, runner, sampleDir)
 		if run.Err != nil {
 			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "err", run.Err)
 		} else {
 			slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", i+1,
 				"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
 		}
+
+		verifyDir := eval.Dir
+		if sampleDir != "" {
+			verifyDir = sampleDir
+		}
+		var pipelineOpts []verifier.PipelineOption
+		if len(eval.Correctness.Judge) > 0 {
+			pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, eval.Prompt))
+		}
+		pipeline := verifier.BuildPipeline(eval.Correctness, verifyDir, pipelineOpts...)
+
 		if pipeline != nil && run.Err == nil {
 			slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", i+1)
 			input := verifier.VerifyInput{
@@ -179,8 +197,28 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	return tr
 }
 
-func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner) result.RunResult {
-	opts, err := buildRunOptions(eval, t)
+// createIsolatedDir creates a temporary directory and copies the eval/treatment working directory into it.
+func createIsolatedDir(eval *suite.Eval, t *suite.Treatment) (string, error) {
+	srcDir := eval.Dir
+	if t.Dir != "" {
+		srcDir = t.Dir
+	}
+
+	tmpDir, err := os.MkdirTemp("", "skival-isolate-*")
+	if err != nil {
+		return "", err
+	}
+
+	if err := copyDir(srcDir, tmpDir); err != nil {
+		os.RemoveAll(tmpDir)
+		return "", err
+	}
+
+	return tmpDir, nil
+}
+
+func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner, isolatedDir string) result.RunResult {
+	opts, err := buildRunOptions(eval, t, isolatedDir)
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -224,7 +262,7 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	}
 }
 
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option, error) {
+func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
 	// Model: treatment > eval.
@@ -236,10 +274,13 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option
 		opts = append(opts, agentrunner.WithModel(model))
 	}
 
-	// Working directory: treatment overrides eval.
+	// Working directory: isolated > treatment > eval.
 	dir := eval.Dir
 	if t.Dir != "" {
 		dir = t.Dir
+	}
+	if isolatedDir != "" {
+		dir = isolatedDir
 	}
 	if dir != "" {
 		opts = append(opts, agentrunner.WithWorkingDir(dir))

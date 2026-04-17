@@ -1,11 +1,12 @@
 ---
 title: "Per-sample working directory isolation"
 id: "01kpcv05j"
-status: pending
+status: completed
 priority: low
 type: feature
 tags: ["schema", "execution"]
 created: "2026-04-17"
+completed_at: 2026-04-17
 ---
 
 # Per-sample working directory isolation
@@ -18,14 +19,14 @@ A `dir_template` or `isolate: true` option should clone/copy the eval's working 
 
 ## Tasks
 
-- [ ] Design the isolation mechanism (copy vs git worktree vs symlink + overlay)
-- [ ] Add `isolate: bool` field to `Eval` struct in `internal/suite/suite.go`
-- [ ] Implement per-sample directory creation in `internal/executor/executor.go` (copy eval dir to temp dir before each run)
-- [ ] Pass the isolated directory as the working dir to the runner
-- [ ] Clean up temporary directories after each sample completes
-- [ ] Ensure verifier scripts run in the correct (isolated) directory
-- [ ] Add suite loader validation and tests
-- [ ] Add executor tests for isolation behavior
+- [x] Design the isolation mechanism (copy vs git worktree vs symlink + overlay)
+- [x] Add `isolate: bool` field to `Eval` struct in `internal/suite/suite.go`
+- [x] Implement per-sample directory creation in `internal/executor/executor.go` (copy eval dir to temp dir before each run)
+- [x] Pass the isolated directory as the working dir to the runner
+- [x] Clean up temporary directories after each sample completes
+- [x] Ensure verifier scripts run in the correct (isolated) directory
+- [x] Add suite loader validation and tests
+- [x] Add executor tests for isolation behavior
 
 ## Acceptance Criteria
 
