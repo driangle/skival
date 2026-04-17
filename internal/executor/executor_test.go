@@ -1082,3 +1082,104 @@ func TestIsolateWithTreatmentDir(t *testing.T) {
 		t.Error("isolated dir should differ from eval dir")
 	}
 }
+
+func TestTreatmentPromptOverridesEval(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ok"}, {Text: "ok"}},
+	}
+
+	s := &suite.Suite{
+		Evals: []suite.Eval{
+			{
+				ID:     "e1",
+				Name:   "Eval",
+				Prompt: "eval prompt",
+				Treatments: suite.Treatments{
+					Control: suite.Treatment{Name: "control", Prompt: "treatment prompt"},
+					Variations: []suite.Treatment{
+						{Name: "uses-eval-prompt"},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(runner.calls) != 2 {
+		t.Fatalf("expected 2 calls, got %d", len(runner.calls))
+	}
+	if runner.calls[0].Prompt != "treatment prompt" {
+		t.Errorf("control should use treatment prompt, got %q", runner.calls[0].Prompt)
+	}
+	if runner.calls[1].Prompt != "eval prompt" {
+		t.Errorf("variation should fall back to eval prompt, got %q", runner.calls[1].Prompt)
+	}
+}
+
+func TestConfigDirSetsEnvVar(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ok"}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:      "control",
+		ConfigDir: "/tmp/custom-claude-config",
+	}
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(runner.calls))
+	}
+	if runner.calls[0].Opts.Env["CLAUDE_CONFIG_DIR"] != "/tmp/custom-claude-config" {
+		t.Errorf("expected CLAUDE_CONFIG_DIR='/tmp/custom-claude-config', got %q", runner.calls[0].Opts.Env["CLAUDE_CONFIG_DIR"])
+	}
+}
+
+func TestConfigDirMergesWithExistingEnv(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ok"}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:      "control",
+		ConfigDir: "/tmp/config",
+		Env:       map[string]string{"FOO": "bar"},
+	}
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
+
+	opts := runner.calls[0].Opts
+	if opts.Env["FOO"] != "bar" {
+		t.Errorf("expected FOO=bar, got %q", opts.Env["FOO"])
+	}
+	if opts.Env["CLAUDE_CONFIG_DIR"] != "/tmp/config" {
+		t.Errorf("expected CLAUDE_CONFIG_DIR='/tmp/config', got %q", opts.Env["CLAUDE_CONFIG_DIR"])
+	}
+}
+
+func TestConfigDirDoesNotMutateOriginalEnv(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ok"}},
+	}
+
+	originalEnv := map[string]string{"FOO": "bar"}
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:      "control",
+		ConfigDir: "/tmp/config",
+		Env:       originalEnv,
+	}
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
+
+	if _, ok := originalEnv["CLAUDE_CONFIG_DIR"]; ok {
+		t.Error("original env map should not be mutated")
+	}
+}

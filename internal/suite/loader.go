@@ -113,6 +113,9 @@ func resolveTreatmentPaths(t *Treatment, suiteDir string) {
 	if t.Dir != "" && !filepath.IsAbs(t.Dir) {
 		t.Dir = filepath.Join(suiteDir, t.Dir)
 	}
+	if t.ConfigDir != "" && !filepath.IsAbs(t.ConfigDir) {
+		t.ConfigDir = filepath.Join(suiteDir, t.ConfigDir)
+	}
 }
 
 // migrateAllowedTools moves the deprecated AllowedTools field on treatments

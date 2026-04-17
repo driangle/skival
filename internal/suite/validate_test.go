@@ -64,6 +64,81 @@ func TestValidate_EvalPromptRequired(t *testing.T) {
 	assertValidationContains(t, err, "prompt is required")
 }
 
+func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID:    "e1",
+				Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl", Prompt: "do A"},
+					Variations: []Treatment{{Name: "v1", Prompt: "do B"}},
+				},
+			},
+		},
+	}
+
+	if err := validate(s); err != nil {
+		t.Fatalf("treatment-level prompts should satisfy prompt requirement, got: %v", err)
+	}
+}
+
+func TestValidate_VariationMissingPromptWhenNoEvalPrompt(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID:    "e1",
+				Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl", Prompt: "do A"},
+					Variations: []Treatment{{Name: "v1"}},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `variation[0] "v1" has no prompt`)
+}
+
+func TestValidate_ConfigDirMustExist(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl", ConfigDir: "/nonexistent/config/dir"},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `config_dir "/nonexistent/config/dir" does not exist`)
+}
+
+func TestValidate_ConfigDirValid(t *testing.T) {
+	dir := t.TempDir()
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl", ConfigDir: dir},
+				},
+			},
+		},
+	}
+
+	if err := validate(s); err != nil {
+		t.Fatalf("valid config_dir should pass, got: %v", err)
+	}
+}
+
 func TestValidate_DuplicateEvalIDs(t *testing.T) {
 	s := &Suite{
 		Version: 1,

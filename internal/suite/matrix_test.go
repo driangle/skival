@@ -247,6 +247,39 @@ func TestExpandMatrices_SkipsEvalsWithoutMatrix(t *testing.T) {
 	}
 }
 
+func TestExpandMatrix_PromptAndConfigDir(t *testing.T) {
+	m := &Matrix{
+		Dimensions: []MatrixDimension{
+			{
+				Name: "config",
+				Values: []MatrixDimensionValue{
+					{Label: "default", Prompt: "do A"},
+					{Label: "custom", Prompt: "do B", ConfigDir: "/tmp/custom-config"},
+				},
+			},
+		},
+	}
+
+	treatments := expandMatrix(m)
+
+	if len(treatments) != 2 {
+		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	}
+
+	if treatments[0].Prompt != "do A" {
+		t.Errorf("default prompt = %q, want %q", treatments[0].Prompt, "do A")
+	}
+	if treatments[0].ConfigDir != "" {
+		t.Errorf("default config_dir should be empty, got %q", treatments[0].ConfigDir)
+	}
+	if treatments[1].Prompt != "do B" {
+		t.Errorf("custom prompt = %q, want %q", treatments[1].Prompt, "do B")
+	}
+	if treatments[1].ConfigDir != "/tmp/custom-config" {
+		t.Errorf("custom config_dir = %q, want %q", treatments[1].ConfigDir, "/tmp/custom-config")
+	}
+}
+
 func TestCartesianProduct_Empty(t *testing.T) {
 	result := cartesianProduct(nil)
 	if result != nil {

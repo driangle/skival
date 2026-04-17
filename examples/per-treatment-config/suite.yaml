@@ -1,0 +1,39 @@
+# Demonstrates per-treatment prompt and config_dir overrides.
+# Each treatment can have its own prompt and point to a different
+# CLAUDE_CONFIG_DIR, giving full control over settings.json, hooks,
+# skills, and MCP configuration.
+version: 1
+description: "Per-treatment prompt and config_dir"
+
+evals:
+  # Example 1: Different prompts per treatment.
+  - id: prompt-comparison
+    name: "Prompt Comparison"
+    model: "claude-sonnet-4-6"
+    dir: "."
+    treatments:
+      control:
+        name: baseline
+        prompt: |
+          Write a Python function that checks if a string is a palindrome.
+      variations:
+        - name: with-tests
+          prompt: |
+            Write a Python function that checks if a string is a palindrome.
+            Also write comprehensive unit tests using pytest.
+
+  # Example 2: Different config directories per treatment.
+  # Each config_dir points Claude Code at a different settings.json,
+  # enabling different permissions, hooks, or MCP configurations.
+  - id: config-comparison
+    name: "Config Dir Comparison"
+    prompt: "List the files in the current directory"
+    model: "claude-sonnet-4-6"
+    dir: "."
+    treatments:
+      control:
+        name: strict-config
+        config_dir: "./configs/strict"
+      variations:
+        - name: permissive-config
+          config_dir: "./configs/permissive"

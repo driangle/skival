@@ -993,6 +993,64 @@ evals:
 	}
 }
 
+func TestLoad_ResolvesConfigDirPath(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "configs", "strict")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+        config_dir: "./configs/strict"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := filepath.Join(dir, "configs", "strict")
+	if s.Evals[0].Treatments.Control.ConfigDir != expected {
+		t.Errorf("expected config_dir %q, got %q", expected, s.Evals[0].Treatments.Control.ConfigDir)
+	}
+}
+
+func TestLoad_TreatmentPrompt(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: ctrl
+        prompt: "do A"
+      variations:
+        - name: v1
+          prompt: "do B"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Treatments.Control.Prompt != "do A" {
+		t.Errorf("expected control prompt %q, got %q", "do A", s.Evals[0].Treatments.Control.Prompt)
+	}
+	if s.Evals[0].Treatments.Variations[0].Prompt != "do B" {
+		t.Errorf("expected variation prompt %q, got %q", "do B", s.Evals[0].Treatments.Variations[0].Prompt)
+	}
+}
+
 func TestLoad_Examples(t *testing.T) {
 	// Smoke test: every examples/<name>/suite.yaml must load without errors.
 	root, err := filepath.Abs(filepath.Join("..", "..", "examples"))

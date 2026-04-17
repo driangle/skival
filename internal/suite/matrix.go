@@ -40,6 +40,12 @@ func expandMatrix(m *Matrix) []Treatment {
 			nameParts = append(nameParts, entry.value.Label)
 			t.DimensionValues[entry.dimName] = entry.value.Label
 
+			if entry.value.Prompt != "" {
+				t.Prompt = entry.value.Prompt
+			}
+			if entry.value.ConfigDir != "" {
+				t.ConfigDir = entry.value.ConfigDir
+			}
 			if entry.value.Model != "" {
 				t.Model = entry.value.Model
 			}

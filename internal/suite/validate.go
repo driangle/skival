@@ -3,6 +3,7 @@ package suite
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -79,8 +80,16 @@ func validate(s *Suite) error {
 			seenIDs[eval.ID] = true
 		}
 
+		// Prompt is required at eval level unless every treatment provides its own.
 		if eval.Prompt == "" {
-			errs = append(errs, fmt.Sprintf("%s: prompt is required", prefix))
+			if eval.Treatments.Control.Prompt == "" {
+				errs = append(errs, fmt.Sprintf("%s: prompt is required (set on eval or on every treatment)", prefix))
+			}
+			for j, v := range eval.Treatments.Variations {
+				if v.Prompt == "" {
+					errs = append(errs, fmt.Sprintf("%s: variation[%d] %q has no prompt (set prompt on the eval or treatment)", prefix, j, v.Name))
+				}
+			}
 		}
 
 		if !validComplexities[eval.Complexity] {
@@ -111,6 +120,20 @@ func validate(s *Suite) error {
 		for j, v := range eval.Treatments.Variations {
 			if v.Skill != "" && len(v.Skills) > 0 {
 				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: cannot set both skill and skills", prefix, j, v.Name))
+			}
+		}
+
+		// Validate config_dir paths exist.
+		if eval.Treatments.Control.ConfigDir != "" {
+			if _, err := os.Stat(eval.Treatments.Control.ConfigDir); err != nil {
+				errs = append(errs, fmt.Sprintf("%s: control treatment %q: config_dir %q does not exist", prefix, eval.Treatments.Control.Name, eval.Treatments.Control.ConfigDir))
+			}
+		}
+		for j, v := range eval.Treatments.Variations {
+			if v.ConfigDir != "" {
+				if _, err := os.Stat(v.ConfigDir); err != nil {
+					errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: config_dir %q does not exist", prefix, j, v.Name, v.ConfigDir))
+				}
 			}
 		}
 

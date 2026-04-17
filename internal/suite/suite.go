@@ -79,6 +79,8 @@ type MatrixDimension struct {
 // corresponding treatment fields.
 type MatrixDimensionValue struct {
 	Label        string            `yaml:"label"`
+	Prompt       string            `yaml:"prompt,omitempty"`
+	ConfigDir    string            `yaml:"config_dir,omitempty"`
 	Model        string            `yaml:"model,omitempty"`
 	Runner       string            `yaml:"runner,omitempty"`
 	RunnerConfig map[string]any    `yaml:"runner_config,omitempty"`
@@ -96,7 +98,9 @@ type Treatments struct {
 // Treatment defines a single treatment configuration.
 type Treatment struct {
 	Name            string            `yaml:"name"`
+	Prompt          string            `yaml:"prompt"`
 	Dir             string            `yaml:"dir"`
+	ConfigDir       string            `yaml:"config_dir"`
 	Model           string            `yaml:"model"`
 	Runner          string            `yaml:"runner"`
 	RunnerConfig    map[string]any    `yaml:"runner_config"`

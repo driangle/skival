@@ -174,9 +174,14 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		if sampleDir != "" {
 			verifyDir = sampleDir
 		}
+		// Prompt: treatment > eval (for judge context).
+		judgePrompt := eval.Prompt
+		if t.Prompt != "" {
+			judgePrompt = t.Prompt
+		}
 		var pipelineOpts []verifier.PipelineOption
 		if len(eval.Correctness.Judge) > 0 {
-			pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, eval.Prompt))
+			pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, judgePrompt))
 		}
 		pipeline := verifier.BuildPipeline(eval.Correctness, verifyDir, pipelineOpts...)
 
@@ -233,7 +238,13 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		}
 	}
 
-	session, err := runner.Start(ctx, eval.Prompt, opts...)
+	// Prompt: treatment > eval.
+	prompt := eval.Prompt
+	if t.Prompt != "" {
+		prompt = t.Prompt
+	}
+
+	session, err := runner.Start(ctx, prompt, opts...)
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -298,9 +309,23 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string) (
 		opts = append(opts, agentrunner.WithTimeout(time.Duration(*eval.Timeout)*time.Second))
 	}
 
-	// Environment variables from treatment.
-	if len(t.Env) > 0 {
-		opts = append(opts, agentrunner.WithEnv(t.Env))
+	// Environment variables from treatment, plus CLAUDE_CONFIG_DIR if config_dir is set.
+	env := t.Env
+	if t.ConfigDir != "" {
+		if env == nil {
+			env = make(map[string]string)
+		} else {
+			// Copy to avoid mutating the original treatment.
+			copied := make(map[string]string, len(env)+1)
+			for k, v := range env {
+				copied[k] = v
+			}
+			env = copied
+		}
+		env["CLAUDE_CONFIG_DIR"] = t.ConfigDir
+	}
+	if len(env) > 0 {
+		opts = append(opts, agentrunner.WithEnv(env))
 	}
 
 	// Runner-specific options from runner_config.
