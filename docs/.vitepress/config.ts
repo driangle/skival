@@ -4,6 +4,7 @@ export default defineConfig({
   title: "skival",
   description:
     "A Go CLI for evaluating AI coding skill performance. Measures time, cost, tokens, and correctness across configurable eval suites.",
+  base: "/skival/",
   cleanUrls: true,
   themeConfig: {
     nav: [
