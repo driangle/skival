@@ -10,6 +10,7 @@ import (
 
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/agentrunner/go/claudecode"
+	"github.com/driangle/agentrunner/go/ollama"
 	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
@@ -63,6 +64,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 	}
 
 	treatments := collectTreatments(eval, opts.Treatments)
+	runnerCache := make(map[string]agentrunner.Runner)
 
 	for i := range treatments {
 		// Run reset between treatments (not before the first one).
@@ -75,7 +77,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 		}
 
 		t := treatments[i]
-		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, reg, opts, prog)
+		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, reg, runnerCache, opts, prog)
 		er.Treatments = append(er.Treatments, tr)
 	}
 
@@ -104,7 +106,7 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 	return entries
 }
 
-func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, opts *Options, prog *progress) result.TreatmentResult {
+func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
 	tr := result.TreatmentResult{
 		Name:      t.Name,
 		IsControl: isControl,
@@ -115,11 +117,16 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		runnerName = defaultRunner
 	}
 
-	runner, err := reg.Create(runnerName, t.RunnerConfig)
-	if err != nil {
-		slog.Error("Failed to create runner", "runner", runnerName, "treatment", t.Name, "err", err)
-		tr.Runs = append(tr.Runs, result.RunResult{Sample: 1, Err: fmt.Errorf("creating runner %q: %w", runnerName, err)})
-		return tr
+	runner, ok := runnerCache[runnerName]
+	if !ok {
+		var err error
+		runner, err = reg.Create(runnerName, t.RunnerConfig)
+		if err != nil {
+			slog.Error("Failed to create runner", "runner", runnerName, "treatment", t.Name, "err", err)
+			tr.Runs = append(tr.Runs, result.RunResult{Sample: 1, Err: fmt.Errorf("creating runner %q: %w", runnerName, err)})
+			return tr
+		}
+		runnerCache[runnerName] = runner
 	}
 
 	samples := 1
@@ -246,27 +253,12 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option
 		opts = append(opts, agentrunner.WithEnv(t.Env))
 	}
 
-	// Allowed tools from runner_config (migrated from deprecated allowed_tools by loader).
-	if rc := t.RunnerConfig; rc != nil {
-		if tools, ok := rc["allowed_tools"]; ok {
-			switch v := tools.(type) {
-			case []string:
-				if len(v) > 0 {
-					opts = append(opts, claudecode.WithAllowedTools(v...))
-				}
-			case []any:
-				var strs []string
-				for _, item := range v {
-					if s, ok := item.(string); ok {
-						strs = append(strs, s)
-					}
-				}
-				if len(strs) > 0 {
-					opts = append(opts, claudecode.WithAllowedTools(strs...))
-				}
-			}
-		}
+	// Runner-specific options from runner_config.
+	runnerName := t.Runner
+	if runnerName == "" {
+		runnerName = defaultRunner
 	}
+	opts = append(opts, buildRunnerSpecificOpts(runnerName, t.RunnerConfig)...)
 
 	// Skill file as appended system prompt.
 	if t.Skill != "" {
@@ -281,6 +273,147 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option
 	opts = append(opts, agentrunner.WithSkipPermissions())
 
 	return opts, nil
+}
+
+// buildRunnerSpecificOpts dispatches to per-runner option builders based on runner name.
+func buildRunnerSpecificOpts(runner string, config map[string]any) []agentrunner.Option {
+	if len(config) == 0 {
+		return nil
+	}
+
+	switch runner {
+	case "claude-code":
+		return buildClaudeCodeOpts(config)
+	case "ollama":
+		return buildOllamaOpts(config)
+	default:
+		for key := range config {
+			slog.Warn("Unknown runner_config key ignored", "runner", runner, "key", key)
+		}
+		return nil
+	}
+}
+
+// buildClaudeCodeOpts maps runner_config keys to claude-code options.
+func buildClaudeCodeOpts(config map[string]any) []agentrunner.Option {
+	known := map[string]bool{"allowed_tools": true, "disallowed_tools": true, "mcp_config": true, "max_budget_usd": true}
+	var opts []agentrunner.Option
+
+	if tools := toStringSlice(config["allowed_tools"]); len(tools) > 0 {
+		opts = append(opts, claudecode.WithAllowedTools(tools...))
+	}
+	if tools := toStringSlice(config["disallowed_tools"]); len(tools) > 0 {
+		opts = append(opts, claudecode.WithDisallowedTools(tools...))
+	}
+	if path, ok := config["mcp_config"].(string); ok && path != "" {
+		opts = append(opts, claudecode.WithMCPConfig(path))
+	}
+	if budget, ok := toFloat64(config["max_budget_usd"]); ok {
+		opts = append(opts, claudecode.WithMaxBudgetUSD(budget))
+	}
+
+	for key := range config {
+		if !known[key] {
+			slog.Warn("Unknown runner_config key for claude-code", "key", key)
+		}
+	}
+
+	return opts
+}
+
+// buildOllamaOpts maps runner_config keys to ollama options.
+func buildOllamaOpts(config map[string]any) []agentrunner.Option {
+	known := map[string]bool{"temperature": true, "num_ctx": true, "num_predict": true, "top_p": true, "top_k": true, "seed": true, "stop": true, "think": true}
+	var opts []agentrunner.Option
+
+	if temp, ok := toFloat64(config["temperature"]); ok {
+		opts = append(opts, ollama.WithTemperature(temp))
+	}
+	if n, ok := toInt(config["num_ctx"]); ok {
+		opts = append(opts, ollama.WithNumCtx(n))
+	}
+	if n, ok := toInt(config["num_predict"]); ok {
+		opts = append(opts, ollama.WithNumPredict(n))
+	}
+	if p, ok := toFloat64(config["top_p"]); ok {
+		opts = append(opts, ollama.WithTopP(p))
+	}
+	if k, ok := toInt(config["top_k"]); ok {
+		opts = append(opts, ollama.WithTopK(k))
+	}
+	if s, ok := toInt(config["seed"]); ok {
+		opts = append(opts, ollama.WithSeed(s))
+	}
+	if sequences := toStringSlice(config["stop"]); len(sequences) > 0 {
+		opts = append(opts, ollama.WithStop(sequences...))
+	}
+	if think, ok := config["think"].(bool); ok {
+		opts = append(opts, ollama.WithThink(think))
+	}
+
+	for key := range config {
+		if !known[key] {
+			slog.Warn("Unknown runner_config key for ollama", "key", key)
+		}
+	}
+
+	return opts
+}
+
+// toStringSlice converts a value to []string, handling both []string and []any.
+func toStringSlice(v any) []string {
+	if v == nil {
+		return nil
+	}
+	switch val := v.(type) {
+	case []string:
+		return val
+	case []any:
+		var strs []string
+		for _, item := range val {
+			if s, ok := item.(string); ok {
+				strs = append(strs, s)
+			}
+		}
+		return strs
+	}
+	return nil
+}
+
+// toFloat64 converts a numeric value to float64.
+func toFloat64(v any) (float64, bool) {
+	if v == nil {
+		return 0, false
+	}
+	switch val := v.(type) {
+	case float64:
+		return val, true
+	case float32:
+		return float64(val), true
+	case int:
+		return float64(val), true
+	case int64:
+		return float64(val), true
+	}
+	return 0, false
+}
+
+// toInt converts a numeric value to int.
+func toInt(v any) (int, bool) {
+	if v == nil {
+		return 0, false
+	}
+	switch val := v.(type) {
+	case int:
+		return val, true
+	case int64:
+		return int(val), true
+	case float64:
+		return int(val), true
+	case float32:
+		return int(val), true
+	}
+	return 0, false
 }
 
 func filterEvals(evals []suite.Eval, ids []string) []suite.Eval {

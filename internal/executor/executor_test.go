@@ -11,6 +11,8 @@ import (
 	"time"
 
 	agentrunner "github.com/driangle/agentrunner/go"
+	"github.com/driangle/agentrunner/go/claudecode"
+	"github.com/driangle/agentrunner/go/ollama"
 	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/suite"
 )
@@ -560,5 +562,175 @@ func TestTreatmentSpecificRunner(t *testing.T) {
 	}
 	if treatments[1].Runs[0].Text != "ollama-result" {
 		t.Errorf("variation should use ollama runner, got %q", treatments[1].Runs[0].Text)
+	}
+}
+
+func TestRunnerCachedAcrossTreatments(t *testing.T) {
+	var createCount int
+	reg := registry.New()
+	reg.Register("claude-code", func(config map[string]any) (agentrunner.Runner, error) {
+		createCount++
+		return &fakeRunner{
+			results: []*agentrunner.Result{{Text: "ok"}, {Text: "ok"}},
+		}, nil
+	})
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{Name: "control"}
+	s.Evals[0].Treatments.Variations = []suite.Treatment{
+		{Name: "variation"}, // also defaults to claude-code
+	}
+
+	_, err := Execute(context.Background(), s, reg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if createCount != 1 {
+		t.Errorf("expected runner factory called once (cached), got %d", createCount)
+	}
+}
+
+func TestBuildClaudeCodeOpts(t *testing.T) {
+	config := map[string]any{
+		"allowed_tools":    []string{"Read", "Write"},
+		"disallowed_tools": []string{"Bash"},
+		"mcp_config":       "/path/to/mcp.json",
+		"max_budget_usd":   1.5,
+	}
+
+	opts := buildRunnerSpecificOpts("claude-code", config)
+
+	var resolved agentrunner.Options
+	for _, o := range opts {
+		o(&resolved)
+	}
+
+	cOpts := claudecode.GetClaudeOptions(&resolved)
+	if cOpts == nil {
+		t.Fatal("expected claude options to be set")
+	}
+	if len(cOpts.AllowedTools) != 2 || cOpts.AllowedTools[0] != "Read" || cOpts.AllowedTools[1] != "Write" {
+		t.Errorf("expected allowed_tools [Read Write], got %v", cOpts.AllowedTools)
+	}
+	if len(cOpts.DisallowedTools) != 1 || cOpts.DisallowedTools[0] != "Bash" {
+		t.Errorf("expected disallowed_tools [Bash], got %v", cOpts.DisallowedTools)
+	}
+	if cOpts.MCPConfig != "/path/to/mcp.json" {
+		t.Errorf("expected mcp_config '/path/to/mcp.json', got %q", cOpts.MCPConfig)
+	}
+	if cOpts.MaxBudgetUSD != 1.5 {
+		t.Errorf("expected max_budget_usd 1.5, got %f", cOpts.MaxBudgetUSD)
+	}
+}
+
+func TestBuildClaudeCodeOptsAnySlice(t *testing.T) {
+	// YAML unmarshals string lists as []any, not []string.
+	config := map[string]any{
+		"allowed_tools": []any{"Read", "Write"},
+	}
+
+	opts := buildRunnerSpecificOpts("claude-code", config)
+
+	var resolved agentrunner.Options
+	for _, o := range opts {
+		o(&resolved)
+	}
+
+	cOpts := claudecode.GetClaudeOptions(&resolved)
+	if cOpts == nil {
+		t.Fatal("expected claude options to be set")
+	}
+	if len(cOpts.AllowedTools) != 2 {
+		t.Errorf("expected 2 allowed tools, got %d", len(cOpts.AllowedTools))
+	}
+}
+
+func TestBuildOllamaOpts(t *testing.T) {
+	config := map[string]any{
+		"temperature": 0.7,
+		"num_ctx":     4096,
+		"num_predict": 512,
+		"top_p":       0.9,
+		"top_k":       40,
+		"seed":        42,
+		"stop":        []string{"<|end|>"},
+		"think":       true,
+	}
+
+	opts := buildRunnerSpecificOpts("ollama", config)
+
+	var resolved agentrunner.Options
+	for _, o := range opts {
+		o(&resolved)
+	}
+
+	oOpts := ollama.GetOllamaOptions(&resolved)
+	if oOpts == nil {
+		t.Fatal("expected ollama options to be set")
+	}
+	if oOpts.Temperature == nil || *oOpts.Temperature != 0.7 {
+		t.Errorf("expected temperature 0.7, got %v", oOpts.Temperature)
+	}
+	if oOpts.NumCtx != 4096 {
+		t.Errorf("expected num_ctx 4096, got %d", oOpts.NumCtx)
+	}
+	if oOpts.NumPredict != 512 {
+		t.Errorf("expected num_predict 512, got %d", oOpts.NumPredict)
+	}
+	if oOpts.TopP == nil || *oOpts.TopP != 0.9 {
+		t.Errorf("expected top_p 0.9, got %v", oOpts.TopP)
+	}
+	if oOpts.TopK != 40 {
+		t.Errorf("expected top_k 40, got %d", oOpts.TopK)
+	}
+	if oOpts.Seed != 42 {
+		t.Errorf("expected seed 42, got %d", oOpts.Seed)
+	}
+	if len(oOpts.Stop) != 1 || oOpts.Stop[0] != "<|end|>" {
+		t.Errorf("expected stop [<|end|>], got %v", oOpts.Stop)
+	}
+	if oOpts.Think == nil || *oOpts.Think != true {
+		t.Errorf("expected think true, got %v", oOpts.Think)
+	}
+}
+
+func TestBuildOllamaOptsIntFromYAML(t *testing.T) {
+	// YAML may unmarshal integers as int, not float64.
+	config := map[string]any{
+		"num_ctx": int(2048),
+		"seed":    int(7),
+	}
+
+	opts := buildRunnerSpecificOpts("ollama", config)
+
+	var resolved agentrunner.Options
+	for _, o := range opts {
+		o(&resolved)
+	}
+
+	oOpts := ollama.GetOllamaOptions(&resolved)
+	if oOpts == nil {
+		t.Fatal("expected ollama options to be set")
+	}
+	if oOpts.NumCtx != 2048 {
+		t.Errorf("expected num_ctx 2048, got %d", oOpts.NumCtx)
+	}
+	if oOpts.Seed != 7 {
+		t.Errorf("expected seed 7, got %d", oOpts.Seed)
+	}
+}
+
+func TestBuildRunnerSpecificOptsNilConfig(t *testing.T) {
+	opts := buildRunnerSpecificOpts("claude-code", nil)
+	if len(opts) != 0 {
+		t.Errorf("expected no options for nil config, got %d", len(opts))
+	}
+}
+
+func TestBuildRunnerSpecificOptsEmptyConfig(t *testing.T) {
+	opts := buildRunnerSpecificOpts("claude-code", map[string]any{})
+	if len(opts) != 0 {
+		t.Errorf("expected no options for empty config, got %d", len(opts))
 	}
 }

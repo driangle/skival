@@ -1,7 +1,7 @@
 ---
 title: "Wire registry into executor and build per-runner options"
 id: "01kpcvjqz"
-status: pending
+status: in-progress
 priority: critical
 type: feature
 effort: medium
@@ -18,20 +18,20 @@ Change the executor to accept a `*registry.Registry` instead of a single `agentr
 
 ## Tasks
 
-- [ ] Change `Execute` signature to accept `*registry.Registry` instead of `agentrunner.Runner`
-- [ ] Add a runner cache (`map[string]agentrunner.Runner`) in `Execute` so the same runner type is reused across treatments
-- [ ] In `executeTreatment`, resolve the runner from the registry (defaulting to `"claude-code"` when empty)
-- [ ] Extract `buildRunnerSpecificOpts(runner string, config map[string]any) []agentrunner.Option` that dispatches to per-runner option builders
-- [ ] Implement `buildClaudeCodeOpts(config)` mapping: `allowed_tools`, `disallowed_tools`, `mcp_config`, `max_budget_usd`
-- [ ] Implement `buildOllamaOpts(config)` mapping: `temperature`, `num_ctx`, `num_predict`, `top_p`, `top_k`, `seed`, `stop`, `think`
-- [ ] Remove the old `AllowedTools` handling from `buildRunOptions` (now handled via `runner_config`)
-- [ ] Update existing executor tests to pass a registry instead of a single runner
+- [x] Change `Execute` signature to accept `*registry.Registry` instead of `agentrunner.Runner`
+- [x] Add a runner cache (`map[string]agentrunner.Runner`) in `Execute` so the same runner type is reused across treatments
+- [x] In `executeTreatment`, resolve the runner from the registry (defaulting to `"claude-code"` when empty)
+- [x] Extract `buildRunnerSpecificOpts(runner string, config map[string]any) []agentrunner.Option` that dispatches to per-runner option builders
+- [x] Implement `buildClaudeCodeOpts(config)` mapping: `allowed_tools`, `disallowed_tools`, `mcp_config`, `max_budget_usd`
+- [x] Implement `buildOllamaOpts(config)` mapping: `temperature`, `num_ctx`, `num_predict`, `top_p`, `top_k`, `seed`, `stop`, `think`
+- [x] Remove the old `AllowedTools` handling from `buildRunOptions` (now handled via `runner_config`)
+- [x] Update existing executor tests to pass a registry instead of a single runner
 
 ## Acceptance Criteria
 
-- [ ] `Execute` accepts a registry and resolves runners per treatment
-- [ ] Runners are cached by name — creating the same runner type twice reuses the instance
-- [ ] `runner_config` keys are correctly mapped to agentrunner options for claude-code and ollama
-- [ ] Unknown `runner_config` keys produce a log warning (not an error)
-- [ ] All existing executor tests pass with the new signature
-- [ ] New unit tests cover per-runner option building for both claude-code and ollama configs
+- [x] `Execute` accepts a registry and resolves runners per treatment
+- [x] Runners are cached by name — creating the same runner type twice reuses the instance
+- [x] `runner_config` keys are correctly mapped to agentrunner options for claude-code and ollama
+- [x] Unknown `runner_config` keys produce a log warning (not an error)
+- [x] All existing executor tests pass with the new signature
+- [x] New unit tests cover per-runner option building for both claude-code and ollama configs
