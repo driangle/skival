@@ -5,9 +5,12 @@ import (
 	"log/slog"
 	"os"
 
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/agentrunner/go/claudecode"
+	"github.com/driangle/agentrunner/go/ollama"
 	"github.com/driangle/skival/internal/executor"
 	"github.com/driangle/skival/internal/persist"
+	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/report"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/spf13/cobra"
@@ -26,7 +29,7 @@ var runCmd = &cobra.Command{
 		}
 		slog.Debug("Suite loaded", "description", s.Description, "evals", len(s.Evals))
 
-		runner := claudecode.NewRunner(claudecode.WithLogger(slog.Default()))
+		reg := defaultRegistry()
 
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
@@ -40,7 +43,7 @@ var runCmd = &cobra.Command{
 			Samples:    samples,
 		}
 
-		sr, err := executor.Execute(cmd.Context(), s, runner, execOpts)
+		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
 		if err != nil {
 			return fmt.Errorf("executing suite: %w", err)
 		}
@@ -57,6 +60,17 @@ var runCmd = &cobra.Command{
 		format, _ := cmd.Flags().GetString("format")
 		return report.Write(os.Stdout, sr, format)
 	},
+}
+
+func defaultRegistry() *registry.Registry {
+	reg := registry.New()
+	reg.Register("claude-code", func(config map[string]any) (agentrunner.Runner, error) {
+		return claudecode.NewRunner(claudecode.WithLogger(slog.Default())), nil
+	})
+	reg.Register("ollama", func(config map[string]any) (agentrunner.Runner, error) {
+		return ollama.NewRunner(), nil
+	})
+	return reg
 }
 
 func init() {

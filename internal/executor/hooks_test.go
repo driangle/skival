@@ -80,7 +80,7 @@ func TestExecuteEval_BeforeHookRuns(t *testing.T) {
 		}},
 	}
 
-	sr, err := Execute(context.Background(), s, runner, nil)
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestExecuteEval_BeforeHookFailure(t *testing.T) {
 		}},
 	}
 
-	sr, _ := Execute(context.Background(), s, runner, nil)
+	sr, _ := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if sr.Evals[0].Err == nil {
 		t.Error("expected eval error when before hook fails")
 	}
@@ -147,7 +147,7 @@ func TestExecuteEval_ResetBetweenTreatments(t *testing.T) {
 		}},
 	}
 
-	sr, _ := Execute(context.Background(), s, runner, nil)
+	sr, _ := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if sr.Evals[0].Err != nil {
 		t.Fatalf("eval error: %v", sr.Evals[0].Err)
 	}
@@ -192,7 +192,7 @@ func TestExecuteEval_AfterHookRunsOnError(t *testing.T) {
 		}},
 	}
 
-	_, _ = Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
 	if _, err := os.Stat(marker); err != nil {
 		t.Error("after hook should run even when before hook fails")
@@ -221,7 +221,7 @@ func TestExecuteEval_ResetHookFailure(t *testing.T) {
 		}},
 	}
 
-	sr, _ := Execute(context.Background(), s, runner, nil)
+	sr, _ := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if sr.Evals[0].Err == nil {
 		t.Error("expected eval error when reset hook fails")
 	}

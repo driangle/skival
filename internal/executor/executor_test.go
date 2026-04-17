@@ -6,12 +6,23 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	agentrunner "github.com/driangle/agentrunner/go"
+	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/suite"
 )
+
+// fakeRegistry creates a registry that returns the given runner for "claude-code".
+func fakeRegistry(runner agentrunner.Runner) *registry.Registry {
+	reg := registry.New()
+	reg.Register("claude-code", func(config map[string]any) (agentrunner.Runner, error) {
+		return runner, nil
+	})
+	return reg
+}
 
 // fakeRunner records calls and returns canned results.
 type fakeRunner struct {
@@ -110,7 +121,7 @@ func TestSingleEvalTreatmentSample(t *testing.T) {
 		},
 	}
 
-	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
+	sr, err := Execute(context.Background(), newMinimalSuite(), fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -167,7 +178,7 @@ func TestControlBeforeVariations(t *testing.T) {
 		{Name: "variation-1"},
 	}
 
-	sr, err := Execute(context.Background(), s, runner, nil)
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -202,7 +213,7 @@ func TestMultipleSamples(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Samples = intPtr(3)
 
-	sr, err := Execute(context.Background(), s, runner, nil)
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -224,7 +235,7 @@ func TestRunnerErrorCaptured(t *testing.T) {
 		errs: []error{runErr},
 	}
 
-	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
+	sr, err := Execute(context.Background(), newMinimalSuite(), fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("suite should not fail on runner error, got: %v", err)
 	}
@@ -253,7 +264,7 @@ func TestOptionsMapping(t *testing.T) {
 		RunnerConfig: map[string]any{"allowed_tools": []string{"Read", "Write"}},
 	}
 
-	_, _ = Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
 	if len(runner.calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(runner.calls))
@@ -289,7 +300,7 @@ func TestTreatmentModelOverridesEval(t *testing.T) {
 		Model: "claude-opus-4-6",
 	}
 
-	_, _ = Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
 	if runner.calls[0].Opts.Model != "claude-opus-4-6" {
 		t.Errorf("treatment model should override eval model, got %q", runner.calls[0].Opts.Model)
@@ -311,7 +322,7 @@ func TestFilterEvals(t *testing.T) {
 		},
 	}
 
-	sr, err := Execute(context.Background(), s, runner, &Options{EvalIDs: []string{"e2"}})
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{EvalIDs: []string{"e2"}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -342,7 +353,7 @@ func TestFilterTreatments(t *testing.T) {
 		},
 	}
 
-	sr, err := Execute(context.Background(), s, runner, &Options{Treatments: []string{"with-skill"}})
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{Treatments: []string{"with-skill"}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -373,7 +384,7 @@ func TestSkillFilePassedAsSystemPrompt(t *testing.T) {
 		Skill: skillPath,
 	}
 
-	_, _ = Execute(context.Background(), s, runner, nil)
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
 	if len(runner.calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(runner.calls))
@@ -394,7 +405,7 @@ func TestSkillFileMissing(t *testing.T) {
 		Skill: "/nonexistent/skill.md",
 	}
 
-	sr, err := Execute(context.Background(), s, runner, nil)
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("suite should not abort, got: %v", err)
 	}
@@ -415,7 +426,7 @@ func TestSamplesOverride(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Samples = intPtr(2) // YAML says 2
 
-	sr, err := Execute(context.Background(), s, runner, &Options{Samples: 5})
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{Samples: 5})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -435,7 +446,7 @@ func TestNoOverrideUsesYAML(t *testing.T) {
 	s.Evals[0].Samples = intPtr(2)
 	s.Evals[0].Model = "claude-sonnet-4-6"
 
-	sr, err := Execute(context.Background(), s, runner, &Options{})
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -457,7 +468,7 @@ func TestConversationPopulated(t *testing.T) {
 		messages: [][]agentrunner.Message{{msg}},
 	}
 
-	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
+	sr, err := Execute(context.Background(), newMinimalSuite(), fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -476,7 +487,7 @@ func TestConversationNilOnError(t *testing.T) {
 		errs: []error{errors.New("boom")},
 	}
 
-	sr, err := Execute(context.Background(), newMinimalSuite(), runner, nil)
+	sr, err := Execute(context.Background(), newMinimalSuite(), fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -484,5 +495,70 @@ func TestConversationNilOnError(t *testing.T) {
 	run := sr.Evals[0].Treatments[0].Runs[0]
 	if run.Conversation != nil {
 		t.Error("expected nil conversation on error")
+	}
+}
+
+func TestUnknownRunnerCapturedAsError(t *testing.T) {
+	reg := registry.New()
+	reg.Register("claude-code", func(config map[string]any) (agentrunner.Runner, error) {
+		return &fakeRunner{results: []*agentrunner.Result{{Text: "ok"}}}, nil
+	})
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:   "control",
+		Runner: "nonexistent",
+	}
+
+	sr, err := Execute(context.Background(), s, reg, nil)
+	if err != nil {
+		t.Fatalf("suite should not abort: %v", err)
+	}
+
+	run := sr.Evals[0].Treatments[0].Runs[0]
+	if run.Err == nil {
+		t.Fatal("expected error for unknown runner")
+	}
+	if !strings.Contains(run.Err.Error(), "nonexistent") {
+		t.Errorf("error should mention runner name, got: %v", run.Err)
+	}
+}
+
+func TestTreatmentSpecificRunner(t *testing.T) {
+	claudeRunner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "claude-result"}},
+	}
+	ollamaRunner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ollama-result"}},
+	}
+
+	reg := registry.New()
+	reg.Register("claude-code", func(config map[string]any) (agentrunner.Runner, error) {
+		return claudeRunner, nil
+	})
+	reg.Register("ollama", func(config map[string]any) (agentrunner.Runner, error) {
+		return ollamaRunner, nil
+	})
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{Name: "control"} // defaults to claude-code
+	s.Evals[0].Treatments.Variations = []suite.Treatment{
+		{Name: "ollama-variant", Runner: "ollama"},
+	}
+
+	sr, err := Execute(context.Background(), s, reg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	treatments := sr.Evals[0].Treatments
+	if len(treatments) != 2 {
+		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	}
+	if treatments[0].Runs[0].Text != "claude-result" {
+		t.Errorf("control should use claude-code runner, got %q", treatments[0].Runs[0].Text)
+	}
+	if treatments[1].Runs[0].Text != "ollama-result" {
+		t.Errorf("variation should use ollama runner, got %q", treatments[1].Runs[0].Text)
 	}
 }

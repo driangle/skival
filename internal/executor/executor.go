@@ -10,6 +10,7 @@ import (
 
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/agentrunner/go/claudecode"
+	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/driangle/skival/internal/verifier"
@@ -17,7 +18,10 @@ import (
 
 // Execute runs all evals in the suite, returning collected results.
 // Runner errors are captured per-run and do not abort the suite.
-func Execute(ctx context.Context, s *suite.Suite, runner agentrunner.Runner, opts *Options) (*result.SuiteResult, error) {
+// defaultRunner is used when a treatment does not specify a runner.
+const defaultRunner = "claude-code"
+
+func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *Options) (*result.SuiteResult, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -33,7 +37,7 @@ func Execute(ctx context.Context, s *suite.Suite, runner agentrunner.Runner, opt
 
 	for i := range evals {
 		prog.evalStart(i+1, len(evals), evals[i].Name)
-		evalResult := executeEval(ctx, &evals[i], runner, opts, prog)
+		evalResult := executeEval(ctx, &evals[i], reg, opts, prog)
 		sr.Evals = append(sr.Evals, evalResult)
 	}
 
@@ -42,7 +46,7 @@ func Execute(ctx context.Context, s *suite.Suite, runner agentrunner.Runner, opt
 	return sr, nil
 }
 
-func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runner, opts *Options, prog *progress) result.EvalResult {
+func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, opts *Options, prog *progress) result.EvalResult {
 	er := result.EvalResult{
 		EvalID:   eval.ID,
 		EvalName: eval.Name,
@@ -71,7 +75,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, runner agentrunner.Runne
 		}
 
 		t := treatments[i]
-		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, runner, opts, prog)
+		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, reg, opts, prog)
 		er.Treatments = append(er.Treatments, tr)
 	}
 
@@ -100,10 +104,22 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 	return entries
 }
 
-func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, runner agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
+func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, opts *Options, prog *progress) result.TreatmentResult {
 	tr := result.TreatmentResult{
 		Name:      t.Name,
 		IsControl: isControl,
+	}
+
+	runnerName := t.Runner
+	if runnerName == "" {
+		runnerName = defaultRunner
+	}
+
+	runner, err := reg.Create(runnerName, t.RunnerConfig)
+	if err != nil {
+		slog.Error("Failed to create runner", "runner", runnerName, "treatment", t.Name, "err", err)
+		tr.Runs = append(tr.Runs, result.RunResult{Sample: 1, Err: fmt.Errorf("creating runner %q: %w", runnerName, err)})
+		return tr
 	}
 
 	samples := 1
