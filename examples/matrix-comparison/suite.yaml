@@ -1,0 +1,31 @@
+version: 1
+description: "Matrix comparison — cross-cutting runner × model evaluation"
+
+defaults:
+  samples: 2
+  timeout: 120
+
+evals:
+  - id: hello-world
+    name: "Hello World"
+    prompt: |
+      Write a file called hello.sh that prints "Hello, World!" to stdout.
+    complexity: low
+    setup:
+      reset: "rm -f hello.sh"
+    correctness:
+      script: "./verify.sh"
+    matrix:
+      dimensions:
+        - name: runner
+          values:
+            - label: claude-code
+              runner: claude-code
+            - label: codex
+              runner: codex
+        - name: model
+          values:
+            - label: opus
+              model: claude-opus-4-6
+            - label: sonnet
+              model: claude-sonnet-4-6

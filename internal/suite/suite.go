@@ -32,6 +32,7 @@ type Eval struct {
 	RunnerConfig map[string]any `yaml:"runner_config"`
 	Setup        Setup          `yaml:"setup"`
 	Correctness  Correctness    `yaml:"correctness"`
+	Matrix       *Matrix        `yaml:"matrix,omitempty"`
 	Treatments   Treatments     `yaml:"treatments"`
 }
 
@@ -59,6 +60,31 @@ type StateAssertion struct {
 	Expect string `yaml:"expect"`
 }
 
+// Matrix defines dimensions for generating treatments from a cartesian product.
+// Each dimension has a name and a list of values. The cartesian product of all
+// dimensions produces the full set of treatments.
+type Matrix struct {
+	Dimensions []MatrixDimension `yaml:"dimensions"`
+}
+
+// MatrixDimension defines a single axis of variation in a matrix.
+type MatrixDimension struct {
+	Name   string              `yaml:"name"`
+	Values []MatrixDimensionValue `yaml:"values"`
+}
+
+// MatrixDimensionValue defines one value within a matrix dimension.
+// Label is required for naming. The remaining fields override the
+// corresponding treatment fields.
+type MatrixDimensionValue struct {
+	Label        string            `yaml:"label"`
+	Model        string            `yaml:"model,omitempty"`
+	Runner       string            `yaml:"runner,omitempty"`
+	RunnerConfig map[string]any    `yaml:"runner_config,omitempty"`
+	Skill        string            `yaml:"skill,omitempty"`
+	Env          map[string]string `yaml:"env,omitempty"`
+}
+
 // Treatments defines the control and variation treatments for an eval.
 type Treatments struct {
 	Control    Treatment   `yaml:"control"`
@@ -67,12 +93,13 @@ type Treatments struct {
 
 // Treatment defines a single treatment configuration.
 type Treatment struct {
-	Name         string            `yaml:"name"`
-	Dir          string            `yaml:"dir"`
-	Model        string            `yaml:"model"`
-	Runner       string            `yaml:"runner"`
-	RunnerConfig map[string]any    `yaml:"runner_config"`
-	Skill        string            `yaml:"skill"`
-	AllowedTools []string          `yaml:"allowed_tools,omitempty"` // Deprecated: use runner_config.allowed_tools
-	Env          map[string]string `yaml:"env"`
+	Name            string            `yaml:"name"`
+	Dir             string            `yaml:"dir"`
+	Model           string            `yaml:"model"`
+	Runner          string            `yaml:"runner"`
+	RunnerConfig    map[string]any    `yaml:"runner_config"`
+	Skill           string            `yaml:"skill"`
+	AllowedTools    []string          `yaml:"allowed_tools,omitempty"` // Deprecated: use runner_config.allowed_tools
+	Env             map[string]string `yaml:"env"`
+	DimensionValues map[string]string `yaml:"-"` // populated by matrix expansion, not parsed from YAML
 }

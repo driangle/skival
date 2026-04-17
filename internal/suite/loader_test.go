@@ -701,6 +701,152 @@ evals:
 	}
 }
 
+func TestLoad_MatrixExpansion(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "compare runners"
+    model: "claude-sonnet-4-6"
+    matrix:
+      dimensions:
+        - name: runner
+          values:
+            - label: claude-code
+              runner: claude-code
+            - label: ollama
+              runner: ollama
+        - name: model
+          values:
+            - label: opus
+              model: claude-opus-4-6
+            - label: sonnet
+              model: claude-sonnet-4-6
+`)
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	// 2x2 = 4 treatments: first is control, rest are variations
+	if e.Treatments.Control.Name != "claude-code_opus" {
+		t.Errorf("control name = %q, want %q", e.Treatments.Control.Name, "claude-code_opus")
+	}
+	if len(e.Treatments.Variations) != 3 {
+		t.Fatalf("expected 3 variations, got %d", len(e.Treatments.Variations))
+	}
+	if e.Treatments.Variations[0].Name != "claude-code_sonnet" {
+		t.Errorf("variation[0] name = %q, want %q", e.Treatments.Variations[0].Name, "claude-code_sonnet")
+	}
+}
+
+func TestLoad_MatrixSingleDimension(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "compare models"
+    matrix:
+      dimensions:
+        - name: model
+          values:
+            - label: opus
+              model: claude-opus-4-6
+            - label: sonnet
+              model: claude-sonnet-4-6
+`)
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Treatments.Control.Name != "opus" {
+		t.Errorf("control name = %q, want %q", e.Treatments.Control.Name, "opus")
+	}
+	if e.Treatments.Control.Model != "claude-opus-4-6" {
+		t.Errorf("control model = %q, want %q", e.Treatments.Control.Model, "claude-opus-4-6")
+	}
+	if len(e.Treatments.Variations) != 1 {
+		t.Fatalf("expected 1 variation, got %d", len(e.Treatments.Variations))
+	}
+}
+
+func TestLoad_MatrixAndTreatmentsMutuallyExclusive(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "conflict"
+    model: "claude-sonnet-4-6"
+    matrix:
+      dimensions:
+        - name: model
+          values:
+            - label: opus
+              model: claude-opus-4-6
+    treatments:
+      control:
+        name: manual
+`)
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for matrix+treatments, got nil")
+	}
+
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+
+	found := false
+	for _, e := range ve.Errors {
+		if contains(e, "cannot define both matrix and treatments") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected error about matrix/treatments conflict, got: %v", ve.Errors)
+	}
+}
+
+func TestLoad_MatrixDimensionValues(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "test"
+    model: "claude-sonnet-4-6"
+    matrix:
+      dimensions:
+        - name: runner
+          values:
+            - label: claude-code
+              runner: claude-code
+        - name: skill
+          values:
+            - label: baseline
+`)
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctrl := s.Evals[0].Treatments.Control
+	if ctrl.DimensionValues["runner"] != "claude-code" {
+		t.Errorf("expected dimension runner=%q, got %q", "claude-code", ctrl.DimensionValues["runner"])
+	}
+	if ctrl.DimensionValues["skill"] != "baseline" {
+		t.Errorf("expected dimension skill=%q, got %q", "baseline", ctrl.DimensionValues["skill"])
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

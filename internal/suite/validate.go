@@ -30,6 +30,25 @@ var validRunners = map[string]bool{
 	"aider":       true,
 }
 
+// validateMatrixExclusive checks that no eval defines both matrix and treatments.
+// This runs before matrix expansion.
+func validateMatrixExclusive(s *Suite) error {
+	var errs []string
+	for i, eval := range s.Evals {
+		if eval.Matrix == nil || len(eval.Matrix.Dimensions) == 0 {
+			continue
+		}
+		hasTreatments := eval.Treatments.Control.Name != "" || len(eval.Treatments.Variations) > 0
+		if hasTreatments {
+			errs = append(errs, fmt.Sprintf("eval[%d]: cannot define both matrix and treatments", i))
+		}
+	}
+	if len(errs) > 0 {
+		return &ValidationError{Errors: errs}
+	}
+	return nil
+}
+
 // validate checks the suite for structural problems and returns a
 // *ValidationError if any are found.
 func validate(s *Suite) error {

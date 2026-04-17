@@ -31,6 +31,10 @@ func Load(path string) (*Suite, error) {
 		return nil, err
 	}
 
+	if err := validateMatrixExclusive(&s); err != nil {
+		return nil, err
+	}
+	expandMatrices(&s)
 	resolvePaths(&s, suiteDir)
 	migrateAllowedTools(&s)
 	mergeDefaults(&s)
