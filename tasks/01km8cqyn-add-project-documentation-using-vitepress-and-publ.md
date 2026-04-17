@@ -1,11 +1,12 @@
 ---
 title: "Add project documentation using VitePress and publish to GitHub Pages"
 id: "01km8cqyn"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: []
 created: "2026-03-21"
+completed_at: 2026-04-17
 ---
 
 # Add project documentation using VitePress and publish to GitHub Pages
@@ -16,12 +17,12 @@ Set up a VitePress-based documentation site for the skival project so users can 
 
 ## Tasks
 
-- [ ] Initialize a VitePress project (e.g. under `docs/`)
-- [ ] Configure VitePress theme, navigation, and sidebar structure
-- [ ] Write initial documentation pages (introduction, getting started, configuration, CLI usage)
-- [ ] Add a GitHub Actions workflow to build and deploy VitePress to GitHub Pages on push to `main`
-- [ ] Configure the repository's GitHub Pages settings to use the Actions deployment
-- [ ] Verify the published site is accessible and renders correctly
+- [x] Initialize a VitePress project (e.g. under `docs/`)
+- [x] Configure VitePress theme, navigation, and sidebar structure
+- [x] Write initial documentation pages (introduction, getting started, configuration, CLI usage)
+- [x] Add a GitHub Actions workflow to build and deploy VitePress to GitHub Pages on push to `main`
+- [x] Configure the repository's GitHub Pages settings to use the Actions deployment
+- [x] Verify the published site is accessible and renders correctly
 
 ## Acceptance Criteria
 
