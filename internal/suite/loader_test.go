@@ -492,6 +492,215 @@ evals:
 	}
 }
 
+func TestLoad_RunnerConfigDeepMergeDefaultsToEval(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  runner: "claude-code"
+  runner_config:
+    max_turns: 10
+    verbose: true
+evals:
+  - id: eval-1
+    prompt: "task"
+    runner_config:
+      max_turns: 20
+      sandbox: "full"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Runner != "claude-code" {
+		t.Errorf("expected runner %q from defaults, got %q", "claude-code", e.Runner)
+	}
+	// Eval override wins
+	if e.RunnerConfig["max_turns"] != 20 {
+		t.Errorf("expected max_turns=20 (eval override), got %v", e.RunnerConfig["max_turns"])
+	}
+	// Default key preserved
+	if e.RunnerConfig["verbose"] != true {
+		t.Errorf("expected verbose=true from defaults, got %v", e.RunnerConfig["verbose"])
+	}
+	// Eval-only key preserved
+	if e.RunnerConfig["sandbox"] != "full" {
+		t.Errorf("expected sandbox=%q from eval, got %v", "full", e.RunnerConfig["sandbox"])
+	}
+}
+
+func TestLoad_RunnerPropagatesEvalToTreatment(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  runner: "claude-code"
+  runner_config:
+    max_turns: 10
+evals:
+  - id: eval-1
+    prompt: "task"
+    runner_config:
+      sandbox: "full"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: v1
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctrl := s.Evals[0].Treatments.Control
+	if ctrl.Runner != "claude-code" {
+		t.Errorf("expected control runner %q inherited from eval, got %q", "claude-code", ctrl.Runner)
+	}
+	if ctrl.RunnerConfig["max_turns"] != 10 {
+		t.Errorf("expected control max_turns=10, got %v", ctrl.RunnerConfig["max_turns"])
+	}
+	if ctrl.RunnerConfig["sandbox"] != "full" {
+		t.Errorf("expected control sandbox=%q, got %v", "full", ctrl.RunnerConfig["sandbox"])
+	}
+
+	v1 := s.Evals[0].Treatments.Variations[0]
+	if v1.Runner != "claude-code" {
+		t.Errorf("expected variation runner %q inherited from eval, got %q", "claude-code", v1.Runner)
+	}
+	if v1.RunnerConfig["max_turns"] != 10 {
+		t.Errorf("expected variation max_turns=10, got %v", v1.RunnerConfig["max_turns"])
+	}
+}
+
+func TestLoad_TreatmentOverridesEvalRunner(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  runner: "claude-code"
+  runner_config:
+    max_turns: 10
+evals:
+  - id: eval-1
+    prompt: "task"
+    runner_config:
+      sandbox: "full"
+    treatments:
+      control:
+        name: baseline
+        runner: "aider"
+        runner_config:
+          edit_format: "diff"
+          sandbox: "none"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctrl := s.Evals[0].Treatments.Control
+	// Treatment runner is not overwritten
+	if ctrl.Runner != "aider" {
+		t.Errorf("expected control runner %q (treatment override), got %q", "aider", ctrl.Runner)
+	}
+	// Treatment key overrides eval key
+	if ctrl.RunnerConfig["sandbox"] != "none" {
+		t.Errorf("expected sandbox=%q (treatment override), got %v", "none", ctrl.RunnerConfig["sandbox"])
+	}
+	// Treatment-only key preserved
+	if ctrl.RunnerConfig["edit_format"] != "diff" {
+		t.Errorf("expected edit_format=%q, got %v", "diff", ctrl.RunnerConfig["edit_format"])
+	}
+	// Eval/default key inherited
+	if ctrl.RunnerConfig["max_turns"] != 10 {
+		t.Errorf("expected max_turns=10 inherited from eval, got %v", ctrl.RunnerConfig["max_turns"])
+	}
+}
+
+func TestLoad_FullMergeChain(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  runner: "claude-code"
+  runner_config:
+    max_turns: 5
+    verbose: true
+    log_level: "info"
+evals:
+  - id: eval-1
+    prompt: "task"
+    runner_config:
+      max_turns: 10
+      timeout: 30
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: custom
+          runner: "codex"
+          runner_config:
+            max_turns: 20
+            custom_flag: true
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+
+	// Control inherits everything from eval (which merged defaults)
+	ctrl := e.Treatments.Control
+	if ctrl.Runner != "claude-code" {
+		t.Errorf("control runner: want %q, got %q", "claude-code", ctrl.Runner)
+	}
+	if ctrl.RunnerConfig["max_turns"] != 10 {
+		t.Errorf("control max_turns: want 10 (eval), got %v", ctrl.RunnerConfig["max_turns"])
+	}
+	if ctrl.RunnerConfig["verbose"] != true {
+		t.Errorf("control verbose: want true (defaults), got %v", ctrl.RunnerConfig["verbose"])
+	}
+	if ctrl.RunnerConfig["log_level"] != "info" {
+		t.Errorf("control log_level: want %q (defaults), got %v", "info", ctrl.RunnerConfig["log_level"])
+	}
+	if ctrl.RunnerConfig["timeout"] != 30 {
+		t.Errorf("control timeout: want 30 (eval), got %v", ctrl.RunnerConfig["timeout"])
+	}
+
+	// Variation overrides runner and some config, inherits the rest
+	v := e.Treatments.Variations[0]
+	if v.Runner != "codex" {
+		t.Errorf("variation runner: want %q, got %q", "codex", v.Runner)
+	}
+	if v.RunnerConfig["max_turns"] != 20 {
+		t.Errorf("variation max_turns: want 20 (treatment), got %v", v.RunnerConfig["max_turns"])
+	}
+	if v.RunnerConfig["custom_flag"] != true {
+		t.Errorf("variation custom_flag: want true (treatment), got %v", v.RunnerConfig["custom_flag"])
+	}
+	if v.RunnerConfig["verbose"] != true {
+		t.Errorf("variation verbose: want true (defaults), got %v", v.RunnerConfig["verbose"])
+	}
+	if v.RunnerConfig["timeout"] != 30 {
+		t.Errorf("variation timeout: want 30 (eval), got %v", v.RunnerConfig["timeout"])
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

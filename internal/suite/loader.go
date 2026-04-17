@@ -34,6 +34,7 @@ func Load(path string) (*Suite, error) {
 	resolvePaths(&s, suiteDir)
 	migrateAllowedTools(&s)
 	mergeDefaults(&s)
+	resolveRunnerConfig(&s)
 
 	if err := validate(&s); err != nil {
 		return nil, err
@@ -129,7 +130,8 @@ func migrateTreatmentAllowedTools(t *Treatment) {
 }
 
 // mergeDefaults applies suite-level defaults to each eval where the eval
-// doesn't provide its own value.
+// doesn't provide its own value. RunnerConfig is deep-merged so eval keys
+// override default keys while preserving defaults the eval didn't set.
 func mergeDefaults(s *Suite) {
 	d := s.Defaults
 	for i := range s.Evals {
@@ -146,8 +148,56 @@ func mergeDefaults(s *Suite) {
 		if e.Runner == "" && d.Runner != "" {
 			e.Runner = d.Runner
 		}
-		if e.RunnerConfig == nil && d.RunnerConfig != nil {
-			e.RunnerConfig = d.RunnerConfig
+		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
+	}
+}
+
+// resolveRunnerConfig propagates Runner and deep-merges RunnerConfig from each
+// eval into its control and variation treatments. Treatment values take
+// precedence over eval values.
+func resolveRunnerConfig(s *Suite) {
+	for i := range s.Evals {
+		e := &s.Evals[i]
+		mergeRunnerIntoTreatment(e, &e.Treatments.Control)
+		for j := range e.Treatments.Variations {
+			mergeRunnerIntoTreatment(e, &e.Treatments.Variations[j])
 		}
 	}
+}
+
+func mergeRunnerIntoTreatment(e *Eval, t *Treatment) {
+	if t.Runner == "" && e.Runner != "" {
+		t.Runner = e.Runner
+	}
+	t.RunnerConfig = mergeMaps(e.RunnerConfig, t.RunnerConfig)
+}
+
+// mergeMaps deep-merges two maps. Keys in override take precedence over base.
+// Returns nil if both inputs are nil.
+func mergeMaps(base, override map[string]any) map[string]any {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		// Copy base so callers don't share the same map.
+		out := make(map[string]any, len(base))
+		for k, v := range base {
+			out[k] = v
+		}
+		return out
+	}
+	out := make(map[string]any, len(base)+len(override))
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range override {
+		if vMap, ok := v.(map[string]any); ok {
+			if baseMap, ok := out[k].(map[string]any); ok {
+				out[k] = mergeMaps(baseMap, vMap)
+				continue
+			}
+		}
+		out[k] = v
+	}
+	return out
 }
