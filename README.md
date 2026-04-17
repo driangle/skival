@@ -11,7 +11,7 @@ Define a control case and N treatment variations, then compare them head-to-head
 - **Multi-sample runs** — Run each treatment multiple times for statistical confidence (median, CV)
 - **Correctness verification** — Pluggable verifiers: substring matching, script execution, HTTP state checks, LLM judge
 - **Structured reporting** — Markdown and JSON output with per-eval breakdowns and aggregate rankings
-- **Extensible runners** — Built on [agentrunner](https://github.com/driangle/agentrunner-go) for Claude Code CLI, designed to support other coding assistants in the future
+- **Extensible runners** — Built on [agentrunner](https://github.com/driangle/agentrunner) for Claude Code CLI, designed to support other coding assistants in the future
 
 ## Project Structure
 
