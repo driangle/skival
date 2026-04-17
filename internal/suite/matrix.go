@@ -49,6 +49,9 @@ func expandMatrix(m *Matrix) []Treatment {
 			if entry.value.Skill != "" {
 				t.Skill = entry.value.Skill
 			}
+			if len(entry.value.Skills) > 0 {
+				t.Skills = append(t.Skills, entry.value.Skills...)
+			}
 			if entry.value.RunnerConfig != nil {
 				t.RunnerConfig = mergeMaps(t.RunnerConfig, entry.value.RunnerConfig)
 			}

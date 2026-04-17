@@ -103,6 +103,11 @@ func resolveTreatmentPaths(t *Treatment, suiteDir string) {
 	if t.Skill != "" && !filepath.IsAbs(t.Skill) {
 		t.Skill = filepath.Join(suiteDir, t.Skill)
 	}
+	for i, s := range t.Skills {
+		if s != "" && !filepath.IsAbs(s) {
+			t.Skills[i] = filepath.Join(suiteDir, s)
+		}
+	}
 	if t.Dir != "" && !filepath.IsAbs(t.Dir) {
 		t.Dir = filepath.Join(suiteDir, t.Dir)
 	}

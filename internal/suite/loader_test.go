@@ -847,6 +847,119 @@ evals:
 	}
 }
 
+func TestLoad_ResolvesSkillsPaths(t *testing.T) {
+	dir := t.TempDir()
+	skillsDir := filepath.Join(dir, "skills")
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSuiteFile(t, skillsDir, "a.md", "skill A")
+	writeSuiteFile(t, skillsDir, "b.md", "skill B")
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: with-skills
+          skills:
+            - "./skills/a.md"
+            - "./skills/b.md"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	v := s.Evals[0].Treatments.Variations[0]
+	expectedA := filepath.Join(dir, "skills", "a.md")
+	expectedB := filepath.Join(dir, "skills", "b.md")
+	if len(v.Skills) != 2 {
+		t.Fatalf("expected 2 skills, got %d", len(v.Skills))
+	}
+	if v.Skills[0] != expectedA {
+		t.Errorf("expected skills[0] %q, got %q", expectedA, v.Skills[0])
+	}
+	if v.Skills[1] != expectedB {
+		t.Errorf("expected skills[1] %q, got %q", expectedB, v.Skills[1])
+	}
+}
+
+func TestLoad_SkillsPreservesAbsolutePaths(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: v1
+          skills:
+            - "/absolute/skill-a.md"
+            - "/absolute/skill-b.md"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	v := s.Evals[0].Treatments.Variations[0]
+	if v.Skills[0] != "/absolute/skill-a.md" {
+		t.Errorf("expected absolute path preserved, got %q", v.Skills[0])
+	}
+	if v.Skills[1] != "/absolute/skill-b.md" {
+		t.Errorf("expected absolute path preserved, got %q", v.Skills[1])
+	}
+}
+
+func TestLoad_SkillAndSkillsMutuallyExclusive(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+        skill: "a.md"
+        skills:
+          - "b.md"
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected validation error for skill+skills, got nil")
+	}
+
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+
+	found := false
+	for _, e := range ve.Errors {
+		if contains(e, "cannot set both skill and skills") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected error about skill/skills conflict, got: %v", ve.Errors)
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

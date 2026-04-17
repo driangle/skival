@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	agentrunner "github.com/driangle/agentrunner/go"
@@ -261,19 +262,45 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option
 	}
 	opts = append(opts, buildRunnerSpecificOpts(runnerName, t.RunnerConfig)...)
 
-	// Skill file as appended system prompt.
-	if t.Skill != "" {
-		content, err := os.ReadFile(t.Skill)
-		if err != nil {
-			return nil, fmt.Errorf("reading skill file %q: %w", t.Skill, err)
-		}
-		opts = append(opts, agentrunner.WithAppendSystemPrompt(string(content)))
+	// Skill file(s) as appended system prompt.
+	skillPrompt, err := loadSkillContent(t)
+	if err != nil {
+		return nil, err
+	}
+	if skillPrompt != "" {
+		opts = append(opts, agentrunner.WithAppendSystemPrompt(skillPrompt))
 	}
 
 	// Always skip permissions for automated runs.
 	opts = append(opts, agentrunner.WithSkipPermissions())
 
 	return opts, nil
+}
+
+// loadSkillContent reads skill file(s) from a treatment and returns the concatenated content.
+// Returns empty string if no skills are configured.
+func loadSkillContent(t *suite.Treatment) (string, error) {
+	if t.Skill != "" {
+		content, err := os.ReadFile(t.Skill)
+		if err != nil {
+			return "", fmt.Errorf("reading skill file %q: %w", t.Skill, err)
+		}
+		return string(content), nil
+	}
+
+	if len(t.Skills) > 0 {
+		var parts []string
+		for _, path := range t.Skills {
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return "", fmt.Errorf("reading skill file %q: %w", path, err)
+			}
+			parts = append(parts, string(content))
+		}
+		return strings.Join(parts, "\n\n"), nil
+	}
+
+	return "", nil
 }
 
 // buildRunnerSpecificOpts dispatches to per-runner option builders based on runner name.

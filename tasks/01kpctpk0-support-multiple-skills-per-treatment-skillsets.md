@@ -1,11 +1,12 @@
 ---
 title: "Support multiple skills per treatment (skillsets)"
 id: "01kpctpk0"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["schema", "skills"]
 created: "2026-04-17"
+completed_at: 2026-04-17
 ---
 
 # Support multiple skills per treatment (skillsets)
@@ -18,14 +19,14 @@ The `skills` field should coexist with the existing `skill` field for backward c
 
 ## Tasks
 
-- [ ] Add `Skills []string` field to `Treatment` struct in `internal/suite/suite.go`
-- [ ] Update `internal/suite/loader.go` to resolve relative paths for all entries in `Skills`
-- [ ] Add validation in `internal/suite/validate.go`: error if both `skill` and `skills` are set on the same treatment
-- [ ] Update `internal/executor/executor.go` to read and concatenate all skill files (separated by newlines) into a single `WithAppendSystemPrompt` call
-- [ ] Update suite loader tests to cover `skills` array loading and path resolution
-- [ ] Update executor tests to verify multi-skill concatenation
-- [ ] Update validation tests for mutual exclusivity of `skill` vs `skills`
-- [ ] Add an example in `examples/` demonstrating skillset comparison
+- [x] Add `Skills []string` field to `Treatment` struct in `internal/suite/suite.go`
+- [x] Update `internal/suite/loader.go` to resolve relative paths for all entries in `Skills`
+- [x] Add validation in `internal/suite/validate.go`: error if both `skill` and `skills` are set on the same treatment
+- [x] Update `internal/executor/executor.go` to read and concatenate all skill files (separated by newlines) into a single `WithAppendSystemPrompt` call
+- [x] Update suite loader tests to cover `skills` array loading and path resolution
+- [x] Update executor tests to verify multi-skill concatenation
+- [x] Update validation tests for mutual exclusivity of `skill` vs `skills`
+- [x] Add an example in `examples/` demonstrating skillset comparison
 
 ## Acceptance Criteria
 

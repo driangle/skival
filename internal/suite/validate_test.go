@@ -283,6 +283,61 @@ func TestValidate_UnknownRunnerOnVariation(t *testing.T) {
 	assertValidationContains(t, err, `variation[0] "v1": unknown runner "fake"`)
 }
 
+func TestValidate_SkillAndSkillsMutuallyExclusiveOnControl(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl", Skill: "a.md", Skills: []string{"b.md"}},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `control treatment "ctrl": cannot set both skill and skills`)
+}
+
+func TestValidate_SkillAndSkillsMutuallyExclusiveOnVariation(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl"},
+					Variations: []Treatment{
+						{Name: "v1", Skill: "a.md", Skills: []string{"b.md"}},
+					},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `variation[0] "v1": cannot set both skill and skills`)
+}
+
+func TestValidate_SkillsAloneIsValid(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl", Skills: []string{"a.md", "b.md"}},
+				},
+			},
+		},
+	}
+
+	if err := validate(s); err != nil {
+		t.Fatalf("skills alone should be valid, got: %v", err)
+	}
+}
+
 func assertValidationContains(t *testing.T, err error, substr string) {
 	t.Helper()
 	if err == nil {

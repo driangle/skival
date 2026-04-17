@@ -396,6 +396,90 @@ func TestSkillFilePassedAsSystemPrompt(t *testing.T) {
 	}
 }
 
+func TestSkillsArrayConcatenated(t *testing.T) {
+	dir := t.TempDir()
+	skillA := filepath.Join(dir, "a.md")
+	skillB := filepath.Join(dir, "b.md")
+	if err := os.WriteFile(skillA, []byte("Skill A content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(skillB, []byte("Skill B content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:   "control",
+		Skills: []string{skillA, skillB},
+	}
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(runner.calls))
+	}
+	expected := "Skill A content\n\nSkill B content"
+	if runner.calls[0].Opts.AppendSystemPrompt != expected {
+		t.Errorf("expected concatenated skills %q, got %q", expected, runner.calls[0].Opts.AppendSystemPrompt)
+	}
+}
+
+func TestSkillsArraySingleFile(t *testing.T) {
+	dir := t.TempDir()
+	skillPath := filepath.Join(dir, "skill.md")
+	if err := os.WriteFile(skillPath, []byte("Single skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:   "control",
+		Skills: []string{skillPath},
+	}
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
+
+	if runner.calls[0].Opts.AppendSystemPrompt != "Single skill" {
+		t.Errorf("expected single skill content, got %q", runner.calls[0].Opts.AppendSystemPrompt)
+	}
+}
+
+func TestSkillsArrayMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	skillA := filepath.Join(dir, "a.md")
+	if err := os.WriteFile(skillA, []byte("Skill A"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:   "control",
+		Skills: []string{skillA, "/nonexistent/b.md"},
+	}
+
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
+	if err != nil {
+		t.Fatalf("suite should not abort, got: %v", err)
+	}
+
+	run := sr.Evals[0].Treatments[0].Runs[0]
+	if run.Err == nil {
+		t.Fatal("expected error for missing skill file in skills array")
+	}
+}
+
 func TestSkillFileMissing(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{}},

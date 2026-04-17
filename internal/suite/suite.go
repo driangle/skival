@@ -82,6 +82,7 @@ type MatrixDimensionValue struct {
 	Runner       string            `yaml:"runner,omitempty"`
 	RunnerConfig map[string]any    `yaml:"runner_config,omitempty"`
 	Skill        string            `yaml:"skill,omitempty"`
+	Skills       []string          `yaml:"skills,omitempty"`
 	Env          map[string]string `yaml:"env,omitempty"`
 }
 
@@ -99,6 +100,7 @@ type Treatment struct {
 	Runner          string            `yaml:"runner"`
 	RunnerConfig    map[string]any    `yaml:"runner_config"`
 	Skill           string            `yaml:"skill"`
+	Skills          []string          `yaml:"skills"`
 	AllowedTools    []string          `yaml:"allowed_tools,omitempty"` // Deprecated: use runner_config.allowed_tools
 	Env             map[string]string `yaml:"env"`
 	DimensionValues map[string]string `yaml:"-"` // populated by matrix expansion, not parsed from YAML

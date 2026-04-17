@@ -103,6 +103,16 @@ func validate(s *Suite) error {
 			}
 		}
 
+		// Skill and skills are mutually exclusive on each treatment.
+		if eval.Treatments.Control.Skill != "" && len(eval.Treatments.Control.Skills) > 0 {
+			errs = append(errs, fmt.Sprintf("%s: control treatment %q: cannot set both skill and skills", prefix, eval.Treatments.Control.Name))
+		}
+		for j, v := range eval.Treatments.Variations {
+			if v.Skill != "" && len(v.Skills) > 0 {
+				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: cannot set both skill and skills", prefix, j, v.Name))
+			}
+		}
+
 		// Every treatment must resolve to a model (treatment-level or eval-level).
 		if eval.Model == "" {
 			if eval.Treatments.Control.Model == "" {
