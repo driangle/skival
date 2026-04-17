@@ -1,7 +1,7 @@
 {
   "name": "skival",
-  "version": "1.0.0",
-  "description": "Create and manage skival eval suites for benchmarking AI agent skills",
+  "version": "0.0.1",
+  "description": "Create and manage skival eval suites for evaluating and comparing AI agent configurations",
   "author": {
     "name": "skival"
   },

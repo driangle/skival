@@ -1,9 +1,9 @@
 ---
 name: skival
-description: Generate skival suite.yaml files for benchmarking AI agent skills. Use when the user wants to create an eval suite, benchmark skills, compare prompt strategies, compare models, or measure agent correctness/cost/speed on specific tasks.
+description: Generate skival suite.yaml files for evaluating and comparing AI agent configurations. Use when the user wants to create an eval suite, compare runners/models/skills/tool-access/environments, benchmark agent performance, or measure correctness/cost/speed across different AI setups.
 ---
 
-You are an expert at creating skival eval suites. Skival benchmarks AI agent skills by measuring correctness, cost, speed, and token usage across configurable treatments. It answers questions like: "Does this skill file improve agent performance?", "Which prompt strategy produces better results?", and "How does model choice affect quality and cost for this task?"
+You are an expert at creating skival eval suites. Skival evaluates and compares AI agent configurations by measuring correctness, cost, speed, and token usage across configurable treatments. It answers questions like: "Does this skill file improve agent performance?", "Which model produces better results for this task?", "How does restricting tool access affect quality?", and "What's the cost/quality tradeoff between different configurations?"
 
 ## Your Task
 
@@ -93,7 +93,7 @@ These are enforced by skival and will cause errors if violated:
 ## Common Patterns
 
 ### Comparing models
-Use the same prompt/correctness with different models in treatments:
+Same task, different models — find the cost/quality sweet spot:
 ```yaml
 treatments:
   control:
@@ -106,8 +106,8 @@ treatments:
       model: "claude-haiku-4-5-20251001"
 ```
 
-### Comparing prompts/skills
-Use identical models but different skill files:
+### Comparing skills/instructions
+Identical models, different guidance — measure how instructions affect output:
 ```yaml
 treatments:
   control:
@@ -120,7 +120,7 @@ treatments:
 ```
 
 ### Comparing tool access
-Restrict which tools treatments can use:
+Restrict which tools treatments can use — test whether tool constraints improve or degrade performance:
 ```yaml
 treatments:
   control:
@@ -130,6 +130,41 @@ treatments:
       allowed_tools: ["Read", "Glob", "Grep"]
     - name: "no-bash"
       allowed_tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+```
+
+### Comparing environments
+Same task in different project setups or with different environment variables:
+```yaml
+treatments:
+  control:
+    name: "default-env"
+    dir: "./projects/baseline"
+  variations:
+    - name: "strict-mode"
+      dir: "./projects/baseline"
+      env:
+        STRICT_LINT: "true"
+        CI: "true"
+    - name: "alt-project"
+      dir: "./projects/alternative"
+```
+
+### Combining dimensions
+Compare multiple factors at once by enumerating combinations:
+```yaml
+treatments:
+  control:
+    name: "sonnet-no-skill"
+    model: "claude-sonnet-4-20250514"
+  variations:
+    - name: "sonnet-with-skill"
+      model: "claude-sonnet-4-20250514"
+      skill: "./skills/best-practices.md"
+    - name: "opus-no-skill"
+      model: "claude-opus-4-20250514"
+    - name: "opus-with-skill"
+      model: "claude-opus-4-20250514"
+      skill: "./skills/best-practices.md"
 ```
 
 ### Multi-step verification
@@ -156,6 +191,8 @@ correctness:
 7. **Prefer `script` verification** for complex correctness checks. The script receives the working directory and should exit 0 for pass.
 8. **Use `judge` sparingly.** It calls Claude Haiku for each criterion, adding cost. Best for subjective quality assessments.
 9. **Keep eval IDs short and descriptive.** They become directory names in results output.
+10. **Vary one dimension at a time when possible.** The clearest comparisons isolate a single variable (model, skill, tools, env). When combining dimensions, name treatments to make the combination obvious.
+11. **Use `env` for configuration that shouldn't be in code.** API keys, feature flags, debug modes — anything that changes behavior without changing the prompt or skill.
 
 ## Running the Suite
 
