@@ -15,6 +15,7 @@ version: 1
 evals:
   - id: eval-1
     prompt: "do the thing"
+    model: "claude-sonnet-4-6"
     treatments:
       control:
         name: baseline
@@ -47,6 +48,7 @@ func TestLoad_FileReference(t *testing.T) {
 	writeSuiteFile(t, evalsDir, "my-eval.yaml", `
 id: file-eval
 prompt: "from file"
+model: "claude-sonnet-4-6"
 treatments:
   control:
     name: baseline
@@ -202,6 +204,7 @@ version: 1
 evals:
   - id: eval-1
     prompt: "task"
+    model: "claude-sonnet-4-6"
     treatments:
       control:
         name: baseline
@@ -228,6 +231,7 @@ version: 1
 evals:
   - id: eval-1
     prompt: "task"
+    model: "claude-sonnet-4-6"
     dir: workdir
     treatments:
       control:
@@ -257,6 +261,7 @@ version: 1
 evals:
   - id: eval-1
     prompt: "task"
+    model: "claude-sonnet-4-6"
     correctness:
       script: "./verify.sh"
     treatments:
@@ -301,6 +306,7 @@ version: 1
 evals:
   - id: eval-1
     prompt: "task"
+    model: "claude-sonnet-4-6"
     dir: "%s"
     correctness:
       script: "%s"

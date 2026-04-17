@@ -123,7 +123,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	for i := 0; i < samples; i++ {
 		prog.sampleStart(eval.Name, t.Name, i+1, samples)
 		slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "total", samples)
-		run := executeSingleRun(ctx, eval, t, i+1, runner, opts.Model)
+		run := executeSingleRun(ctx, eval, t, i+1, runner)
 		if run.Err != nil {
 			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "err", run.Err)
 		} else {
@@ -154,8 +154,8 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	return tr
 }
 
-func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner, modelOverride string) result.RunResult {
-	opts, err := buildRunOptions(eval, t, modelOverride)
+func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner) result.RunResult {
+	opts, err := buildRunOptions(eval, t)
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -199,16 +199,13 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	}
 }
 
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment, modelOverride string) ([]agentrunner.Option, error) {
+func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
-	// Model: CLI override > treatment > eval.
+	// Model: treatment > eval.
 	model := eval.Model
 	if t.Model != "" {
 		model = t.Model
-	}
-	if modelOverride != "" {
-		model = modelOverride
 	}
 	if model != "" {
 		opts = append(opts, agentrunner.WithModel(model))

@@ -63,7 +63,6 @@ skival report <results-dir>    Generate reports from saved results
 | `--results-dir` | Directory for results output |
 | `--treatments` | Filter to specific treatments |
 | `--evals` | Filter to specific eval IDs |
-| `--model` | Override model for all treatments |
 | `--format` | Output format: `markdown`, `json` (default: `markdown`) |
 
 ## Configuration

@@ -58,6 +58,18 @@ func validate(s *Suite) error {
 		if eval.Treatments.Control.Name == "" {
 			errs = append(errs, fmt.Sprintf("%s: control treatment name is required", prefix))
 		}
+
+		// Every treatment must resolve to a model (treatment-level or eval-level).
+		if eval.Model == "" {
+			if eval.Treatments.Control.Model == "" {
+				errs = append(errs, fmt.Sprintf("%s: control treatment %q has no model (set model on the eval or treatment)", prefix, eval.Treatments.Control.Name))
+			}
+			for j, v := range eval.Treatments.Variations {
+				if v.Model == "" {
+					errs = append(errs, fmt.Sprintf("%s: variation[%d] %q has no model (set model on the eval or treatment)", prefix, j, v.Name))
+				}
+			}
+		}
 	}
 
 	if len(errs) > 0 {

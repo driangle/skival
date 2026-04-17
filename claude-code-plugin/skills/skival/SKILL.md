@@ -205,7 +205,6 @@ skival run suite.yaml --samples 5               # Override sample count
 skival run suite.yaml --results-dir ./results   # Save detailed results
 skival run suite.yaml --evals eval-1,eval-2     # Run specific evals only
 skival run suite.yaml --treatments control,v1   # Run specific treatments only
-skival run suite.yaml --model claude-opus-4     # Override model for all treatments
 skival run suite.yaml --format json             # JSON output instead of markdown
 ```
 

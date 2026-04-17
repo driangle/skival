@@ -18,6 +18,7 @@ evals:
   - id: eval-1
     name: "Test Eval"
     prompt: "do something"
+    model: "claude-sonnet-4-6"
     complexity: medium
     treatments:
       control:
@@ -85,6 +86,7 @@ version: 1
 evals:
   - id: eval-1
     prompt: "do something"
+    model: "claude-sonnet-4-6"
     correctness:
       execute: true
       expected_output:

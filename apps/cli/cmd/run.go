@@ -31,15 +31,13 @@ var runCmd = &cobra.Command{
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
 		samples, _ := cmd.Flags().GetInt("samples")
-		model, _ := cmd.Flags().GetString("model")
-		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "model", model)
+		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples)
 
 		execOpts := &executor.Options{
 			EvalIDs:    evalIDs,
 			Treatments: treatments,
 			Progress:   os.Stderr,
 			Samples:    samples,
-			Model:      model,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, runner, execOpts)
@@ -66,8 +64,7 @@ func init() {
 	runCmd.Flags().String("results-dir", "", "Directory for results output")
 	runCmd.Flags().StringSlice("treatments", nil, "Filter to specific treatments")
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
-	runCmd.Flags().String("model", "", "Override model for all treatments")
-	runCmd.Flags().String("format", "markdown", "Output format: markdown, json")
+runCmd.Flags().String("format", "markdown", "Output format: markdown, json")
 
 	rootCmd.AddCommand(runCmd)
 }

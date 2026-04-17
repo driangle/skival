@@ -426,34 +426,6 @@ func TestSamplesOverride(t *testing.T) {
 	}
 }
 
-func TestModelOverride(t *testing.T) {
-	runner := &fakeRunner{
-		results: []*agentrunner.Result{{}, {}},
-	}
-
-	s := newMinimalSuite()
-	s.Evals[0].Model = "claude-sonnet-4-6"
-	s.Evals[0].Treatments.Control = suite.Treatment{
-		Name:  "control",
-		Model: "claude-opus-4-6", // treatment-level override
-	}
-	s.Evals[0].Treatments.Variations = []suite.Treatment{
-		{Name: "variation"}, // inherits eval model
-	}
-
-	_, _ = Execute(context.Background(), s, runner, &Options{Model: "claude-haiku-4-5-20251001"})
-
-	if len(runner.calls) != 2 {
-		t.Fatalf("expected 2 calls, got %d", len(runner.calls))
-	}
-	// CLI override should win over both treatment and eval model.
-	for i, call := range runner.calls {
-		if call.Opts.Model != "claude-haiku-4-5-20251001" {
-			t.Errorf("call %d: expected CLI model override 'claude-haiku-4-5-20251001', got %q", i, call.Opts.Model)
-		}
-	}
-}
-
 func TestNoOverrideUsesYAML(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "r1"}, {Text: "r2"}},

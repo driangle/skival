@@ -12,6 +12,7 @@ func TestValidate_ValidSuite(t *testing.T) {
 			{
 				ID:     "eval-1",
 				Prompt: "do something",
+				Model:  "claude-sonnet-4-6",
 				Treatments: Treatments{
 					Control: Treatment{Name: "baseline"},
 				},
@@ -93,7 +94,7 @@ func TestValidate_ValidComplexities(t *testing.T) {
 		s := &Suite{
 			Version: 1,
 			Evals: []Eval{
-				{ID: "e1", Prompt: "p", Complexity: c, Treatments: Treatments{Control: Treatment{Name: "c"}}},
+				{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Complexity: c, Treatments: Treatments{Control: Treatment{Name: "c"}}},
 			},
 		}
 		if err := validate(s); err != nil {
@@ -127,6 +128,74 @@ func TestValidate_MultipleErrors(t *testing.T) {
 	if len(ve.Errors) < 4 {
 		t.Errorf("expected at least 4 errors (version, id, prompt, complexity, control), got %d: %v",
 			len(ve.Errors), ve.Errors)
+	}
+}
+
+func TestValidate_ModelRequiredOnControl(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{ID: "e1", Prompt: "p", Treatments: Treatments{Control: Treatment{Name: "ctrl"}}},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `control treatment "ctrl" has no model`)
+}
+
+func TestValidate_ModelRequiredOnVariation(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl", Model: "claude-sonnet-4-6"},
+					Variations: []Treatment{{Name: "v1"}},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `variation[0] "v1" has no model`)
+}
+
+func TestValidate_EvalModelCoversAllTreatments(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl"},
+					Variations: []Treatment{{Name: "v1"}},
+				},
+			},
+		},
+	}
+
+	if err := validate(s); err != nil {
+		t.Fatalf("eval-level model should cover all treatments, got: %v", err)
+	}
+}
+
+func TestValidate_TreatmentLevelModelsWithoutEvalModel(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl", Model: "claude-sonnet-4-6"},
+					Variations: []Treatment{{Name: "v1", Model: "claude-opus-4-6"}},
+				},
+			},
+		},
+	}
+
+	if err := validate(s); err != nil {
+		t.Fatalf("per-treatment models should be valid, got: %v", err)
 	}
 }
 
