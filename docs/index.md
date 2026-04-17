@@ -2,8 +2,8 @@
 layout: home
 hero:
   name: skival
-  text: AI Coding Skill Evaluator
-  tagline: Measure time, cost, tokens, and correctness across configurable eval suites
+  text: A/B test your AI coding agents
+  tagline: Run the same tasks with and without your changes. See what actually helps.
   actions:
     - theme: brand
       text: Get Started
@@ -12,12 +12,12 @@ hero:
       text: View on GitHub
       link: https://github.com/driangle/skival
 features:
-  - title: Multi-Treatment Comparison
-    details: Run a control and N treatment variations side-by-side, then rank by weighted score.
-  - title: Pluggable Verifiers
-    details: Verify correctness with substring matching, script execution, HTTP state checks, or LLM judges.
-  - title: Statistical Rigor
-    details: Run each treatment multiple times and get median, coefficient of variation, and aggregate rankings.
-  - title: Structured Reporting
-    details: Markdown and JSON output with per-eval breakdowns, cost tracking, and token usage.
+  - title: Control vs. Variations
+    details: Define a baseline and any number of variations -- different skills, models, prompts, or configs -- and run them against the same tasks.
+  - title: Know If It's Correct
+    details: Check results with exit codes, expected output, custom scripts, HTTP assertions, or an LLM judge. Chain them together.
+  - title: Run It Enough Times
+    details: One run is anecdotal. Run each variation multiple times and get medians, variance, and confidence that the difference is real.
+  - title: Cost, Speed, Correctness
+    details: Every run tracks dollar cost, token usage, and time to completion alongside pass/fail -- so you can find the cheapest correct answer.
 ---

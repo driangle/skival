@@ -1,0 +1,268 @@
+/* ──────────────────────────────────────────────
+   skival — Alpine Scoreboard Theme
+   Deep slate blues, glacial teal, warm amber accent
+   ────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  /* ── Brand: Warm Amber ── */
+  --vp-c-brand-1: #e8913a;
+  --vp-c-brand-2: #d4802e;
+  --vp-c-brand-3: #c07224;
+  --vp-c-brand-soft: rgba(232, 145, 58, 0.12);
+
+  /* ── Palette ── */
+  --sk-slate: #1b2a4a;
+  --sk-slate-light: #243560;
+  --sk-teal: #3a8c8c;
+  --sk-teal-soft: rgba(58, 140, 140, 0.1);
+  --sk-amber: #e8913a;
+  --sk-snow: #f4f6f9;
+  --sk-ink: #1a1d2e;
+
+  /* ── Backgrounds ── */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: var(--sk-snow);
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: var(--sk-snow);
+
+  /* ── Text ── */
+  --vp-c-text-1: var(--sk-ink);
+  --vp-c-text-2: #4a4d5e;
+  --vp-c-text-3: #7a7d8e;
+
+  /* ── Borders ── */
+  --vp-c-border: #d8dce6;
+  --vp-c-divider: #e4e8f0;
+  --vp-c-gutter: #e4e8f0;
+
+  /* ── Tip/Note: Glacial Teal ── */
+  --vp-c-tip-1: var(--sk-teal);
+  --vp-c-tip-2: #2e7373;
+  --vp-c-tip-3: #246060;
+  --vp-c-tip-soft: var(--sk-teal-soft);
+
+  /* ── Code Blocks ── */
+  --vp-code-color: var(--sk-slate);
+  --vp-code-bg: var(--sk-snow);
+  --vp-code-block-bg: #1e2d4d;
+  --vp-code-block-color: #d6dce8;
+  --vp-code-block-divider-color: #2a3d66;
+  --vp-code-lang-color: #6b7fa0;
+  --vp-code-line-highlight-color: rgba(58, 140, 140, 0.12);
+  --vp-code-line-number-color: #4a5f85;
+  --vp-code-copy-code-bg: rgba(255, 255, 255, 0.05);
+  --vp-code-copy-code-hover-bg: rgba(255, 255, 255, 0.1);
+  --vp-code-copy-code-border-color: #2a3d66;
+  --vp-code-copy-code-hover-border-color: #3a5080;
+  --vp-code-tab-divider: #2a3d66;
+  --vp-code-tab-text-color: #6b7fa0;
+  --vp-code-tab-bg: transparent;
+  --vp-code-tab-hover-text-color: #d6dce8;
+  --vp-code-tab-active-text-color: #e8913a;
+  --vp-code-tab-active-bar-color: #e8913a;
+
+  /* ── Buttons ── */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: var(--sk-amber);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: #d4802e;
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: #c07224;
+
+  --vp-button-alt-border: var(--sk-slate);
+  --vp-button-alt-text: var(--sk-slate);
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-hover-border: var(--sk-slate-light);
+  --vp-button-alt-hover-text: var(--sk-slate-light);
+  --vp-button-alt-hover-bg: rgba(27, 42, 74, 0.04);
+
+  /* ── Nav ── */
+  --vp-nav-bg-color: rgba(255, 255, 255, 0.92);
+  --vp-sidebar-bg-color: var(--sk-snow);
+
+  /* ── Hero ── */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    135deg,
+    var(--sk-slate) 30%,
+    var(--sk-teal) 70%,
+    var(--sk-amber)
+  );
+  --vp-home-hero-image-background-image: linear-gradient(
+    135deg,
+    rgba(58, 140, 140, 0.2) 0%,
+    rgba(232, 145, 58, 0.15) 100%
+  );
+
+  /* ── Custom blocks: teal left border ── */
+  --vp-custom-block-tip-border: var(--sk-teal);
+  --vp-custom-block-tip-text: #1a1d2e;
+  --vp-custom-block-tip-bg: rgba(58, 140, 140, 0.06);
+  --vp-custom-block-tip-code-bg: rgba(58, 140, 140, 0.08);
+
+  /* ── Typography ── */
+  --vp-font-family-base: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --vp-font-family-mono: "JetBrains Mono", "Fira Code", "Cascadia Code",
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ── Dark Mode ── */
+.dark {
+  --vp-c-brand-1: #f0a050;
+  --vp-c-brand-2: #e8913a;
+  --vp-c-brand-3: #d4802e;
+  --vp-c-brand-soft: rgba(232, 145, 58, 0.16);
+
+  --vp-c-bg: #0f1626;
+  --vp-c-bg-alt: #131d33;
+  --vp-c-bg-elv: #182240;
+  --vp-c-bg-soft: #182240;
+
+  --vp-c-text-1: #d6dce8;
+  --vp-c-text-2: #8a94aa;
+  --vp-c-text-3: #5a6478;
+
+  --vp-c-border: #243560;
+  --vp-c-divider: #1e2e50;
+  --vp-c-gutter: #0a0f1c;
+
+  --vp-code-block-bg: #0c1322;
+  --vp-code-block-color: #c8d0e0;
+  --vp-code-block-divider-color: #1e2e50;
+  --vp-code-bg: rgba(24, 34, 64, 0.6);
+  --vp-code-color: #c8d0e0;
+
+  --vp-nav-bg-color: rgba(15, 22, 38, 0.92);
+  --vp-sidebar-bg-color: var(--vp-c-bg-alt);
+
+  --vp-button-alt-border: #3a5080;
+  --vp-button-alt-text: #d6dce8;
+  --vp-button-alt-hover-border: #4a6090;
+  --vp-button-alt-hover-text: #e8edf5;
+  --vp-button-alt-hover-bg: rgba(255, 255, 255, 0.04);
+
+  --vp-custom-block-tip-bg: rgba(58, 140, 140, 0.08);
+  --vp-custom-block-tip-code-bg: rgba(58, 140, 140, 0.1);
+}
+
+/* ── Topographic contour pattern on hero ── */
+.VPHero {
+  position: relative;
+}
+
+.VPHero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cpath d='M20 200 Q100 180 200 200 T380 200' fill='none' stroke='%233a8c8c' stroke-width='0.5' opacity='0.12'/%3E%3Cpath d='M20 160 Q120 130 200 160 T380 155' fill='none' stroke='%233a8c8c' stroke-width='0.5' opacity='0.09'/%3E%3Cpath d='M20 240 Q80 260 200 240 T380 245' fill='none' stroke='%233a8c8c' stroke-width='0.5' opacity='0.09'/%3E%3Cpath d='M20 120 Q140 80 200 120 T380 110' fill='none' stroke='%231b2a4a' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M20 280 Q60 310 200 280 T380 290' fill='none' stroke='%231b2a4a' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M20 80 Q160 40 200 80 T380 65' fill='none' stroke='%231b2a4a' stroke-width='0.4' opacity='0.05'/%3E%3Cpath d='M20 320 Q50 360 200 320 T380 335' fill='none' stroke='%231b2a4a' stroke-width='0.4' opacity='0.05'/%3E%3C/svg%3E");
+  background-size: 400px 400px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(
+    ellipse 60% 60% at 50% 50%,
+    black 0%,
+    transparent 100%
+  );
+}
+
+/* ── Sharp edges: reduce border radius ── */
+:root {
+  --vp-border-radius: 2px;
+}
+
+.VPButton {
+  border-radius: 3px !important;
+}
+
+.VPFeature {
+  border-radius: 4px !important;
+}
+
+/* ── Feature cards: teal left accent ── */
+.VPFeature {
+  border-left: 3px solid var(--sk-teal) !important;
+  transition: border-left-color 0.2s ease;
+}
+
+.VPFeature:hover {
+  border-left-color: var(--sk-amber) !important;
+}
+
+/* ── Scoreboard-style tables ── */
+.vp-doc table {
+  border-collapse: collapse;
+  border-radius: 0;
+}
+
+.vp-doc table thead {
+  background: var(--sk-slate);
+  color: #ffffff;
+}
+
+.dark .vp-doc table thead {
+  background: #1e2e50;
+}
+
+.vp-doc table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  letter-spacing: 0.05em;
+  padding: 10px 16px;
+  border-color: var(--sk-slate);
+}
+
+.dark .vp-doc table thead th {
+  border-color: #1e2e50;
+}
+
+.vp-doc table tbody tr:nth-child(even) {
+  background: var(--sk-snow);
+}
+
+.dark .vp-doc table tbody tr:nth-child(even) {
+  background: rgba(24, 34, 64, 0.3);
+}
+
+.vp-doc table tbody td {
+  padding: 8px 16px;
+}
+
+/* ── Code block: teal left border ── */
+.vp-doc div[class*="language-"] {
+  border-left: 3px solid var(--sk-teal);
+  border-radius: 0 4px 4px 0;
+}
+
+/* ── Inline code ── */
+.vp-doc :not(pre) > code {
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+
+/* ── Sidebar active link: amber ── */
+.VPSidebarItem.is-active > .item > .link > .text {
+  color: var(--sk-amber) !important;
+}
+
+/* ── Nav link hover ── */
+.VPNavBarMenuLink:hover .text,
+.VPNavBarMenuLink.active .text {
+  color: var(--sk-amber);
+}
+
+/* ── Hero tagline spacing ── */
+.VPHero .tagline {
+  max-width: 520px;
+}
+
+/* ── Heading anchors: amber on hover ── */
+.vp-doc .header-anchor:hover {
+  color: var(--sk-amber);
+}
