@@ -107,14 +107,15 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 }
 
 func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
-	tr := result.TreatmentResult{
-		Name:      t.Name,
-		IsControl: isControl,
-	}
-
 	runnerName := t.Runner
 	if runnerName == "" {
 		runnerName = defaultRunner
+	}
+
+	tr := result.TreatmentResult{
+		Name:      t.Name,
+		Runner:    runnerName,
+		IsControl: isControl,
 	}
 
 	runner, ok := runnerCache[runnerName]

@@ -199,6 +199,90 @@ func TestValidate_TreatmentLevelModelsWithoutEvalModel(t *testing.T) {
 	}
 }
 
+func TestValidate_ValidRunners(t *testing.T) {
+	for _, runner := range []string{"", "claude-code", "ollama"} {
+		s := &Suite{
+			Version: 1,
+			Evals: []Eval{
+				{
+					ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+					Runner: runner,
+					Treatments: Treatments{
+						Control: Treatment{Name: "ctrl", Runner: runner},
+					},
+				},
+			},
+		}
+		if err := validate(s); err != nil {
+			t.Errorf("runner %q should be valid, got: %v", runner, err)
+		}
+	}
+}
+
+func TestValidate_UnknownRunnerOnDefaults(t *testing.T) {
+	s := &Suite{
+		Version:  1,
+		Defaults: Defaults{Runner: "unknown"},
+		Evals: []Eval{
+			{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `defaults: unknown runner "unknown"`)
+}
+
+func TestValidate_UnknownRunnerOnEval(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Runner:     "bad-runner",
+				Treatments: Treatments{Control: Treatment{Name: "c"}},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `eval[0]: unknown runner "bad-runner"`)
+}
+
+func TestValidate_UnknownRunnerOnControlTreatment(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl", Runner: "nope"},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `control treatment "ctrl": unknown runner "nope"`)
+}
+
+func TestValidate_UnknownRunnerOnVariation(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl"},
+					Variations: []Treatment{{Name: "v1", Model: "claude-sonnet-4-6", Runner: "fake"}},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `variation[0] "v1": unknown runner "fake"`)
+}
+
 func assertValidationContains(t *testing.T, err error, substr string) {
 	t.Helper()
 	if err == nil {

@@ -82,6 +82,42 @@ func TestWriteJSON_Rankings(t *testing.T) {
 	}
 }
 
+func TestWriteJSON_RunnerField(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "e1",
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{{
+				Name:   "ctrl",
+				Runner: "claude-code",
+				Runs:   []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100}},
+			}},
+		}},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		Evals []struct {
+			Treatments []struct {
+				Runner string `json:"runner"`
+			} `json:"treatments"`
+		} `json:"evals"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+
+	if parsed.Evals[0].Treatments[0].Runner != "claude-code" {
+		t.Errorf("expected runner %q, got %q", "claude-code", parsed.Evals[0].Treatments[0].Runner)
+	}
+}
+
 func TestWriteJSON_EvalError(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),

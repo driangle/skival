@@ -156,6 +156,74 @@ func TestWriteMarkdown_NoErrorsSectionWhenAllPass(t *testing.T) {
 	}
 }
 
+func TestWriteMarkdown_RunnerAnnotationMultipleRunners(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{
+				{Name: "a", Runner: "claude-code", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Runner: "ollama", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if !strings.Contains(out, "a (claude-code)") {
+		t.Error("expected runner annotation on treatment a")
+	}
+	if !strings.Contains(out, "b (ollama)") {
+		t.Error("expected runner annotation on treatment b")
+	}
+}
+
+func TestWriteMarkdown_NoRunnerAnnotationSingleRunner(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{
+				{Name: "a", Runner: "claude-code", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Runner: "claude-code", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if strings.Contains(out, "(claude-code)") {
+		t.Error("should not show runner annotation when all treatments use the same runner")
+	}
+}
+
+func TestWriteMarkdown_RankingRunnerColumn(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			Treatments: []result.TreatmentResult{
+				{Name: "a", Runner: "claude-code", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Runner: "ollama", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if !strings.Contains(out, "RUNNER") {
+		t.Error("expected RUNNER column header in rankings for multi-runner suite")
+	}
+	if !strings.Contains(out, "claude-code") {
+		t.Error("expected runner name in rankings")
+	}
+}
+
 func TestWriteMarkdown_AggregateRow(t *testing.T) {
 	cv := 0.15
 	sr := &result.SuiteResult{

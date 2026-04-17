@@ -22,6 +22,14 @@ var validComplexities = map[string]bool{
 	"high":   true,
 }
 
+var validRunners = map[string]bool{
+	"":            true,
+	"claude-code": true,
+	"ollama":      true,
+	"codex":       true,
+	"aider":       true,
+}
+
 // validate checks the suite for structural problems and returns a
 // *ValidationError if any are found.
 func validate(s *Suite) error {
@@ -33,6 +41,10 @@ func validate(s *Suite) error {
 
 	if len(s.Evals) == 0 {
 		errs = append(errs, "at least one eval is required")
+	}
+
+	if !validRunners[s.Defaults.Runner] {
+		errs = append(errs, fmt.Sprintf("defaults: unknown runner %q", s.Defaults.Runner))
 	}
 
 	seenIDs := make(map[string]bool)
@@ -55,8 +67,21 @@ func validate(s *Suite) error {
 			errs = append(errs, fmt.Sprintf("%s: invalid complexity %q (must be low, medium, or high)", prefix, eval.Complexity))
 		}
 
+		if !validRunners[eval.Runner] {
+			errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))
+		}
+
 		if eval.Treatments.Control.Name == "" {
 			errs = append(errs, fmt.Sprintf("%s: control treatment name is required", prefix))
+		}
+
+		if !validRunners[eval.Treatments.Control.Runner] {
+			errs = append(errs, fmt.Sprintf("%s: control treatment %q: unknown runner %q", prefix, eval.Treatments.Control.Name, eval.Treatments.Control.Runner))
+		}
+		for j, v := range eval.Treatments.Variations {
+			if !validRunners[v.Runner] {
+				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: unknown runner %q", prefix, j, v.Name, v.Runner))
+			}
 		}
 
 		// Every treatment must resolve to a model (treatment-level or eval-level).

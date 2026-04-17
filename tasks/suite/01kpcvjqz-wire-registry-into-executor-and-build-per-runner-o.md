@@ -1,13 +1,14 @@
 ---
 title: "Wire registry into executor and build per-runner options"
 id: "01kpcvjqz"
-status: in-progress
+status: completed
 priority: critical
 type: feature
 effort: medium
 tags: ["backend", "executor"]
 dependencies: ["01kpcvjj5", "01kpcvjkv"]
 created: "2026-04-17"
+completed_at: 2026-04-17
 ---
 
 # Wire registry into executor and build per-runner options

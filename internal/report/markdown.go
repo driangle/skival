@@ -18,12 +18,28 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintf(w, "**Started:** %s  \n", sr.StartedAt.Format("2006-01-02 15:04:05"))
 	fmt.Fprintf(w, "**Finished:** %s  \n\n", sr.FinishedAt.Format("2006-01-02 15:04:05"))
 
-	writeResultsTable(w, sr)
+	multi := hasMultipleRunners(sr)
+	writeResultsTable(w, sr, multi)
 	writeErrorsSection(w, sr)
-	writeRankingTable(w, sr)
+	writeRankingTable(w, sr, multi)
 }
 
-func writeResultsTable(w io.Writer, sr *result.SuiteResult) {
+// hasMultipleRunners returns true when the suite contains more than one distinct runner name.
+func hasMultipleRunners(sr *result.SuiteResult) bool {
+	seen := ""
+	for _, eval := range sr.Evals {
+		for _, treat := range eval.Treatments {
+			if seen == "" {
+				seen = treat.Runner
+			} else if treat.Runner != seen {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
 	fmt.Fprintf(w, "## Results\n\n")
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
@@ -36,23 +52,31 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult) {
 			continue
 		}
 		for _, treat := range eval.Treatments {
+			treatLabel := treatmentLabel(treat, multiRunner)
 			for _, run := range treat.Runs {
 				status := runStatus(run)
 				cost := fmt.Sprintf("$%.4f", run.CostUSD)
 				duration := formatDuration(run.DurationMs)
 
 				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\n",
-					eval.EvalName, treat.Name, run.Sample, status, cost, duration)
+					eval.EvalName, treatLabel, run.Sample, status, cost, duration)
 			}
 
 			if agg := treat.Aggregate; agg != nil && len(treat.Runs) >= 2 {
-				writeAggregateRow(tw, eval.EvalName, treat.Name, agg)
+				writeAggregateRow(tw, eval.EvalName, treatLabel, agg)
 			}
 		}
 	}
 
 	tw.Flush()
 	fmt.Fprintln(w)
+}
+
+func treatmentLabel(t result.TreatmentResult, multiRunner bool) string {
+	if multiRunner && t.Runner != "" {
+		return fmt.Sprintf("%s (%s)", t.Name, t.Runner)
+	}
+	return t.Name
 }
 
 func writeAggregateRow(tw *tabwriter.Writer, evalName, treatName string, agg *result.Aggregate) {
@@ -102,7 +126,7 @@ func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintln(w)
 }
 
-func writeRankingTable(w io.Writer, sr *result.SuiteResult) {
+func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
 	ranks := RankTreatments(sr)
 	if len(ranks) < 2 {
 		return
@@ -111,14 +135,26 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintf(w, "## Rankings\n\n")
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(tw, "RANK\tTREATMENT\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
-	fmt.Fprintf(tw, "----\t---------\t-----\t---------\t-----------\t---------------\n")
+	if multiRunner {
+		fmt.Fprintf(tw, "RANK\tTREATMENT\tRUNNER\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
+		fmt.Fprintf(tw, "----\t---------\t------\t-----\t---------\t-----------\t---------------\n")
+	} else {
+		fmt.Fprintf(tw, "RANK\tTREATMENT\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
+		fmt.Fprintf(tw, "----\t---------\t-----\t---------\t-----------\t---------------\n")
+	}
 
 	for _, r := range ranks {
-		fmt.Fprintf(tw, "#%d\t%s\t%.3f\t%.0f%%\t$%.4f\t%s\n",
-			r.Rank, r.Name, r.CompositeScore,
-			r.PassRate*100, r.MedianCostUSD,
-			formatDuration(r.MedianDuration))
+		if multiRunner {
+			fmt.Fprintf(tw, "#%d\t%s\t%s\t%.3f\t%.0f%%\t$%.4f\t%s\n",
+				r.Rank, r.Name, r.Runner, r.CompositeScore,
+				r.PassRate*100, r.MedianCostUSD,
+				formatDuration(r.MedianDuration))
+		} else {
+			fmt.Fprintf(tw, "#%d\t%s\t%.3f\t%.0f%%\t$%.4f\t%s\n",
+				r.Rank, r.Name, r.CompositeScore,
+				r.PassRate*100, r.MedianCostUSD,
+				formatDuration(r.MedianDuration))
+		}
 	}
 
 	tw.Flush()

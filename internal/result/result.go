@@ -25,8 +25,9 @@ type RunResult struct {
 
 // TreatmentResult groups runs for one treatment.
 type TreatmentResult struct {
-	Name      string
-	IsControl bool
+	Name      string `json:"name"`
+	Runner    string `json:"runner,omitempty"`
+	IsControl bool   `json:"is_control"`
 	Runs      []RunResult
 	Aggregate *Aggregate
 }
