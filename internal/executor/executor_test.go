@@ -250,7 +250,7 @@ func TestOptionsMapping(t *testing.T) {
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:         "control",
 		Env:          map[string]string{"FOO": "bar"},
-		AllowedTools: []string{"Read", "Write"},
+		RunnerConfig: map[string]any{"allowed_tools": []string{"Read", "Write"}},
 	}
 
 	_, _ = Execute(context.Background(), s, runner, nil)

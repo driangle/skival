@@ -10,25 +10,29 @@ type Suite struct {
 
 // Defaults defines suite-level defaults applied to evals that don't override them.
 type Defaults struct {
-	Samples *int   `yaml:"samples"`
-	Timeout *int   `yaml:"timeout"`
-	Model   string `yaml:"model"`
+	Samples      *int           `yaml:"samples"`
+	Timeout      *int           `yaml:"timeout"`
+	Model        string         `yaml:"model"`
+	Runner       string         `yaml:"runner"`
+	RunnerConfig map[string]any `yaml:"runner_config"`
 }
 
 // Eval defines a single evaluation within a suite.
 type Eval struct {
-	File        string      `yaml:"file,omitempty"`
-	ID          string      `yaml:"id"`
-	Name        string      `yaml:"name"`
-	Prompt      string      `yaml:"prompt"`
-	Dir         string      `yaml:"dir"`
-	Complexity  string      `yaml:"complexity"`
-	Samples     *int        `yaml:"samples"`
-	Timeout     *int        `yaml:"timeout"`
-	Model       string      `yaml:"model"`
-	Setup       Setup       `yaml:"setup"`
-	Correctness Correctness `yaml:"correctness"`
-	Treatments  Treatments  `yaml:"treatments"`
+	File         string         `yaml:"file,omitempty"`
+	ID           string         `yaml:"id"`
+	Name         string         `yaml:"name"`
+	Prompt       string         `yaml:"prompt"`
+	Dir          string         `yaml:"dir"`
+	Complexity   string         `yaml:"complexity"`
+	Samples      *int           `yaml:"samples"`
+	Timeout      *int           `yaml:"timeout"`
+	Model        string         `yaml:"model"`
+	Runner       string         `yaml:"runner"`
+	RunnerConfig map[string]any `yaml:"runner_config"`
+	Setup        Setup          `yaml:"setup"`
+	Correctness  Correctness    `yaml:"correctness"`
+	Treatments   Treatments     `yaml:"treatments"`
 }
 
 // Setup defines lifecycle hooks for an eval.
@@ -66,7 +70,9 @@ type Treatment struct {
 	Name         string            `yaml:"name"`
 	Dir          string            `yaml:"dir"`
 	Model        string            `yaml:"model"`
+	Runner       string            `yaml:"runner"`
+	RunnerConfig map[string]any    `yaml:"runner_config"`
 	Skill        string            `yaml:"skill"`
-	AllowedTools []string          `yaml:"allowed_tools"`
+	AllowedTools []string          `yaml:"allowed_tools,omitempty"` // Deprecated: use runner_config.allowed_tools
 	Env          map[string]string `yaml:"env"`
 }

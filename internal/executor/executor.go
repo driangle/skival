@@ -230,9 +230,26 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment) ([]agentrunner.Option
 		opts = append(opts, agentrunner.WithEnv(t.Env))
 	}
 
-	// Allowed tools from treatment.
-	if len(t.AllowedTools) > 0 {
-		opts = append(opts, claudecode.WithAllowedTools(t.AllowedTools...))
+	// Allowed tools from runner_config (migrated from deprecated allowed_tools by loader).
+	if rc := t.RunnerConfig; rc != nil {
+		if tools, ok := rc["allowed_tools"]; ok {
+			switch v := tools.(type) {
+			case []string:
+				if len(v) > 0 {
+					opts = append(opts, claudecode.WithAllowedTools(v...))
+				}
+			case []any:
+				var strs []string
+				for _, item := range v {
+					if s, ok := item.(string); ok {
+						strs = append(strs, s)
+					}
+				}
+				if len(strs) > 0 {
+					opts = append(opts, claudecode.WithAllowedTools(strs...))
+				}
+			}
+		}
 	}
 
 	// Skill file as appended system prompt.

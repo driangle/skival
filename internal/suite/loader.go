@@ -2,6 +2,7 @@ package suite
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -31,6 +32,7 @@ func Load(path string) (*Suite, error) {
 	}
 
 	resolvePaths(&s, suiteDir)
+	migrateAllowedTools(&s)
 	mergeDefaults(&s)
 
 	if err := validate(&s); err != nil {
@@ -101,6 +103,31 @@ func resolveTreatmentPaths(t *Treatment, suiteDir string) {
 	}
 }
 
+// migrateAllowedTools moves the deprecated AllowedTools field on treatments
+// into RunnerConfig["allowed_tools"] and logs a deprecation warning.
+func migrateAllowedTools(s *Suite) {
+	for i := range s.Evals {
+		migrateTreatmentAllowedTools(&s.Evals[i].Treatments.Control)
+		for j := range s.Evals[i].Treatments.Variations {
+			migrateTreatmentAllowedTools(&s.Evals[i].Treatments.Variations[j])
+		}
+	}
+}
+
+func migrateTreatmentAllowedTools(t *Treatment) {
+	if len(t.AllowedTools) == 0 {
+		return
+	}
+	log.Printf("WARNING: treatment %q uses deprecated allowed_tools field; use runner_config.allowed_tools instead", t.Name)
+	if t.RunnerConfig == nil {
+		t.RunnerConfig = make(map[string]any)
+	}
+	if _, ok := t.RunnerConfig["allowed_tools"]; !ok {
+		t.RunnerConfig["allowed_tools"] = t.AllowedTools
+	}
+	t.AllowedTools = nil
+}
+
 // mergeDefaults applies suite-level defaults to each eval where the eval
 // doesn't provide its own value.
 func mergeDefaults(s *Suite) {
@@ -115,6 +142,12 @@ func mergeDefaults(s *Suite) {
 		}
 		if e.Model == "" && d.Model != "" {
 			e.Model = d.Model
+		}
+		if e.Runner == "" && d.Runner != "" {
+			e.Runner = d.Runner
+		}
+		if e.RunnerConfig == nil && d.RunnerConfig != nil {
+			e.RunnerConfig = d.RunnerConfig
 		}
 	}
 }

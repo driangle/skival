@@ -339,6 +339,159 @@ evals:
 	}
 }
 
+func TestLoad_RunnerAndRunnerConfigFields(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  runner: "claude-code"
+  runner_config:
+    max_turns: 10
+evals:
+  - id: eval-1
+    prompt: "task"
+    runner: "codex"
+    runner_config:
+      sandbox: "full"
+    treatments:
+      control:
+        name: baseline
+        runner: "aider"
+        runner_config:
+          edit_format: "diff"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Runner != "codex" {
+		t.Errorf("expected eval runner %q, got %q", "codex", e.Runner)
+	}
+	if e.RunnerConfig["sandbox"] != "full" {
+		t.Errorf("expected eval runner_config.sandbox=%q, got %v", "full", e.RunnerConfig["sandbox"])
+	}
+
+	ctrl := e.Treatments.Control
+	if ctrl.Runner != "aider" {
+		t.Errorf("expected treatment runner %q, got %q", "aider", ctrl.Runner)
+	}
+	if ctrl.RunnerConfig["edit_format"] != "diff" {
+		t.Errorf("expected treatment runner_config.edit_format=%q, got %v", "diff", ctrl.RunnerConfig["edit_format"])
+	}
+}
+
+func TestLoad_DefaultsRunnerMerge(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  runner: "claude-code"
+  runner_config:
+    max_turns: 10
+evals:
+  - id: eval-1
+    prompt: "task"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if e.Runner != "claude-code" {
+		t.Errorf("expected runner %q from defaults, got %q", "claude-code", e.Runner)
+	}
+	if e.RunnerConfig["max_turns"] != 10 {
+		t.Errorf("expected runner_config.max_turns=10 from defaults, got %v", e.RunnerConfig["max_turns"])
+	}
+}
+
+func TestLoad_MigrateAllowedToolsToRunnerConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+        allowed_tools:
+          - Read
+          - Write
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctrl := s.Evals[0].Treatments.Control
+	if ctrl.AllowedTools != nil {
+		t.Error("expected AllowedTools to be nil after migration")
+	}
+	if ctrl.RunnerConfig == nil {
+		t.Fatal("expected RunnerConfig to be populated after migration")
+	}
+	tools, ok := ctrl.RunnerConfig["allowed_tools"]
+	if !ok {
+		t.Fatal("expected runner_config.allowed_tools to be set")
+	}
+	toolSlice, ok := tools.([]string)
+	if !ok {
+		t.Fatalf("expected []string, got %T", tools)
+	}
+	if len(toolSlice) != 2 || toolSlice[0] != "Read" || toolSlice[1] != "Write" {
+		t.Errorf("expected [Read Write], got %v", toolSlice)
+	}
+}
+
+func TestLoad_MigrateAllowedToolsDoesNotOverrideExisting(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+        allowed_tools:
+          - Read
+        runner_config:
+          allowed_tools:
+            - Write
+            - Edit
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctrl := s.Evals[0].Treatments.Control
+	tools := ctrl.RunnerConfig["allowed_tools"]
+	// The explicit runner_config value should win over the deprecated field.
+	toolSlice, ok := tools.([]any)
+	if !ok {
+		t.Fatalf("expected []any, got %T", tools)
+	}
+	if len(toolSlice) != 2 {
+		t.Errorf("expected 2 tools from runner_config, got %v", toolSlice)
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
