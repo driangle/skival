@@ -1,0 +1,9 @@
+id: string-reverse
+name: "String Reversal"
+prompt: |
+  Write a function that reverses a string in-place.
+  Save it to reverse.py.
+complexity: low
+treatments:
+  control:
+    name: baseline

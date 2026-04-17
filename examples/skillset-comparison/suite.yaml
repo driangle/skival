@@ -2,6 +2,7 @@ version: 1
 description: "Skillset comparison — baseline vs single skill vs composed skillset"
 
 defaults:
+  model: "claude-sonnet-4-6"
   samples: 3
   timeout: 60
 

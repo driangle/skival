@@ -1,0 +1,41 @@
+# Evals at each complexity level with different sample counts.
+version: 1
+description: "Demonstrates complexity levels"
+
+defaults:
+  model: "claude-sonnet-4-6"
+
+evals:
+  - id: low-complexity
+    name: "Simple file creation"
+    prompt: "Create a file called hello.txt containing 'hello'."
+    complexity: low
+    samples: 5
+    timeout: 30
+    treatments:
+      control:
+        name: baseline
+
+  - id: medium-complexity
+    name: "REST API endpoint"
+    prompt: |
+      Write a Python Flask app in app.py with a GET /users endpoint
+      that returns a JSON list of users.
+    complexity: medium
+    samples: 3
+    timeout: 120
+    treatments:
+      control:
+        name: baseline
+
+  - id: high-complexity
+    name: "Full CRUD application"
+    prompt: |
+      Build a complete TODO application with a SQLite backend.
+      Include CRUD endpoints, input validation, and error handling.
+    complexity: high
+    samples: 2
+    timeout: 300
+    treatments:
+      control:
+        name: baseline

@@ -1,0 +1,30 @@
+# Lifecycle hooks: before, after, and reset.
+version: 1
+description: "Demonstrates setup lifecycle hooks"
+
+defaults:
+  model: "claude-sonnet-4-6"
+  samples: 3
+  timeout: 60
+
+evals:
+  - id: with-hooks
+    name: "Eval with full lifecycle hooks"
+    prompt: |
+      Read the file input.txt and write its contents reversed to output.txt.
+    isolate: true
+    setup:
+      # Runs once before the eval starts (e.g., create fixtures)
+      before: |
+        echo "dlrow olleh" > input.txt
+      # Runs after each sample to restore a clean state
+      reset: |
+        rm -f output.txt
+      # Runs once after all samples complete (e.g., tear down services)
+      after: |
+        rm -f input.txt output.txt
+    correctness:
+      execute: true
+    treatments:
+      control:
+        name: baseline

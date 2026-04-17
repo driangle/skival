@@ -1,0 +1,87 @@
+# All correctness verification modes.
+version: 1
+description: "Demonstrates every correctness verification option"
+
+defaults:
+  model: "claude-sonnet-4-6"
+  samples: 2
+  timeout: 60
+
+evals:
+  # Verify that output compiles
+  - id: compiles-check
+    prompt: "Write a Go program in main.go that prints 'hello'."
+    correctness:
+      compiles: true
+    treatments:
+      control:
+        name: baseline
+
+  # Verify that output executes successfully
+  - id: execute-check
+    prompt: "Write a shell script run.sh that exits with code 0."
+    correctness:
+      execute: true
+    treatments:
+      control:
+        name: baseline
+
+  # Verify expected output strings appear
+  - id: expected-output-check
+    prompt: "Write a script that prints 'PASS: all tests green'."
+    correctness:
+      expected_output:
+        - "PASS"
+        - "all tests green"
+    treatments:
+      control:
+        name: baseline
+
+  # Verify via a custom script
+  - id: script-check
+    prompt: "Create a file called output.txt containing exactly 'hello world'."
+    correctness:
+      script: "./scripts/verify-output.sh"
+    treatments:
+      control:
+        name: baseline
+
+  # Verify via HTTP state assertions
+  - id: state-check
+    prompt: "Start a web server on port 8080 that responds to GET /health with 'ok'."
+    correctness:
+      state:
+        - url: "http://localhost:8080/health"
+          method: GET
+          expect: "ok"
+        - url: "http://localhost:8080/ready"
+          method: GET
+          expect: "ready"
+    treatments:
+      control:
+        name: baseline
+
+  # Verify via LLM judge
+  - id: judge-check
+    prompt: "Write a README.md explaining how to set up a Go project."
+    correctness:
+      judge:
+        - "Does the README explain how to initialize a Go module?"
+        - "Does it include instructions for running tests?"
+    treatments:
+      control:
+        name: baseline
+
+  # Multiple correctness checks combined
+  - id: combined-check
+    prompt: |
+      Write a Python script called calc.py that reads two numbers
+      from stdin and prints their sum.
+    correctness:
+      execute: true
+      expected_output:
+        - "Result:"
+      script: "./scripts/verify-calc.sh"
+    treatments:
+      control:
+        name: baseline

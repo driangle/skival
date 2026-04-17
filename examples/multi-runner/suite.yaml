@@ -1,0 +1,28 @@
+# Different runners across treatments in the same suite.
+version: 1
+description: "Demonstrates multiple runners in a single suite"
+
+defaults:
+  samples: 2
+  timeout: 120
+
+evals:
+  - id: cross-runner
+    name: "Cross-runner comparison"
+    prompt: |
+      Write a Python script called primes.py that prints all prime numbers
+      less than 100, one per line.
+    correctness:
+      execute: true
+    treatments:
+      control:
+        name: claude-code
+        model: "claude-sonnet-4-6"
+        runner: claude-code
+      variations:
+        - name: codex
+          model: "gpt-4.1"
+          runner: codex
+        - name: aider
+          model: "claude-sonnet-4-6"
+          runner: aider

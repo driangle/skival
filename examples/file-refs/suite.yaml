@@ -1,0 +1,12 @@
+# Evals loaded via file: references to separate YAML files.
+# Each file: entry points to a standalone eval definition.
+version: 1
+description: "Demonstrates file-based eval references"
+
+defaults:
+  model: "claude-sonnet-4-6"
+  samples: 2
+
+evals:
+  - file: evals/string-reverse.yaml
+  - file: evals/fibonacci.yaml

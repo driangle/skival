@@ -2,7 +2,7 @@
 title: "Multi-dimensional reporting and analysis"
 id: "01kpcv08d"
 status: pending
-priority: medium
+priority: low
 type: feature
 tags: ["reporting", "analysis"]
 created: "2026-04-17"

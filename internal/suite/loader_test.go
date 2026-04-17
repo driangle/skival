@@ -993,6 +993,41 @@ evals:
 	}
 }
 
+func TestLoad_Examples(t *testing.T) {
+	// Smoke test: every examples/<name>/suite.yaml must load without errors.
+	root, err := filepath.Abs(filepath.Join("..", "..", "examples"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatalf("reading examples dir: %v", err)
+	}
+
+	var found int
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		suitePath := filepath.Join(root, e.Name(), "suite.yaml")
+		if _, err := os.Stat(suitePath); err != nil {
+			continue
+		}
+		name := e.Name()
+		t.Run(name, func(t *testing.T) {
+			if _, err := Load(suitePath); err != nil {
+				t.Errorf("Load(%s/suite.yaml) failed: %v", name, err)
+			}
+		})
+		found++
+	}
+
+	if found == 0 {
+		t.Fatal("no example suite.yaml files found")
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
