@@ -19,9 +19,10 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintf(w, "**Finished:** %s  \n\n", sr.FinishedAt.Format("2006-01-02 15:04:05"))
 
 	multi := hasMultipleRunners(sr)
-	writeResultsTable(w, sr, multi)
+	multiModel := hasMultipleModels(sr)
+	writeResultsTable(w, sr, multi, multiModel)
 	writeErrorsSection(w, sr)
-	writeRankingTable(w, sr, multi)
+	writeRankingTable(w, sr, multi, multiModel)
 }
 
 // hasMultipleRunners returns true when the suite contains more than one distinct runner name.
@@ -39,7 +40,22 @@ func hasMultipleRunners(sr *result.SuiteResult) bool {
 	return false
 }
 
-func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
+// hasMultipleModels returns true when the suite contains more than one distinct model.
+func hasMultipleModels(sr *result.SuiteResult) bool {
+	seen := ""
+	for _, eval := range sr.Evals {
+		for _, treat := range eval.Treatments {
+			if seen == "" {
+				seen = treat.Model
+			} else if treat.Model != seen {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiModel bool) {
 	fmt.Fprintf(w, "## Results\n\n")
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
@@ -52,7 +68,7 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
 			continue
 		}
 		for _, treat := range eval.Treatments {
-			treatLabel := treatmentLabel(treat, multiRunner)
+			treatLabel := treatmentLabel(treat, multiRunner, multiModel)
 			for _, run := range treat.Runs {
 				status := runStatus(run)
 				cost := fmt.Sprintf("$%.4f", run.CostUSD)
@@ -72,9 +88,16 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
 	fmt.Fprintln(w)
 }
 
-func treatmentLabel(t result.TreatmentResult, multiRunner bool) string {
+func treatmentLabel(t result.TreatmentResult, multiRunner, multiModel bool) string {
+	var annotations []string
 	if multiRunner && t.Runner != "" {
-		return fmt.Sprintf("%s (%s)", t.Name, t.Runner)
+		annotations = append(annotations, t.Runner)
+	}
+	if multiModel && t.Model != "" {
+		annotations = append(annotations, t.Model)
+	}
+	if len(annotations) > 0 {
+		return fmt.Sprintf("%s (%s)", t.Name, strings.Join(annotations, ", "))
 	}
 	return t.Name
 }
@@ -126,7 +149,7 @@ func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintln(w)
 }
 
-func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
+func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiModel bool) {
 	ranks := RankTreatments(sr)
 	if len(ranks) < 2 {
 		return
@@ -135,26 +158,35 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner bool) {
 	fmt.Fprintf(w, "## Rankings\n\n")
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+
+	// Build header dynamically based on which extra columns are needed.
+	header := "RANK\tTREATMENT"
+	sep := "----\t---------"
 	if multiRunner {
-		fmt.Fprintf(tw, "RANK\tTREATMENT\tRUNNER\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
-		fmt.Fprintf(tw, "----\t---------\t------\t-----\t---------\t-----------\t---------------\n")
-	} else {
-		fmt.Fprintf(tw, "RANK\tTREATMENT\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
-		fmt.Fprintf(tw, "----\t---------\t-----\t---------\t-----------\t---------------\n")
+		header += "\tRUNNER"
+		sep += "\t------"
 	}
+	if multiModel {
+		header += "\tMODEL"
+		sep += "\t-----"
+	}
+	header += "\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n"
+	sep += "\t-----\t---------\t-----------\t---------------\n"
+	fmt.Fprint(tw, header)
+	fmt.Fprint(tw, sep)
 
 	for _, r := range ranks {
+		fmt.Fprintf(tw, "#%d\t%s", r.Rank, r.Name)
 		if multiRunner {
-			fmt.Fprintf(tw, "#%d\t%s\t%s\t%.3f\t%.0f%%\t$%.4f\t%s\n",
-				r.Rank, r.Name, r.Runner, r.CompositeScore,
-				r.PassRate*100, r.MedianCostUSD,
-				formatDuration(r.MedianDuration))
-		} else {
-			fmt.Fprintf(tw, "#%d\t%s\t%.3f\t%.0f%%\t$%.4f\t%s\n",
-				r.Rank, r.Name, r.CompositeScore,
-				r.PassRate*100, r.MedianCostUSD,
-				formatDuration(r.MedianDuration))
+			fmt.Fprintf(tw, "\t%s", r.Runner)
 		}
+		if multiModel {
+			fmt.Fprintf(tw, "\t%s", r.Model)
+		}
+		fmt.Fprintf(tw, "\t%.3f\t%.0f%%\t$%.4f\t%s\n",
+			r.CompositeScore,
+			r.PassRate*100, r.MedianCostUSD,
+			formatDuration(r.MedianDuration))
 	}
 
 	tw.Flush()

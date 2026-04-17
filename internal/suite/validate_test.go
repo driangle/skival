@@ -338,6 +338,66 @@ func TestValidate_SkillsAloneIsValid(t *testing.T) {
 	}
 }
 
+func TestModelLooksValidForRunner(t *testing.T) {
+	tests := []struct {
+		model  string
+		runner string
+		valid  bool
+	}{
+		{"claude-sonnet-4-6", "claude-code", true},
+		{"claude-opus-4-6", "claude-code", true},
+		{"gpt-4o", "claude-code", false},
+		{"llama3", "claude-code", false},
+		{"gpt-4o", "codex", true},
+		{"o1-mini", "codex", true},
+		{"o3-mini", "codex", true},
+		{"codex-mini", "codex", true},
+		{"claude-sonnet-4-6", "codex", false},
+		{"llama3", "ollama", true},
+		{"claude-sonnet-4-6", "ollama", true}, // ollama accepts anything
+		{"any-model", "aider", true},           // aider accepts anything
+	}
+
+	for _, tt := range tests {
+		got := modelLooksValidForRunner(tt.model, tt.runner)
+		if got != tt.valid {
+			t.Errorf("modelLooksValidForRunner(%q, %q) = %v, want %v", tt.model, tt.runner, got, tt.valid)
+		}
+	}
+}
+
+func TestWarnModelRunnerCompat_NoWarningForMatchingModel(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl"},
+				},
+			},
+		},
+	}
+	// Should not panic or error — just logs warnings.
+	warnModelRunnerCompat(s)
+}
+
+func TestWarnModelRunnerCompat_WarnsForMismatch(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "gpt-4o",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl", Runner: "claude-code"},
+				},
+			},
+		},
+	}
+	// Should not panic — warning is logged via log.Printf.
+	warnModelRunnerCompat(s)
+}
+
 func assertValidationContains(t *testing.T, err error, substr string) {
 	t.Helper()
 	if err == nil {

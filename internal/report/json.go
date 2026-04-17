@@ -27,6 +27,7 @@ type jsonEval struct {
 type jsonTreatment struct {
 	Name      string         `json:"name"`
 	Runner    string         `json:"runner,omitempty"`
+	Model     string         `json:"model,omitempty"`
 	IsControl bool           `json:"is_control"`
 	Runs      []jsonRun      `json:"runs"`
 	Aggregate *jsonAggregate `json:"aggregate,omitempty"`
@@ -57,6 +58,7 @@ type jsonRanking struct {
 	Rank           int     `json:"rank"`
 	Name           string  `json:"name"`
 	Runner         string  `json:"runner,omitempty"`
+	Model          string  `json:"model,omitempty"`
 	CompositeScore float64 `json:"composite_score"`
 	PassRate       float64 `json:"pass_rate"`
 	MedianCostUSD  float64 `json:"median_cost_usd"`
@@ -91,6 +93,7 @@ func buildJSONReport(sr *result.SuiteResult) jsonReport {
 			jt := jsonTreatment{
 				Name:      treat.Name,
 				Runner:    treat.Runner,
+				Model:     treat.Model,
 				IsControl: treat.IsControl,
 			}
 			for _, run := range treat.Runs {
@@ -130,6 +133,7 @@ func buildJSONReport(sr *result.SuiteResult) jsonReport {
 			Rank:           rank.Rank,
 			Name:           rank.Name,
 			Runner:         rank.Runner,
+			Model:          rank.Model,
 			CompositeScore: rank.CompositeScore,
 			PassRate:       rank.PassRate,
 			MedianCostUSD:  rank.MedianCostUSD,

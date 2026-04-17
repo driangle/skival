@@ -309,6 +309,53 @@ func TestTreatmentModelOverridesEval(t *testing.T) {
 	}
 }
 
+func TestTreatmentResultModelFromEval(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ok"}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Model = "claude-sonnet-4-6"
+
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tr := sr.Evals[0].Treatments[0]
+	if tr.Model != "claude-sonnet-4-6" {
+		t.Errorf("expected model 'claude-sonnet-4-6', got %q", tr.Model)
+	}
+}
+
+func TestTreatmentResultModelOverride(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "ok"}, {Text: "ok"}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Model = "claude-sonnet-4-6"
+	s.Evals[0].Treatments.Control = suite.Treatment{
+		Name:  "control",
+		Model: "claude-opus-4-6",
+	}
+	s.Evals[0].Treatments.Variations = []suite.Treatment{
+		{Name: "variation"},
+	}
+
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if sr.Evals[0].Treatments[0].Model != "claude-opus-4-6" {
+		t.Errorf("control should use treatment model, got %q", sr.Evals[0].Treatments[0].Model)
+	}
+	if sr.Evals[0].Treatments[1].Model != "claude-sonnet-4-6" {
+		t.Errorf("variation should use eval model, got %q", sr.Evals[0].Treatments[1].Model)
+	}
+}
+
 func TestFilterEvals(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{

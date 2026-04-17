@@ -224,6 +224,71 @@ func TestWriteMarkdown_RankingRunnerColumn(t *testing.T) {
 	}
 }
 
+func TestWriteMarkdown_ModelAnnotationMultipleModels(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{
+				{Name: "a", Runner: "claude-code", Model: "claude-sonnet-4-6", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Runner: "claude-code", Model: "claude-opus-4-6", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if !strings.Contains(out, "claude-sonnet-4-6") {
+		t.Error("expected model annotation for treatment a")
+	}
+	if !strings.Contains(out, "claude-opus-4-6") {
+		t.Error("expected model annotation for treatment b")
+	}
+}
+
+func TestWriteMarkdown_NoModelAnnotationSingleModel(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{
+				{Name: "a", Model: "claude-sonnet-4-6", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Model: "claude-sonnet-4-6", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if strings.Contains(out, "claude-sonnet-4-6") {
+		t.Error("should not show model annotation when all treatments use the same model")
+	}
+}
+
+func TestWriteMarkdown_RankingModelColumn(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			Treatments: []result.TreatmentResult{
+				{Name: "a", Model: "claude-sonnet-4-6", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Model: "claude-opus-4-6", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr)
+	out := buf.String()
+
+	if !strings.Contains(out, "MODEL") {
+		t.Error("expected MODEL column header in rankings for multi-model suite")
+	}
+}
+
 func TestWriteMarkdown_AggregateRow(t *testing.T) {
 	cv := 0.15
 	sr := &result.SuiteResult{

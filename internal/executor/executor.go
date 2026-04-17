@@ -113,9 +113,16 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		runnerName = defaultRunner
 	}
 
+	// Model: treatment > eval.
+	model := eval.Model
+	if t.Model != "" {
+		model = t.Model
+	}
+
 	tr := result.TreatmentResult{
 		Name:      t.Name,
 		Runner:    runnerName,
+		Model:     model,
 		IsControl: isControl,
 	}
 

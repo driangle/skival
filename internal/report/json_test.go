@@ -118,6 +118,60 @@ func TestWriteJSON_RunnerField(t *testing.T) {
 	}
 }
 
+func TestWriteJSON_ModelField(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "e1",
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{
+				{
+					Name:   "ctrl",
+					Runner: "claude-code",
+					Model:  "claude-sonnet-4-6",
+					Runs:   []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100, Pass: boolPtr(true)}},
+				},
+				{
+					Name:   "var",
+					Runner: "ollama",
+					Model:  "llama3",
+					Runs:   []result.RunResult{{Sample: 1, CostUSD: 0.01, DurationMs: 200, Pass: boolPtr(true)}},
+				},
+			},
+		}},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		Evals []struct {
+			Treatments []struct {
+				Model string `json:"model"`
+			} `json:"treatments"`
+		} `json:"evals"`
+		Rankings []struct {
+			Model string `json:"model"`
+		} `json:"rankings"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+
+	if parsed.Evals[0].Treatments[0].Model != "claude-sonnet-4-6" {
+		t.Errorf("expected model %q, got %q", "claude-sonnet-4-6", parsed.Evals[0].Treatments[0].Model)
+	}
+	if parsed.Evals[0].Treatments[1].Model != "llama3" {
+		t.Errorf("expected model %q, got %q", "llama3", parsed.Evals[0].Treatments[1].Model)
+	}
+	if len(parsed.Rankings) >= 2 && parsed.Rankings[0].Model == "" {
+		t.Error("expected model field in rankings")
+	}
+}
+
 func TestWriteJSON_EvalError(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),

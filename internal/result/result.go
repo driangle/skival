@@ -27,6 +27,7 @@ type RunResult struct {
 type TreatmentResult struct {
 	Name      string `json:"name"`
 	Runner    string `json:"runner,omitempty"`
+	Model     string `json:"model,omitempty"`
 	IsControl bool   `json:"is_control"`
 	Runs      []RunResult
 	Aggregate *Aggregate

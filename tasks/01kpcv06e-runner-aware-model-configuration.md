@@ -1,11 +1,12 @@
 ---
 title: "Runner-aware model configuration"
 id: "01kpcv06e"
-status: pending
+status: completed
 priority: low
 type: feature
 tags: ["schema", "models"]
 created: "2026-04-17"
+completed_at: 2026-04-17
 ---
 
 # Runner-aware model configuration
@@ -18,11 +19,11 @@ This depends on multi-runner support being implemented first.
 
 ## Tasks
 
-- [ ] Define how `model` interacts with `runner` — validate that the model is compatible with the selected runner, or treat it as an opaque string passed through
-- [ ] Update validation to warn (not error) if model doesn't match known patterns for the runner
-- [ ] Ensure model precedence chain (treatment > eval > defaults) works correctly when different treatments use different runners
-- [ ] Add reporting metadata to show which runner+model combination was used per treatment
-- [ ] Add tests for model resolution across runner types
+- [x] Define how `model` interacts with `runner` — validate that the model is compatible with the selected runner, or treat it as an opaque string passed through
+- [x] Update validation to warn (not error) if model doesn't match known patterns for the runner
+- [x] Ensure model precedence chain (treatment > eval > defaults) works correctly when different treatments use different runners
+- [x] Add reporting metadata to show which runner+model combination was used per treatment
+- [x] Add tests for model resolution across runner types
 
 ## Acceptance Criteria
 

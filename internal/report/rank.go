@@ -16,6 +16,7 @@ const (
 type TreatmentRank struct {
 	Name           string
 	Runner         string
+	Model          string
 	PassRate       float64
 	MedianCostUSD  float64
 	MedianDuration int64
@@ -36,6 +37,7 @@ func RankTreatments(sr *result.SuiteResult) []TreatmentRank {
 		ranks = append(ranks, TreatmentRank{
 			Name:           name,
 			Runner:         s.runner,
+			Model:          s.model,
 			PassRate:       s.passRate(),
 			MedianCostUSD:  s.medianCost(),
 			MedianDuration: s.medianDuration(),
@@ -61,6 +63,7 @@ func RankTreatments(sr *result.SuiteResult) []TreatmentRank {
 // treatmentStats accumulates raw data for a treatment across evals.
 type treatmentStats struct {
 	runner    string
+	model     string
 	passed    int
 	verified  int
 	costs     []float64
@@ -109,7 +112,7 @@ func collectStats(sr *result.SuiteResult) map[string]*treatmentStats {
 		for _, treat := range eval.Treatments {
 			s, ok := stats[treat.Name]
 			if !ok {
-				s = &treatmentStats{runner: treat.Runner}
+				s = &treatmentStats{runner: treat.Runner, model: treat.Model}
 				stats[treat.Name] = s
 			}
 

@@ -2,6 +2,7 @@ package suite
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -130,4 +131,50 @@ func validate(s *Suite) error {
 		return &ValidationError{Errors: errs}
 	}
 	return nil
+}
+
+// warnModelRunnerCompat logs warnings when a model ID doesn't look valid
+// for the selected runner. This is advisory only and does not block loading.
+func warnModelRunnerCompat(s *Suite) {
+	for _, eval := range s.Evals {
+		warnTreatmentModelRunner(eval.Treatments.Control, eval.Model)
+		for _, v := range eval.Treatments.Variations {
+			warnTreatmentModelRunner(v, eval.Model)
+		}
+	}
+}
+
+func warnTreatmentModelRunner(t Treatment, evalModel string) {
+	model := t.Model
+	if model == "" {
+		model = evalModel
+	}
+	if model == "" {
+		return
+	}
+
+	runner := t.Runner
+	if runner == "" {
+		runner = "claude-code"
+	}
+
+	if !modelLooksValidForRunner(model, runner) {
+		log.Printf("WARNING: treatment %q: model %q may not be compatible with runner %q", t.Name, model, runner)
+	}
+}
+
+// modelLooksValidForRunner checks if a model ID matches known patterns for a runner.
+// Returns true if the model looks valid or if no patterns are known for the runner.
+func modelLooksValidForRunner(model, runner string) bool {
+	switch runner {
+	case "claude-code":
+		return strings.HasPrefix(model, "claude-")
+	case "codex":
+		return strings.HasPrefix(model, "gpt-") ||
+			strings.HasPrefix(model, "o1-") ||
+			strings.HasPrefix(model, "o3-") ||
+			strings.HasPrefix(model, "codex-")
+	default:
+		return true
+	}
 }

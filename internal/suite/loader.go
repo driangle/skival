@@ -44,6 +44,8 @@ func Load(path string) (*Suite, error) {
 		return nil, err
 	}
 
+	warnModelRunnerCompat(&s)
+
 	return &s, nil
 }
 
