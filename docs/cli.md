@@ -24,6 +24,7 @@ skival run <suite.yaml> [flags]
 | `--treatments <names>` | | Comma-separated list of treatment names to run |
 | `--evals <ids>` | | Comma-separated list of eval IDs to run |
 | `--format <type>` | `markdown` | Output format: `markdown` or `json` |
+| `--timeout <secs>` | | Timeout in seconds for all evals (overrides suite/eval-level timeouts) |
 
 ### Examples
 
@@ -49,6 +50,12 @@ Run with 4 concurrent samples:
 
 ```bash
 skival run suite.yaml --samples 10 --parallel 4
+```
+
+Override timeout to 2 minutes for all evals:
+
+```bash
+skival run suite.yaml --timeout 120
 ```
 
 ## `skival report`

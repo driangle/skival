@@ -174,10 +174,12 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		parallel = samples
 	}
 
+	timeoutOverride := opts.Timeout
+
 	if parallel <= 1 {
 		// Sequential execution (default).
 		for i := 0; i < samples; i++ {
-			run := runSample(ctx, eval, t, i, samples, runner, prog)
+			run := runSample(ctx, eval, t, i, samples, runner, prog, timeoutOverride)
 			tr.Runs = append(tr.Runs, run)
 		}
 	} else {
@@ -192,7 +194,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
-				runs[idx] = runSample(ctx, eval, t, idx, samples, runner, prog)
+				runs[idx] = runSample(ctx, eval, t, idx, samples, runner, prog, timeoutOverride)
 			}(i)
 		}
 		wg.Wait()
@@ -206,7 +208,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 
 // runSample executes a single sample, including isolation, running, verification,
 // and retry logic based on the treatment's retry config.
-func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, samples int, runner agentrunner.Runner, prog *progress) result.RunResult {
+func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, samples int, runner agentrunner.Runner, prog *progress, timeoutOverride int) result.RunResult {
 	sample := idx + 1
 	prog.sampleStart(eval.Name, t.Name, sample, samples)
 	slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", sample, "total", samples)
@@ -247,7 +249,7 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 			time.Sleep(delay)
 		}
 
-		run := executeSingleRun(ctx, eval, t, sample, runner, sampleDir)
+		run := executeSingleRun(ctx, eval, t, sample, runner, sampleDir, timeoutOverride)
 		if run.Err != nil {
 			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt, "err", run.Err)
 		} else {
@@ -317,8 +319,8 @@ func createIsolatedDir(eval *suite.Eval, t *suite.Treatment) (string, error) {
 	return tmpDir, nil
 }
 
-func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner, isolatedDir string) result.RunResult {
-	opts, err := buildRunOptions(eval, t, isolatedDir)
+func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner, isolatedDir string, timeoutOverride int) result.RunResult {
+	opts, err := buildRunOptions(eval, t, isolatedDir, timeoutOverride)
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -368,7 +370,7 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	}
 }
 
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string) ([]agentrunner.Option, error) {
+func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string, timeoutOverride int) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
 	// Model: treatment > eval.
@@ -392,8 +394,10 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string) (
 		opts = append(opts, agentrunner.WithWorkingDir(dir))
 	}
 
-	// Timeout from eval.
-	if eval.Timeout != nil {
+	// Timeout: CLI override > eval-level.
+	if timeoutOverride > 0 {
+		opts = append(opts, agentrunner.WithTimeout(time.Duration(timeoutOverride)*time.Second))
+	} else if eval.Timeout != nil {
 		opts = append(opts, agentrunner.WithTimeout(time.Duration(*eval.Timeout)*time.Second))
 	}
 

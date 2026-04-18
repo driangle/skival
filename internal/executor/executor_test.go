@@ -1411,6 +1411,71 @@ func TestParallelProgressNoRace(t *testing.T) {
 	}
 }
 
+func TestTimeoutOverrideFromOptions(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Timeout = intPtr(30) // eval says 30s
+
+	// CLI overrides to 120s.
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), &Options{Timeout: 120})
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(runner.calls))
+	}
+	if runner.calls[0].Opts.Timeout != 120*time.Second {
+		t.Errorf("expected timeout 120s (CLI override), got %v", runner.calls[0].Opts.Timeout)
+	}
+}
+
+func TestTimeoutOverrideWithoutEvalTimeout(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	// No eval-level timeout set.
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), &Options{Timeout: 60})
+
+	if runner.calls[0].Opts.Timeout != 60*time.Second {
+		t.Errorf("expected timeout 60s (CLI override), got %v", runner.calls[0].Opts.Timeout)
+	}
+}
+
+func TestNoTimeoutOverrideUsesEval(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	s.Evals[0].Timeout = intPtr(45)
+
+	// No CLI timeout override (Timeout: 0).
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), &Options{})
+
+	if runner.calls[0].Opts.Timeout != 45*time.Second {
+		t.Errorf("expected timeout 45s (eval-level), got %v", runner.calls[0].Opts.Timeout)
+	}
+}
+
+func TestNoTimeoutAnywhere(t *testing.T) {
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{}},
+	}
+
+	s := newMinimalSuite()
+	// No timeout set at any level.
+
+	_, _ = Execute(context.Background(), s, fakeRegistry(runner), &Options{})
+
+	if runner.calls[0].Opts.Timeout != 0 {
+		t.Errorf("expected no timeout (0), got %v", runner.calls[0].Opts.Timeout)
+	}
+}
+
 func TestParallelOptionOverridesSuiteDefault(t *testing.T) {
 	runner := &concurrentRunner{
 		result: &agentrunner.Result{Text: "ok"},

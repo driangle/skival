@@ -14,4 +14,6 @@ type Options struct {
 	Samples int
 	// Parallel sets the max number of concurrent samples. 0 or 1 = sequential.
 	Parallel int
+	// Timeout overrides the per-eval timeout (in seconds) when set (> 0).
+	Timeout int
 }

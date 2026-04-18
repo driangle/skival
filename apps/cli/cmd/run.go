@@ -35,7 +35,15 @@ var runCmd = &cobra.Command{
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
 		samples, _ := cmd.Flags().GetInt("samples")
 		parallel, _ := cmd.Flags().GetInt("parallel")
-		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "parallel", parallel)
+		timeout, _ := cmd.Flags().GetInt("timeout")
+		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "parallel", parallel, "timeout", timeout)
+
+		if timeout < 0 {
+			return fmt.Errorf("--timeout must be a positive number of seconds")
+		}
+		if timeout == 0 && cmd.Flags().Changed("timeout") {
+			return fmt.Errorf("--timeout must be a positive number of seconds")
+		}
 
 		execOpts := &executor.Options{
 			EvalIDs:    evalIDs,
@@ -43,6 +51,7 @@ var runCmd = &cobra.Command{
 			Progress:   os.Stderr,
 			Samples:    samples,
 			Parallel:   parallel,
+			Timeout:    timeout,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
@@ -95,6 +104,7 @@ func init() {
 	runCmd.Flags().StringSlice("treatments", nil, "Filter to specific treatments")
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
 	runCmd.Flags().String("format", "markdown", "Output format: markdown, json")
+	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")
 
 	rootCmd.AddCommand(runCmd)
 }
