@@ -67,7 +67,7 @@ func countVerifiers(c suite.Correctness) int {
 	if c.Compiles != "" {
 		count++
 	}
-	if len(c.ExpectedOutput) > 0 {
+	if len(c.Output.Contains) > 0 {
 		count++
 	}
 	if c.Script != "" {

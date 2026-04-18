@@ -81,7 +81,7 @@ evals:
 
 ## Correctness Verification
 
-Every verification mode in one suite: `compiles`, `agent_exits_ok`, `expected_output`, `script`, `state`, and `judge`.
+Every verification mode in one suite: `compiles`, `agent_exits_ok`, `output`, `script`, `state`, and `judge`.
 
 ```yaml
 evals:
@@ -101,9 +101,10 @@ evals:
   - id: expected-output-check
     prompt: "Write a script that prints 'PASS: all tests green'."
     correctness:
-      expected_output:
-        - "PASS"
-        - "all tests green"
+      output:
+        contains:
+          - "PASS"
+          - "all tests green"
 
   # Verify with a custom script
   - id: script-check
@@ -133,8 +134,9 @@ evals:
     prompt: "Write calc.py that reads two numbers and prints their sum."
     correctness:
       agent_exits_ok: true
-      expected_output:
-        - "Result:"
+      output:
+        contains:
+          - "Result:"
       script: "./scripts/verify-calc.sh"
 ```
 

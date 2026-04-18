@@ -72,13 +72,18 @@ type Setup struct {
 
 // Correctness defines how to verify an eval's output.
 type Correctness struct {
-	Compiles       string           `yaml:"compiles"`
-	AgentExitsOK   *bool            `yaml:"agent_exits_ok"`
-	ExpectedOutput []string         `yaml:"expected_output"`
-	Script         string           `yaml:"script"`
-	State          []StateAssertion `yaml:"state"`
-	Judge          []string         `yaml:"judge"`
-	JudgeModel     string           `yaml:"judge_model"`
+	Compiles     string           `yaml:"compiles"`
+	AgentExitsOK *bool            `yaml:"agent_exits_ok"`
+	Output       Output           `yaml:"output"`
+	Script       string           `yaml:"script"`
+	State        []StateAssertion `yaml:"state"`
+	Judge        []string         `yaml:"judge"`
+	JudgeModel   string           `yaml:"judge_model"`
+}
+
+// Output defines structured output matching criteria.
+type Output struct {
+	Contains []string `yaml:"contains"`
 }
 
 // StateAssertion defines an HTTP assertion to check after execution.

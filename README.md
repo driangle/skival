@@ -37,7 +37,8 @@ evals:
     prompt: "Create a hello world program in Go"
     model: "claude-sonnet-4-6"
     correctness:
-      expected_output: ["Hello, world!"]
+      output:
+        contains: ["Hello, world!"]
     treatments:
       control:
         name: "baseline"

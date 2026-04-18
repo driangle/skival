@@ -54,10 +54,10 @@ func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) 
 		})
 	}
 
-	if len(c.ExpectedOutput) > 0 {
+	if len(c.Output.Contains) > 0 {
 		steps = append(steps, namedVerifier{
 			name:     "output",
-			verifier: &OutputVerifier{ExpectedSubstrings: c.ExpectedOutput},
+			verifier: &OutputVerifier{ExpectedSubstrings: c.Output.Contains},
 		})
 	}
 

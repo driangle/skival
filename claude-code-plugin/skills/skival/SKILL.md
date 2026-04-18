@@ -47,8 +47,9 @@ evals:                                # REQUIRED. At least one eval.
     correctness:                      # Optional. How to verify the agent's output.
       compiles: true                  # Check if generated code compiles.
       agent_exits_ok: true             # Agent process exited with code 0.
-      expected_output:                # Substrings that MUST appear in stdout.
-        - "expected string"
+      output:                           # Structured output matching.
+        contains:                       # Substrings that MUST appear in stdout.
+          - "expected string"
       script: "./verify.sh"           # Custom script (exit 0 = pass, non-zero = fail).
       state:                          # HTTP assertions after execution.
         - url: "http://localhost:3000/api/items"
@@ -172,8 +173,9 @@ Combine verifiers for thorough correctness checking:
 ```yaml
 correctness:
   agent_exits_ok: true
-  expected_output:
-    - "All tests passed"
+  output:
+    contains:
+      - "All tests passed"
   script: "./verify.sh"
   judge:
     - "Code handles edge cases"

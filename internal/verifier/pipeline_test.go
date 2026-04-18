@@ -18,7 +18,7 @@ func TestBuildPipeline_NoConfig(t *testing.T) {
 
 func TestBuildPipeline_OutputOnly(t *testing.T) {
 	p := BuildPipeline(suite.Correctness{
-		ExpectedOutput: []string{"hello"},
+		Output: suite.Output{Contains: []string{"hello"}},
 	}, "")
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -31,7 +31,7 @@ func TestBuildPipeline_OutputOnly(t *testing.T) {
 func TestBuildPipeline_AllVerifiers(t *testing.T) {
 	p := BuildPipeline(suite.Correctness{
 		AgentExitsOK:   boolPtr(true),
-		ExpectedOutput: []string{"ok"},
+		Output:         suite.Output{Contains: []string{"ok"}},
 		State:          []suite.StateAssertion{{URL: "http://localhost", Expect: "up"}},
 		Script:         "exit 0",
 	}, "/tmp")

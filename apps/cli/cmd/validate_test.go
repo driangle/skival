@@ -93,8 +93,9 @@ evals:
     model: "claude-sonnet-4-6"
     correctness:
       agent_exits_ok: true
-      expected_output:
-        - "hello"
+      output:
+        contains:
+          - "hello"
       script: "./verify.sh"
     treatments:
       control:

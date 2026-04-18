@@ -39,9 +39,10 @@ Checks that the agent's stdout contains all specified substrings.
 
 ```yaml
 correctness:
-  expected_output:
-    - "Hello, World!"
-    - "success"
+  output:
+    contains:
+      - "Hello, World!"
+      - "success"
 ```
 
 All substrings must be present. Matching is case-sensitive.
@@ -110,8 +111,9 @@ Verifiers are evaluated in order: compiles, agent_exits_ok, output, state, scrip
 ```yaml
 correctness:
   agent_exits_ok: true
-  expected_output:
-    - "All tests passed"
+  output:
+    contains:
+      - "All tests passed"
   script: "./check-coverage.sh"
   judge:
     - "Code is well-structured and readable"

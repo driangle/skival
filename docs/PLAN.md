@@ -74,8 +74,9 @@ evals:
     correctness:
       compiles: "go build ./..."     # Build command (exit 0 = pass)
       agent_exits_ok: true           # Agent process exited with code 0
-      expected_output:               # Substrings that must appear in stdout
-        - "expected string"
+      output:                          # Structured output matching
+        contains:                      # Substrings that must appear in stdout
+          - "expected string"
       script: "./verify.sh"          # Custom verification script (exit 0 = pass)
       state:                         # HTTP assertions after execution
         - url: "http://localhost:3000/api/items"

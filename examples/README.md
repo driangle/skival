@@ -8,7 +8,7 @@ Self-contained example suites demonstrating the full range of skival configurati
 | `defaults/` | Suite-level defaults (model, samples, timeout, runner, runner_config) inherited by evals |
 | `file-refs/` | Evals loaded via `file:` references to separate YAML files |
 | `multi-treatment/` | Control vs. multiple variations with different models, skills, env vars, and runner_config |
-| `correctness/` | All correctness modes: compiles, agent_exits_ok, expected_output, script, state assertions, judge |
+| `correctness/` | All correctness modes: compiles, agent_exits_ok, output, script, state assertions, judge |
 | `setup-hooks/` | Before/after/reset lifecycle hooks with isolation |
 | `complexity/` | Evals at each complexity level (low, medium, high) with different sample counts |
 | `runner-config/` | Runner and runner_config at defaults, eval, and treatment levels showing override precedence |

@@ -231,7 +231,7 @@ func TestBuildPipeline_JudgeWithoutRunner(t *testing.T) {
 func TestBuildPipeline_JudgeIsLastStep(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
 	p := BuildPipeline(suite.Correctness{
-		ExpectedOutput: []string{"hello"},
+		Output:         suite.Output{Contains: []string{"hello"}},
 		Judge:          []string{"is good"},
 	}, "", WithJudge(runner, "prompt", ""))
 
