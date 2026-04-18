@@ -116,6 +116,20 @@ skival run suite.yaml --samples 3 --results-dir ./results
 
 This gives you median values and coefficient of variation for cost, duration, and correctness.
 
+### Retrying Flaky Runs
+
+If your evals are sensitive to transient failures (timeouts, network errors), add retry configuration:
+
+```yaml
+defaults:
+  retry:
+    max_attempts: 3
+    backoff: exponential
+    delay: 2s
+```
+
+This retries transient failures up to 2 additional times with exponential backoff. Set `on: all` to also retry correctness failures. See [Configuration — Retry](/configuration#retry) for the full reference.
+
 ## What's Next?
 
 - [Configuration](/configuration) -- Full suite.yaml reference

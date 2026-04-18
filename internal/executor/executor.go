@@ -188,7 +188,8 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	return tr
 }
 
-// runSample executes a single sample, including isolation, running, and verification.
+// runSample executes a single sample, including isolation, running, verification,
+// and retry logic based on the treatment's retry config.
 func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, samples int, runner agentrunner.Runner, prog *progress) result.RunResult {
 	sample := idx + 1
 	prog.sampleStart(eval.Name, t.Name, sample, samples)
@@ -205,14 +206,9 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 		defer os.RemoveAll(sampleDir)
 	}
 
-	run := executeSingleRun(ctx, eval, t, sample, runner, sampleDir)
-	if run.Err != nil {
-		slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", sample, "err", run.Err)
-	} else {
-		slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", sample,
-			"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
-	}
+	retryCfg := resolveRetryConfig(t.Retry)
 
+	// Build verification pipeline once (reused across attempts).
 	verifyDir := eval.Dir
 	if sampleDir != "" {
 		verifyDir = sampleDir
@@ -227,23 +223,62 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 	}
 	pipeline := verifier.BuildPipeline(eval.Correctness, verifyDir, pipelineOpts...)
 
-	if pipeline != nil && run.Err == nil {
-		slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", sample)
-		input := verifier.VerifyInput{
-			RunOutput: run.Text,
-			ExitCode:  run.ExitCode,
+	var bestRun result.RunResult
+	for attempt := 1; attempt <= retryCfg.maxAttempts; attempt++ {
+		if attempt > 1 {
+			delay := backoffDelay(attempt-1, retryCfg)
+			slog.Debug("Retrying sample", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt, "delay", delay)
+			time.Sleep(delay)
 		}
-		pr := pipeline.Run(ctx, input)
-		run.Pass = &pr.Pass
-		for _, step := range pr.Steps {
-			slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
-			if step.Name == "judge" && step.Result.Conversation != nil {
-				run.JudgeConversation = step.Result.Conversation
+
+		run := executeSingleRun(ctx, eval, t, sample, runner, sampleDir)
+		if run.Err != nil {
+			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt, "err", run.Err)
+		} else {
+			slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt,
+				"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
+		}
+
+		// Run verification if execution succeeded.
+		if pipeline != nil && run.Err == nil {
+			slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt)
+			input := verifier.VerifyInput{
+				RunOutput: run.Text,
+				ExitCode:  run.ExitCode,
+			}
+			pr := pipeline.Run(ctx, input)
+			run.Pass = &pr.Pass
+			for _, step := range pr.Steps {
+				slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
+				if step.Name == "judge" && step.Result.Conversation != nil {
+					run.JudgeConversation = step.Result.Conversation
+				}
 			}
 		}
+
+		// Tag retry metadata.
+		run.Attempt = attempt
+		run.Retried = attempt > 1
+
+		// Keep the best result across attempts.
+		if attempt == 1 || isBetterResult(run, bestRun) {
+			bestRun = run
+		}
+
+		// If the run passed or shouldn't be retried, stop.
+		if run.Pass != nil && *run.Pass {
+			bestRun.TotalAttempts = attempt
+			break
+		}
+		if attempt < retryCfg.maxAttempts && !shouldRetry(&run, retryCfg) {
+			bestRun.TotalAttempts = attempt
+			break
+		}
+		bestRun.TotalAttempts = attempt
 	}
-	prog.sampleDone(run.CostUSD, run.Pass)
-	return run
+
+	prog.sampleDone(bestRun.CostUSD, bestRun.Pass)
+	return bestRun
 }
 
 // createIsolatedDir creates a temporary directory and copies the eval/treatment working directory into it.

@@ -51,6 +51,7 @@ defaults:
 | `samples` | Number of runs per treatment |
 | `timeout` | Timeout in seconds |
 | `parallel` | Max concurrent samples per treatment (default: sequential) |
+| `retry` | Retry configuration for failed runs (see [Retry](#retry)) |
 
 ## Evals
 
@@ -152,6 +153,7 @@ treatments:
 | `runner` | No | Override the runner |
 | `runner_config` | No | Runner-specific config (deep-merged with defaults) |
 | `env` | No | Environment variables for this treatment |
+| `retry` | No | Override retry configuration |
 
 ### Override Precedence
 
@@ -201,6 +203,62 @@ Each value in a dimension can override any treatment-level field:
 ::: warning
 `matrix` and `treatments` are mutually exclusive within the same eval.
 :::
+
+## Retry
+
+Configure retry behavior for failed sample runs. By default, each sample runs once with no retries.
+
+```yaml
+defaults:
+  retry:
+    max_attempts: 3
+    backoff: exponential
+    delay: 2s
+    on: transient
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `max_attempts` | `1` | Total attempts including the first. `1` means no retries |
+| `backoff` | `fixed` | `fixed` or `exponential`. Exponential doubles the delay each attempt |
+| `delay` | `2s` | Base delay between retries (Go duration: `500ms`, `2s`, `1m`) |
+| `on` | `transient` | `transient` or `all`. Controls which failures trigger retries |
+
+### Retry Modes
+
+- **`transient`** — Retry on runner errors, timeouts, and network failures. Don't retry if the agent ran successfully but produced incorrect output.
+- **`all`** — Retry on any non-pass outcome, including correctness failures. Useful for flaky evals or giving the agent another chance.
+
+### Backoff
+
+- **`fixed`** — Waits the same `delay` between each attempt (with ±25% jitter).
+- **`exponential`** — Doubles the delay each attempt: `delay`, `2×delay`, `4×delay`, etc. (with ±25% jitter).
+
+### Result Selection
+
+When multiple attempts are made, the **best** result is kept (not the last). Pass beats fail, fail beats error, and lower cost breaks ties.
+
+### Override Precedence
+
+Retry config inherits via the standard precedence: treatment > eval > defaults.
+
+```yaml
+defaults:
+  retry:
+    max_attempts: 2
+evals:
+  - id: flaky-eval
+    retry:
+      max_attempts: 5        # overrides defaults for this eval
+      on: all
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: experimental
+          retry:
+            max_attempts: 3   # overrides eval for this treatment
+```
 
 ## Runner Configuration
 

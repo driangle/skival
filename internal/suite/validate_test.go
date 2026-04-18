@@ -473,6 +473,118 @@ func TestWarnModelRunnerCompat_WarnsForMismatch(t *testing.T) {
 	warnModelRunnerCompat(s)
 }
 
+func TestValidate_RetryConfigValid(t *testing.T) {
+	attempts := 3
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Retry: &Retry{MaxAttempts: &attempts, Backoff: "exponential", Delay: "500ms", On: "all"},
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl"},
+				},
+			},
+		},
+	}
+	if err := validate(s); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidate_RetryMaxAttemptsInvalid(t *testing.T) {
+	attempts := 0
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Retry:      &Retry{MaxAttempts: &attempts},
+				Treatments: Treatments{Control: Treatment{Name: "c"}},
+			},
+		},
+	}
+	err := validate(s)
+	assertValidationContains(t, err, "max_attempts must be >= 1")
+}
+
+func TestValidate_RetryInvalidBackoff(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Retry:      &Retry{Backoff: "linear"},
+				Treatments: Treatments{Control: Treatment{Name: "c"}},
+			},
+		},
+	}
+	err := validate(s)
+	assertValidationContains(t, err, `backoff must be 'fixed' or 'exponential'`)
+}
+
+func TestValidate_RetryInvalidDelay(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Retry:      &Retry{Delay: "not-a-duration"},
+				Treatments: Treatments{Control: Treatment{Name: "c"}},
+			},
+		},
+	}
+	err := validate(s)
+	assertValidationContains(t, err, `delay "not-a-duration" is not a valid duration`)
+}
+
+func TestValidate_RetryInvalidOn(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Retry:      &Retry{On: "never"},
+				Treatments: Treatments{Control: Treatment{Name: "c"}},
+			},
+		},
+	}
+	err := validate(s)
+	assertValidationContains(t, err, `on must be 'transient' or 'all'`)
+}
+
+func TestValidate_RetryOnDefaultsLevel(t *testing.T) {
+	attempts := 0
+	s := &Suite{
+		Version:  1,
+		Defaults: Defaults{Retry: &Retry{MaxAttempts: &attempts}},
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{Control: Treatment{Name: "c"}},
+			},
+		},
+	}
+	err := validate(s)
+	assertValidationContains(t, err, "defaults.retry: max_attempts must be >= 1")
+}
+
+func TestValidate_RetryOnTreatmentLevel(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "c", Retry: &Retry{Backoff: "bad"}},
+				},
+			},
+		},
+	}
+	err := validate(s)
+	assertValidationContains(t, err, "eval[0].control.retry: backoff must be")
+}
+
 func assertValidationContains(t *testing.T, err error, substr string) {
 	t.Helper()
 	if err == nil {

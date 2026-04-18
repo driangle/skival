@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 // ValidationError collects multiple validation problems.
@@ -150,10 +151,55 @@ func validate(s *Suite) error {
 		}
 	}
 
+	// Validate retry config at all levels.
+	errs = append(errs, validateRetryConfig(s.Defaults.Retry, "defaults.retry")...)
+	for i, eval := range s.Evals {
+		prefix := fmt.Sprintf("eval[%d]", i)
+		errs = append(errs, validateRetryConfig(eval.Retry, prefix+".retry")...)
+		errs = append(errs, validateRetryConfig(eval.Treatments.Control.Retry, prefix+".control.retry")...)
+		for j, v := range eval.Treatments.Variations {
+			errs = append(errs, validateRetryConfig(v.Retry, fmt.Sprintf("%s.variation[%d].retry", prefix, j))...)
+		}
+	}
+
 	if len(errs) > 0 {
 		return &ValidationError{Errors: errs}
 	}
 	return nil
+}
+
+var validBackoffs = map[string]bool{
+	"":             true,
+	"fixed":        true,
+	"exponential":  true,
+}
+
+var validRetryOn = map[string]bool{
+	"":          true,
+	"transient": true,
+	"all":       true,
+}
+
+func validateRetryConfig(r *Retry, path string) []string {
+	if r == nil {
+		return nil
+	}
+	var errs []string
+	if r.MaxAttempts != nil && *r.MaxAttempts < 1 {
+		errs = append(errs, fmt.Sprintf("%s: max_attempts must be >= 1, got %d", path, *r.MaxAttempts))
+	}
+	if !validBackoffs[r.Backoff] {
+		errs = append(errs, fmt.Sprintf("%s: backoff must be 'fixed' or 'exponential', got %q", path, r.Backoff))
+	}
+	if r.Delay != "" {
+		if _, err := time.ParseDuration(r.Delay); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: delay %q is not a valid duration", path, r.Delay))
+		}
+	}
+	if !validRetryOn[r.On] {
+		errs = append(errs, fmt.Sprintf("%s: on must be 'transient' or 'all', got %q", path, r.On))
+	}
+	return errs
 }
 
 // warnModelRunnerCompat logs warnings when a model ID doesn't look valid

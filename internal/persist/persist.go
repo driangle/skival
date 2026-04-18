@@ -83,27 +83,33 @@ func writeSummary(dir string, sr *result.SuiteResult) error {
 
 // runJSON is the serialized form of a single run.
 type runJSON struct {
-	Sample     int     `json:"sample"`
-	Text       string  `json:"text"`
-	IsError    bool    `json:"is_error"`
-	ExitCode   int     `json:"exit_code"`
-	CostUSD    float64 `json:"cost_usd"`
-	DurationMs int64   `json:"duration_ms"`
-	SessionID  string  `json:"session_id,omitempty"`
-	Pass       *bool   `json:"pass"`
-	Error      string  `json:"error,omitempty"`
+	Sample        int     `json:"sample"`
+	Text          string  `json:"text"`
+	IsError       bool    `json:"is_error"`
+	ExitCode      int     `json:"exit_code"`
+	CostUSD       float64 `json:"cost_usd"`
+	DurationMs    int64   `json:"duration_ms"`
+	SessionID     string  `json:"session_id,omitempty"`
+	Pass          *bool   `json:"pass"`
+	Error         string  `json:"error,omitempty"`
+	Attempt       int     `json:"attempt,omitempty"`
+	TotalAttempts int     `json:"total_attempts,omitempty"`
+	Retried       bool    `json:"retried,omitempty"`
 }
 
 func writeRunJSON(treatDir string, run result.RunResult) error {
 	r := runJSON{
-		Sample:     run.Sample,
-		Text:       run.Text,
-		IsError:    run.IsError,
-		ExitCode:   run.ExitCode,
-		CostUSD:    run.CostUSD,
-		DurationMs: run.DurationMs,
-		SessionID:  run.SessionID,
-		Pass:       run.Pass,
+		Sample:        run.Sample,
+		Text:          run.Text,
+		IsError:       run.IsError,
+		ExitCode:      run.ExitCode,
+		CostUSD:       run.CostUSD,
+		DurationMs:    run.DurationMs,
+		SessionID:     run.SessionID,
+		Pass:          run.Pass,
+		Attempt:       run.Attempt,
+		TotalAttempts: run.TotalAttempts,
+		Retried:       run.Retried,
 	}
 	if run.Err != nil {
 		r.Error = run.Err.Error()

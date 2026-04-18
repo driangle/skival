@@ -8,6 +8,14 @@ type Suite struct {
 	Evals       []Eval    `yaml:"evals"`
 }
 
+// Retry configures retry behavior for failed sample runs.
+type Retry struct {
+	MaxAttempts *int   `yaml:"max_attempts"` // total attempts including the first (default: 1)
+	Backoff     string `yaml:"backoff"`      // "fixed" or "exponential" (default: "fixed")
+	Delay       string `yaml:"delay"`        // base delay between retries (default: "2s")
+	On          string `yaml:"on"`           // "transient" or "all" (default: "transient")
+}
+
 // Defaults defines suite-level defaults applied to evals that don't override them.
 type Defaults struct {
 	Samples      *int           `yaml:"samples"`
@@ -16,6 +24,7 @@ type Defaults struct {
 	Model        string         `yaml:"model"`
 	Runner       string         `yaml:"runner"`
 	RunnerConfig map[string]any `yaml:"runner_config"`
+	Retry        *Retry         `yaml:"retry"`
 }
 
 // Eval defines a single evaluation within a suite.
@@ -35,6 +44,7 @@ type Eval struct {
 	RunnerConfig map[string]any `yaml:"runner_config"`
 	Setup        Setup          `yaml:"setup"`
 	Correctness  Correctness    `yaml:"correctness"`
+	Retry        *Retry         `yaml:"retry"`
 	Matrix       *Matrix        `yaml:"matrix,omitempty"`
 	Treatments   Treatments     `yaml:"treatments"`
 }
@@ -110,5 +120,6 @@ type Treatment struct {
 	Skills          []string          `yaml:"skills"`
 	AllowedTools    []string          `yaml:"allowed_tools,omitempty"` // Deprecated: use runner_config.allowed_tools
 	Env             map[string]string `yaml:"env"`
+	Retry           *Retry            `yaml:"retry"`
 	DimensionValues map[string]string `yaml:"-"` // populated by matrix expansion, not parsed from YAML
 }

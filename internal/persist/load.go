@@ -104,14 +104,17 @@ func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
 		}
 
 		run := result.RunResult{
-			Sample:     rj.Sample,
-			Text:       rj.Text,
-			IsError:    rj.IsError,
-			ExitCode:   rj.ExitCode,
-			CostUSD:    rj.CostUSD,
-			DurationMs: rj.DurationMs,
-			SessionID:  rj.SessionID,
-			Pass:       rj.Pass,
+			Sample:        rj.Sample,
+			Text:          rj.Text,
+			IsError:       rj.IsError,
+			ExitCode:      rj.ExitCode,
+			CostUSD:       rj.CostUSD,
+			DurationMs:    rj.DurationMs,
+			SessionID:     rj.SessionID,
+			Pass:          rj.Pass,
+			Attempt:       rj.Attempt,
+			TotalAttempts: rj.TotalAttempts,
+			Retried:       rj.Retried,
 		}
 		if rj.Error != "" {
 			run.Err = fmt.Errorf("%s", rj.Error)

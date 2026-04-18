@@ -1086,6 +1086,116 @@ func TestLoad_Examples(t *testing.T) {
 	}
 }
 
+func TestLoad_RetryConfigParsing(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  retry:
+    max_attempts: 3
+    backoff: exponential
+    delay: 1s
+    on: transient
+evals:
+  - id: eval-1
+    prompt: "task"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	r := s.Defaults.Retry
+	if r == nil {
+		t.Fatal("expected defaults retry to be set")
+	}
+	if *r.MaxAttempts != 3 {
+		t.Errorf("expected max_attempts=3, got %d", *r.MaxAttempts)
+	}
+	if r.Backoff != "exponential" {
+		t.Errorf("expected backoff=exponential, got %q", r.Backoff)
+	}
+	if r.Delay != "1s" {
+		t.Errorf("expected delay=1s, got %q", r.Delay)
+	}
+	if r.On != "transient" {
+		t.Errorf("expected on=transient, got %q", r.On)
+	}
+}
+
+func TestLoad_RetryInheritsPrecedence(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  retry:
+    max_attempts: 2
+    on: transient
+evals:
+  - id: eval-1
+    prompt: "task"
+    retry:
+      max_attempts: 3
+      on: all
+    treatments:
+      control:
+        name: ctrl
+      variations:
+        - name: v1
+          retry:
+            max_attempts: 5
+  - id: eval-2
+    prompt: "task2"
+    treatments:
+      control:
+        name: ctrl2
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// eval-1 has its own retry, overrides defaults
+	e1 := s.Evals[0]
+	if e1.Retry == nil || *e1.Retry.MaxAttempts != 3 {
+		t.Errorf("eval-1 retry should be 3 (eval override)")
+	}
+	if e1.Retry.On != "all" {
+		t.Errorf("eval-1 retry.on should be all")
+	}
+
+	// control inherits from eval (eval > defaults)
+	ctrl := e1.Treatments.Control
+	if ctrl.Retry == nil || *ctrl.Retry.MaxAttempts != 3 {
+		t.Errorf("control should inherit retry from eval (3)")
+	}
+
+	// v1 has its own retry, overrides eval
+	v1 := e1.Treatments.Variations[0]
+	if v1.Retry == nil || *v1.Retry.MaxAttempts != 5 {
+		t.Errorf("v1 should have retry max_attempts=5 (treatment override)")
+	}
+
+	// eval-2 inherits from defaults
+	e2 := s.Evals[1]
+	if e2.Retry == nil || *e2.Retry.MaxAttempts != 2 {
+		t.Errorf("eval-2 should inherit retry from defaults (2)")
+	}
+
+	// eval-2 control inherits from eval (which inherited from defaults)
+	ctrl2 := e2.Treatments.Control
+	if ctrl2.Retry == nil || *ctrl2.Retry.MaxAttempts != 2 {
+		t.Errorf("ctrl2 should inherit retry from defaults via eval (2)")
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

@@ -1,7 +1,7 @@
 ---
 title: "Configurable retry logic for flaky runs"
 id: "01kpfdn43"
-status: pending
+status: in-progress
 priority: high
 type: feature
 tags: ["executor", "reliability"]
@@ -32,17 +32,17 @@ Retry config can be set at suite defaults, per-eval, or per-treatment level foll
 
 ## Tasks
 
-- [ ] Add `Retry` struct to suite schema (`MaxAttempts`, `Backoff`, `Delay`, `On`) with YAML parsing
-- [ ] Add validation rules: `max_attempts >= 1`, `backoff` enum, `delay` parseable as duration, `on` enum
-- [ ] Implement retry loop in executor around the sample run, respecting `max_attempts`
-- [ ] Implement fixed and exponential backoff with jitter
-- [ ] Classify run outcomes: transient error (runner crash, timeout, network) vs correctness failure vs success
-- [ ] When `on: transient`, only retry on transient errors; when `on: all`, retry on any non-pass outcome
-- [ ] On retry, use the best result (pass > fail, lower cost breaks ties) rather than the last attempt
-- [ ] Add retry metadata to `RunResult` (attempt number, total attempts, whether it was a retry)
-- [ ] Add tests for retry logic: backoff timing, transient vs all modes, result selection
-- [ ] Update suite loader tests for retry config parsing and validation
-- [ ] Update documentation (configuration.md, getting-started.md) with retry config
+- [x] Add `Retry` struct to suite schema (`MaxAttempts`, `Backoff`, `Delay`, `On`) with YAML parsing
+- [x] Add validation rules: `max_attempts >= 1`, `backoff` enum, `delay` parseable as duration, `on` enum
+- [x] Implement retry loop in executor around the sample run, respecting `max_attempts`
+- [x] Implement fixed and exponential backoff with jitter
+- [x] Classify run outcomes: transient error (runner crash, timeout, network) vs correctness failure vs success
+- [x] When `on: transient`, only retry on transient errors; when `on: all`, retry on any non-pass outcome
+- [x] On retry, use the best result (pass > fail, lower cost breaks ties) rather than the last attempt
+- [x] Add retry metadata to `RunResult` (attempt number, total attempts, whether it was a retry)
+- [x] Add tests for retry logic: backoff timing, transient vs all modes, result selection
+- [x] Update suite loader tests for retry config parsing and validation
+- [x] Update documentation (configuration.md, getting-started.md) with retry config
 
 ## Acceptance Criteria
 

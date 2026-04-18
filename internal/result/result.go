@@ -21,6 +21,9 @@ type RunResult struct {
 	Pass               *bool
 	Conversation       []json.RawMessage
 	JudgeConversation  []json.RawMessage
+	Attempt            int  // 1-indexed attempt number (0 means no retry was configured)
+	TotalAttempts      int  // total attempts made for this sample
+	Retried            bool // true if this result came from a retry (attempt > 1)
 }
 
 // TreatmentResult groups runs for one treatment.

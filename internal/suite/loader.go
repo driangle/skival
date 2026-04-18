@@ -166,6 +166,9 @@ func mergeDefaults(s *Suite) {
 			e.Runner = d.Runner
 		}
 		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
+		if e.Retry == nil && d.Retry != nil {
+			e.Retry = d.Retry
+		}
 	}
 }
 
@@ -187,6 +190,9 @@ func mergeRunnerIntoTreatment(e *Eval, t *Treatment) {
 		t.Runner = e.Runner
 	}
 	t.RunnerConfig = mergeMaps(e.RunnerConfig, t.RunnerConfig)
+	if t.Retry == nil && e.Retry != nil {
+		t.Retry = e.Retry
+	}
 }
 
 // mergeMaps deep-merges two maps. Keys in override take precedence over base.

@@ -1,11 +1,12 @@
 ---
 title: "Result comparison across runs"
 id: "01kpfdfcd"
-status: in-progress
+status: completed
 priority: high
 type: feature
 tags: ["cli", "reporting"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Result comparison across runs
