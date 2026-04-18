@@ -58,22 +58,38 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 	// Always run after hook, even on error.
 	defer runAfterHook(ctx, eval.Setup, eval.Dir)
 
+	treatments := collectTreatments(eval, opts.Treatments)
+
 	// Run before hook once before any treatment.
 	if err := runBeforeHook(ctx, eval.Setup, eval.Dir); err != nil {
 		er.Err = err
+		for _, t := range treatments {
+			er.Skipped = append(er.Skipped, result.SkippedTreatment{
+				Name:   t.treatment.Name,
+				Reason: "before hook failed",
+			})
+		}
 		prog.evalError(eval.Name, err)
+		prog.skippedTreatments(eval.Name, er.Skipped)
 		return er
 	}
 
-	treatments := collectTreatments(eval, opts.Treatments)
 	runnerCache := make(map[string]agentrunner.Runner)
 
 	for i := range treatments {
 		// Run reset between treatments (not before the first one).
 		if i > 0 {
 			if err := runResetHook(ctx, eval.Setup, eval.Dir); err != nil {
-				er.Err = err
-				prog.evalError(eval.Name, err)
+				er.Err = fmt.Errorf("reset hook failed between treatment %q and %q: %w",
+					treatments[i-1].treatment.Name, treatments[i].treatment.Name, err)
+				for _, t := range treatments[i:] {
+					er.Skipped = append(er.Skipped, result.SkippedTreatment{
+						Name:   t.treatment.Name,
+						Reason: fmt.Sprintf("reset hook failed after treatment %q", treatments[i-1].treatment.Name),
+					})
+				}
+				prog.evalError(eval.Name, er.Err)
+				prog.skippedTreatments(eval.Name, er.Skipped)
 				return er
 			}
 		}

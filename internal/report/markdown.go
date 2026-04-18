@@ -22,6 +22,7 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	multiModel := hasMultipleModels(sr)
 	writeResultsTable(w, sr, multi, multiModel)
 	writeErrorsSection(w, sr)
+	writeSkippedSection(w, sr)
 	writeRankingTable(w, sr, multi, multiModel, weights)
 }
 
@@ -145,6 +146,31 @@ func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintf(w, "## Errors\n\n")
 	for _, eval := range errors {
 		fmt.Fprintf(w, "- **%s** (`%s`): %v\n", eval.EvalName, eval.EvalID, eval.Err)
+	}
+	fmt.Fprintln(w)
+}
+
+func writeSkippedSection(w io.Writer, sr *result.SuiteResult) {
+	var hasSkipped bool
+	for _, eval := range sr.Evals {
+		if len(eval.Skipped) > 0 {
+			hasSkipped = true
+			break
+		}
+	}
+	if !hasSkipped {
+		return
+	}
+
+	fmt.Fprintf(w, "## Skipped Treatments\n\n")
+	for _, eval := range sr.Evals {
+		if len(eval.Skipped) == 0 {
+			continue
+		}
+		fmt.Fprintf(w, "**%s** (`%s`):\n", eval.EvalName, eval.EvalID)
+		for _, s := range eval.Skipped {
+			fmt.Fprintf(w, "- %s — %s\n", s.Name, s.Reason)
+		}
 	}
 	fmt.Fprintln(w)
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -206,6 +207,83 @@ func TestWriteJSON_EvalError(t *testing.T) {
 	}
 	if parsed.Evals[0].ID != "broken" {
 		t.Errorf("expected id 'broken', got %q", parsed.Evals[0].ID)
+	}
+}
+
+func TestWriteJSON_SkippedTreatments(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "e1",
+			EvalName: "test",
+			Err:      fmt.Errorf("setup.before: hook failed: boom"),
+			Skipped: []result.SkippedTreatment{
+				{Name: "ctrl", Reason: "before hook failed"},
+				{Name: "v1", Reason: "before hook failed"},
+			},
+		}},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		Evals []struct {
+			Error   string `json:"error"`
+			Skipped []struct {
+				Name   string `json:"name"`
+				Reason string `json:"reason"`
+			} `json:"skipped"`
+		} `json:"evals"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+
+	eval := parsed.Evals[0]
+	if eval.Error == "" {
+		t.Error("expected error field")
+	}
+	if len(eval.Skipped) != 2 {
+		t.Fatalf("expected 2 skipped, got %d", len(eval.Skipped))
+	}
+	if eval.Skipped[0].Name != "ctrl" {
+		t.Errorf("skipped[0].Name = %q, want ctrl", eval.Skipped[0].Name)
+	}
+	if eval.Skipped[0].Reason != "before hook failed" {
+		t.Errorf("skipped[0].Reason = %q, want 'before hook failed'", eval.Skipped[0].Reason)
+	}
+	if eval.Skipped[1].Name != "v1" {
+		t.Errorf("skipped[1].Name = %q, want v1", eval.Skipped[1].Name)
+	}
+}
+
+func TestWriteJSON_NoSkippedWhenNoneSkipped(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "e1",
+			EvalName: "test",
+			Treatments: []result.TreatmentResult{{
+				Name: "ctrl",
+				Runs: []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100}},
+			}},
+		}},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	// The "skipped" field should be omitted entirely.
+	raw := buf.String()
+	if strings.Contains(raw, `"skipped"`) {
+		t.Error("should not include skipped field when there are no skipped treatments")
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"github.com/driangle/skival/internal/result"
 )
 
 // progress tracks and displays execution progress.
@@ -68,6 +70,20 @@ func (p *progress) sampleDone(costUSD float64, pass *bool) {
 	}
 	fmt.Fprintf(p.w, "\r\033[K[%s] sample done: %s (cost: $%.4f)\n",
 		p.elapsed(), status, costUSD)
+}
+
+func (p *progress) skippedTreatments(evalName string, skipped []result.SkippedTreatment) {
+	if p == nil || len(skipped) == 0 {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	names := make([]string, len(skipped))
+	for i, s := range skipped {
+		names[i] = s.Name
+	}
+	fmt.Fprintf(p.w, "\r\033[K[%s] Skipping %d remaining treatments for eval %q: %s\n",
+		p.elapsed(), len(skipped), evalName, fmt.Sprintf("%v", names))
 }
 
 func (p *progress) finish() {

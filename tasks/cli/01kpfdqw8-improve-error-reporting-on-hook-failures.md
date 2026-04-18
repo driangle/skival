@@ -1,11 +1,12 @@
 ---
 title: "Improve error reporting on hook failures"
 id: "01kpfdqw8"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["executor", "error-handling"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Improve error reporting on hook failures
@@ -18,13 +19,13 @@ Improve error messaging so hook failures are clearly reported in both stderr pro
 
 ## Tasks
 
-- [ ] Capture hook stderr/stdout on failure and include it in the error message
-- [ ] Log a clear warning to stderr when treatments are skipped due to a hook failure (e.g., "Skipping 3 remaining treatments for eval 'foo': before hook failed")
-- [ ] Include skipped treatments in the eval result with a clear skip reason rather than omitting them entirely
-- [ ] Add an error/skip summary section to the markdown report listing evals with hook failures and which treatments were skipped
-- [ ] Add skip metadata to the JSON report for programmatic consumption
-- [ ] Add tests for error reporting on before/reset/after hook failures
-- [ ] Add tests that skipped treatments appear in the report with the correct reason
+- [x] Capture hook stderr/stdout on failure and include it in the error message
+- [x] Log a clear warning to stderr when treatments are skipped due to a hook failure (e.g., "Skipping 3 remaining treatments for eval 'foo': before hook failed")
+- [x] Include skipped treatments in the eval result with a clear skip reason rather than omitting them entirely
+- [x] Add an error/skip summary section to the markdown report listing evals with hook failures and which treatments were skipped
+- [x] Add skip metadata to the JSON report for programmatic consumption
+- [x] Add tests for error reporting on before/reset/after hook failures
+- [x] Add tests that skipped treatments appear in the report with the correct reason
 
 ## Acceptance Criteria
 

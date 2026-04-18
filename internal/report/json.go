@@ -17,11 +17,17 @@ type jsonReport struct {
 	Rankings    []jsonRanking   `json:"rankings,omitempty"`
 }
 
+type jsonSkipped struct {
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
+}
+
 type jsonEval struct {
 	ID         string          `json:"id"`
 	Name       string          `json:"name"`
 	Error      string          `json:"error,omitempty"`
 	Treatments []jsonTreatment `json:"treatments"`
+	Skipped    []jsonSkipped   `json:"skipped,omitempty"`
 }
 
 type jsonTreatment struct {
@@ -88,6 +94,9 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 		je := jsonEval{ID: eval.EvalID, Name: eval.EvalName}
 		if eval.Err != nil {
 			je.Error = eval.Err.Error()
+		}
+		for _, s := range eval.Skipped {
+			je.Skipped = append(je.Skipped, jsonSkipped{Name: s.Name, Reason: s.Reason})
 		}
 		for _, treat := range eval.Treatments {
 			jt := jsonTreatment{

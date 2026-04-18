@@ -289,6 +289,58 @@ func TestWriteMarkdown_RankingModelColumn(t *testing.T) {
 	}
 }
 
+func TestWriteMarkdown_SkippedTreatments(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "e1",
+			EvalName: "my-eval",
+			Err:      fmt.Errorf("setup.before: hook failed: boom"),
+			Skipped: []result.SkippedTreatment{
+				{Name: "ctrl", Reason: "before hook failed"},
+				{Name: "v1", Reason: "before hook failed"},
+			},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+	out := buf.String()
+
+	if !strings.Contains(out, "## Skipped Treatments") {
+		t.Error("missing skipped treatments section")
+	}
+	if !strings.Contains(out, "ctrl") {
+		t.Error("missing skipped treatment name 'ctrl'")
+	}
+	if !strings.Contains(out, "v1") {
+		t.Error("missing skipped treatment name 'v1'")
+	}
+	if !strings.Contains(out, "before hook failed") {
+		t.Error("missing skip reason")
+	}
+}
+
+func TestWriteMarkdown_NoSkippedSectionWhenNoneSkipped(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "good",
+			Treatments: []result.TreatmentResult{{
+				Name: "ctrl",
+				Runs: []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100}},
+			}},
+		}},
+	}
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+
+	if strings.Contains(buf.String(), "## Skipped") {
+		t.Error("should not show skipped section when there are no skipped treatments")
+	}
+}
+
 func TestWriteMarkdown_AggregateRow(t *testing.T) {
 	cv := 0.15
 	sr := &result.SuiteResult{

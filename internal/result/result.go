@@ -36,11 +36,18 @@ type TreatmentResult struct {
 	Aggregate *Aggregate
 }
 
+// SkippedTreatment records a treatment that was not executed due to a hook failure.
+type SkippedTreatment struct {
+	Name   string // treatment name
+	Reason string // why it was skipped (e.g., "before hook failed")
+}
+
 // EvalResult groups treatments for one eval.
 type EvalResult struct {
 	EvalID     string
 	EvalName   string
 	Treatments []TreatmentResult
+	Skipped    []SkippedTreatment
 	Err        error
 }
 
