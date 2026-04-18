@@ -1,7 +1,7 @@
 ---
 title: "Configurable ranking weights"
 id: "01kpfdpda"
-status: pending
+status: in-progress
 priority: medium
 type: feature
 tags: ["reporting", "configuration"]
