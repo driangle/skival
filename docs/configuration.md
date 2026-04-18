@@ -53,6 +53,7 @@ defaults:
 | `timeout` | Timeout in seconds |
 | `parallel` | Max concurrent samples per treatment (default: sequential) |
 | `retry` | Retry configuration for failed runs (see [Retry](#retry)) |
+| `judge_model` | Default model for the judge verifier (default: `claude-haiku-4-5-20251001`) |
 
 ## Evals
 

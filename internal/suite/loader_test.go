@@ -1336,6 +1336,112 @@ evals:
 	}
 }
 
+func TestLoad_JudgeModelOnEval(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    correctness:
+      judge: ["output is correct"]
+      judge_model: "claude-opus-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Correctness.JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q", s.Evals[0].Correctness.JudgeModel, "claude-opus-4-6")
+	}
+}
+
+func TestLoad_JudgeModelFromDefaults(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  judge_model: "claude-opus-4-6"
+evals:
+  - id: eval-1
+    prompt: "task"
+    correctness:
+      judge: ["output is correct"]
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Correctness.JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q", s.Evals[0].Correctness.JudgeModel, "claude-opus-4-6")
+	}
+}
+
+func TestLoad_JudgeModelEvalOverridesDefaults(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  model: "claude-sonnet-4-6"
+  judge_model: "claude-haiku-4-5-20251001"
+evals:
+  - id: eval-1
+    prompt: "task"
+    correctness:
+      judge: ["output is correct"]
+      judge_model: "claude-opus-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Correctness.JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q (eval should override defaults)", s.Evals[0].Correctness.JudgeModel, "claude-opus-4-6")
+	}
+}
+
+func TestLoad_JudgeModelOmittedUsesNoOverride(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    correctness:
+      judge: ["output is correct"]
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Correctness.JudgeModel != "" {
+		t.Errorf("judge_model = %q, want empty (default should be applied at runtime)", s.Evals[0].Correctness.JudgeModel)
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

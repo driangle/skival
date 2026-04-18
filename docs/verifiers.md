@@ -92,6 +92,17 @@ correctness:
 
 The judge receives the original prompt, the agent's output, and each criterion, then returns a pass/fail verdict.
 
+By default the judge uses `claude-haiku-4-5-20251001`. Override it with `judge_model`:
+
+```yaml
+correctness:
+  judge:
+    - "The code handles edge cases"
+  judge_model: "claude-sonnet-4-6"
+```
+
+`judge_model` can also be set at suite defaults level (see [Configuration](configuration.md)).
+
 ## Combining Verifiers
 
 Verifiers are evaluated in order: compiles, execute, output, state, script, judge. Evaluation stops at the first failure.

@@ -1,11 +1,12 @@
 ---
 title: "Configurable judge model"
 id: "01kpfdpgk"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["verifier", "configuration"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Configurable judge model
@@ -33,15 +34,15 @@ defaults:
 
 ## Tasks
 
-- [ ] Add optional `judge_model` field to the `Correctness` struct in suite schema
-- [ ] Add optional `judge_model` field to suite defaults
-- [ ] Apply standard override precedence: eval-level `judge_model` > suite defaults `judge_model` > hardcoded default
-- [ ] Update `JudgeVerifier` in `verifier/judge.go` to accept the model as a parameter instead of using the constant
-- [ ] Thread the resolved judge model from suite loader through executor to verifier construction
-- [ ] Add validation: if `judge_model` is set, warn if `judge` criteria are not also defined
-- [ ] Add tests for judge model config parsing and precedence
-- [ ] Add test that `JudgeVerifier` uses the configured model
-- [ ] Update documentation (verifiers.md, configuration.md) with `judge_model` field
+- [x] Add optional `judge_model` field to the `Correctness` struct in suite schema
+- [x] Add optional `judge_model` field to suite defaults
+- [x] Apply standard override precedence: eval-level `judge_model` > suite defaults `judge_model` > hardcoded default
+- [x] Update `JudgeVerifier` in `verifier/judge.go` to accept the model as a parameter instead of using the constant
+- [x] Thread the resolved judge model from suite loader through executor to verifier construction
+- [x] Add validation: if `judge_model` is set, warn if `judge` criteria are not also defined
+- [x] Add tests for judge model config parsing and precedence
+- [x] Add test that `JudgeVerifier` uses the configured model
+- [x] Update documentation (verifiers.md, configuration.md) with `judge_model` field
 
 ## Acceptance Criteria
 

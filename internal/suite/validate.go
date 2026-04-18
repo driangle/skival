@@ -156,6 +156,13 @@ func validate(s *Suite) error {
 		}
 	}
 
+	// Warn if judge_model is set without judge criteria.
+	for i, eval := range s.Evals {
+		if eval.Correctness.JudgeModel != "" && len(eval.Correctness.Judge) == 0 {
+			log.Printf("WARNING: eval[%d] %q: judge_model is set but no judge criteria are defined", i, eval.ID)
+		}
+	}
+
 	// Validate ranking weights.
 	errs = append(errs, validateRankingWeights(s.Ranking)...)
 

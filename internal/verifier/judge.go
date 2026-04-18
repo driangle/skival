@@ -9,7 +9,8 @@ import (
 	agentrunner "github.com/driangle/agentrunner/go"
 )
 
-const judgeModel = "claude-haiku-4-5-20251001"
+// DefaultJudgeModel is the default model used by JudgeVerifier when none is configured.
+const DefaultJudgeModel = "claude-haiku-4-5-20251001"
 
 const judgePromptTemplate = `You are an evaluation judge. Determine whether the agent's output satisfies the given criteria.
 
@@ -34,14 +35,20 @@ type JudgeVerifier struct {
 	Runner   agentrunner.Runner
 	Criteria []string
 	Prompt   string
+	Model    string
 }
 
 func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyResult {
 	criteria := strings.Join(v.Criteria, "\n- ")
 	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.Prompt, input.RunOutput, "- "+criteria)
 
+	model := v.Model
+	if model == "" {
+		model = DefaultJudgeModel
+	}
+
 	session, err := v.Runner.Start(ctx, judgePrompt,
-		agentrunner.WithModel(judgeModel),
+		agentrunner.WithModel(model),
 		agentrunner.WithSkipPermissions(),
 	)
 	if err != nil {

@@ -137,11 +137,75 @@ func TestParseJudgeResponse_MultiLine(t *testing.T) {
 	}
 }
 
+// capturingRunner records the options passed to Start for inspection.
+type capturingRunner struct {
+	fakeRunner
+	capturedOpts agentrunner.Options
+}
+
+func (c *capturingRunner) Start(ctx context.Context, prompt string, opts ...agentrunner.Option) (*agentrunner.Session, error) {
+	for _, o := range opts {
+		o(&c.capturedOpts)
+	}
+	return c.fakeRunner.Start(ctx, prompt, opts...)
+}
+
+func TestJudgeVerifier_UsesConfiguredModel(t *testing.T) {
+	r := &capturingRunner{fakeRunner: fakeRunner{text: "PASS: ok"}}
+	v := &JudgeVerifier{
+		Runner:   r,
+		Criteria: []string{"output is correct"},
+		Prompt:   "do something",
+		Model:    "claude-sonnet-4-6",
+	}
+	result := v.Verify(context.Background(), VerifyInput{RunOutput: "hello"})
+	if !result.Pass {
+		t.Fatalf("expected pass, got fail: %s", result.Reason)
+	}
+	if r.capturedOpts.Model != "claude-sonnet-4-6" {
+		t.Errorf("model = %q, want %q", r.capturedOpts.Model, "claude-sonnet-4-6")
+	}
+}
+
+func TestJudgeVerifier_DefaultModelWhenEmpty(t *testing.T) {
+	r := &capturingRunner{fakeRunner: fakeRunner{text: "PASS: ok"}}
+	v := &JudgeVerifier{
+		Runner:   r,
+		Criteria: []string{"output is correct"},
+		Prompt:   "do something",
+	}
+	result := v.Verify(context.Background(), VerifyInput{RunOutput: "hello"})
+	if !result.Pass {
+		t.Fatalf("expected pass, got fail: %s", result.Reason)
+	}
+	if r.capturedOpts.Model != DefaultJudgeModel {
+		t.Errorf("model = %q, want default %q", r.capturedOpts.Model, DefaultJudgeModel)
+	}
+}
+
+func TestBuildPipeline_JudgeModelPropagated(t *testing.T) {
+	runner := &fakeRunner{text: "PASS: ok"}
+	p := BuildPipeline(suite.Correctness{
+		Judge: []string{"output is correct"},
+	}, "", WithJudge(runner, "do something", "claude-opus-4-6"))
+
+	if p == nil {
+		t.Fatal("expected non-nil pipeline")
+	}
+	jv, ok := p.steps[0].verifier.(*JudgeVerifier)
+	if !ok {
+		t.Fatal("expected JudgeVerifier")
+	}
+	if jv.Model != "claude-opus-4-6" {
+		t.Errorf("model = %q, want %q", jv.Model, "claude-opus-4-6")
+	}
+}
+
 func TestBuildPipeline_WithJudge(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
 	p := BuildPipeline(suite.Correctness{
 		Judge: []string{"output is correct"},
-	}, "", WithJudge(runner, "do something"))
+	}, "", WithJudge(runner, "do something", ""))
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -169,7 +233,7 @@ func TestBuildPipeline_JudgeIsLastStep(t *testing.T) {
 	p := BuildPipeline(suite.Correctness{
 		ExpectedOutput: []string{"hello"},
 		Judge:          []string{"is good"},
-	}, "", WithJudge(runner, "prompt"))
+	}, "", WithJudge(runner, "prompt", ""))
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")

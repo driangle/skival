@@ -165,6 +165,9 @@ func mergeDefaults(s *Suite) {
 		if e.Runner == "" && d.Runner != "" {
 			e.Runner = d.Runner
 		}
+		if e.Correctness.JudgeModel == "" && d.JudgeModel != "" {
+			e.Correctness.JudgeModel = d.JudgeModel
+		}
 		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
 		if e.Retry == nil && d.Retry != nil {
 			e.Retry = d.Retry

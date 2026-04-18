@@ -90,6 +90,7 @@ func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) 
 				Runner:   cfg.runner,
 				Criteria: c.Judge,
 				Prompt:   cfg.evalPrompt,
+				Model:    cfg.judgeModel,
 			},
 		})
 	}
@@ -107,13 +108,15 @@ type PipelineOption func(*pipelineConfig)
 type pipelineConfig struct {
 	runner     agentrunner.Runner
 	evalPrompt string
+	judgeModel string
 }
 
-// WithJudge provides a runner and eval prompt for the judge verifier.
-func WithJudge(runner agentrunner.Runner, evalPrompt string) PipelineOption {
+// WithJudge provides a runner, eval prompt, and optional model for the judge verifier.
+func WithJudge(runner agentrunner.Runner, evalPrompt string, judgeModel string) PipelineOption {
 	return func(c *pipelineConfig) {
 		c.runner = runner
 		c.evalPrompt = evalPrompt
+		c.judgeModel = judgeModel
 	}
 }
 

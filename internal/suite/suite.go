@@ -35,6 +35,7 @@ type Defaults struct {
 	Timeout      *int           `yaml:"timeout"`
 	Parallel     *int           `yaml:"parallel"`
 	Model        string         `yaml:"model"`
+	JudgeModel   string         `yaml:"judge_model"`
 	Runner       string         `yaml:"runner"`
 	RunnerConfig map[string]any `yaml:"runner_config"`
 	Retry        *Retry         `yaml:"retry"`
@@ -77,6 +78,7 @@ type Correctness struct {
 	Script         string           `yaml:"script"`
 	State          []StateAssertion `yaml:"state"`
 	Judge          []string         `yaml:"judge"`
+	JudgeModel     string           `yaml:"judge_model"`
 }
 
 // StateAssertion defines an HTTP assertion to check after execution.
