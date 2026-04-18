@@ -12,6 +12,7 @@ export default defineConfig({
       { text: "Configuration", link: "/configuration" },
       { text: "CLI", link: "/cli" },
       { text: "Verifiers", link: "/verifiers" },
+      { text: "Examples", link: "/examples" },
     ],
     sidebar: [
       {
@@ -27,6 +28,7 @@ export default defineConfig({
           { text: "Configuration", link: "/configuration" },
           { text: "CLI", link: "/cli" },
           { text: "Verifiers", link: "/verifiers" },
+          { text: "Examples", link: "/examples" },
         ],
       },
     ],
