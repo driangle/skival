@@ -103,7 +103,7 @@ func init() {
 	runCmd.Flags().String("results-dir", "", "Directory for results output")
 	runCmd.Flags().StringSlice("treatments", nil, "Filter to specific treatments")
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
-	runCmd.Flags().String("format", "markdown", "Output format: markdown, json")
+	runCmd.Flags().String("format", "markdown", "Output format: markdown, json, html")
 	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")
 
 	rootCmd.AddCommand(runCmd)

@@ -23,7 +23,7 @@ skival run <suite.yaml> [flags]
 | `--results-dir <path>` | | Save results to disk for later reporting |
 | `--treatments <names>` | | Comma-separated list of treatment names to run |
 | `--evals <ids>` | | Comma-separated list of eval IDs to run |
-| `--format <type>` | `markdown` | Output format: `markdown` or `json` |
+| `--format <type>` | `markdown` | Output format: `markdown`, `json`, or `html` |
 | `--timeout <secs>` | | Timeout in seconds for all evals (overrides suite/eval-level timeouts) |
 
 ### Examples
@@ -70,7 +70,7 @@ skival report <results-dir> [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--format <type>` | `markdown` | Output format: `markdown` or `json` |
+| `--format <type>` | `markdown` | Output format: `markdown`, `json`, or `html` |
 
 ### Example
 
@@ -114,7 +114,7 @@ skival compare <baseline-dir> <candidate-dir> [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--format <type>` | `markdown` | Output format: `markdown` or `json` |
+| `--format <type>` | `markdown` | Output format: `markdown`, `json`, or `html` |
 
 ### Examples
 

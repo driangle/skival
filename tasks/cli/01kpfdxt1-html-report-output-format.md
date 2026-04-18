@@ -1,11 +1,12 @@
 ---
 title: "HTML report output format"
 id: "01kpfdxt1"
-status: pending
+status: completed
 priority: low
 type: feature
 tags: ["reporting", "cli"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # HTML report output format
@@ -16,12 +17,12 @@ Add an HTML report output format (`--format html`) for sharing eval results. Mar
 
 ## Tasks
 
-- [ ] Add `WriteHTML()` function in `internal/report/` that generates a self-contained HTML file (inline CSS, no external dependencies)
-- [ ] Include sortable tables for per-eval results and aggregate summary
-- [ ] Add directional color coding for metrics (green = good, red = bad)
-- [ ] Wire `html` as a valid `--format` option in `run` and `report` commands
-- [ ] Add tests for HTML report generation
-- [ ] Update CLI documentation (cli.md) with the new format option
+- [x] Add `WriteHTML()` function in `internal/report/` that generates a self-contained HTML file (inline CSS, no external dependencies)
+- [x] Include sortable tables for per-eval results and aggregate summary
+- [x] Add directional color coding for metrics (green = good, red = bad)
+- [x] Wire `html` as a valid `--format` option in `run` and `report` commands
+- [x] Add tests for HTML report generation
+- [x] Update CLI documentation (cli.md) with the new format option
 
 ## Acceptance Criteria
 

@@ -16,7 +16,9 @@ func Write(w io.Writer, sr *result.SuiteResult, format string, weights Weights) 
 		return nil
 	case "json":
 		return WriteJSON(w, sr, weights)
+	case "html":
+		return WriteHTML(w, sr, weights)
 	default:
-		return fmt.Errorf("unsupported format: %q (use \"markdown\" or \"json\")", format)
+		return fmt.Errorf("unsupported format: %q (use \"markdown\", \"json\", or \"html\")", format)
 	}
 }

@@ -26,7 +26,7 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reportCmd.Flags().String("format", "markdown", "Output format: markdown, json")
+	reportCmd.Flags().String("format", "markdown", "Output format: markdown, json, html")
 
 	rootCmd.AddCommand(reportCmd)
 }
