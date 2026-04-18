@@ -1,11 +1,12 @@
 ---
 title: "Parallel execution for evals and samples"
 id: "01kpfdfbx"
-status: in-progress
+status: completed
 priority: high
 type: feature
 tags: ["performance", "executor"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Parallel execution for evals and samples
