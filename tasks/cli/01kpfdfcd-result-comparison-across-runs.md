@@ -1,7 +1,7 @@
 ---
 title: "Result comparison across runs"
 id: "01kpfdfcd"
-status: pending
+status: in-progress
 priority: high
 type: feature
 tags: ["cli", "reporting"]
