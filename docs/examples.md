@@ -86,7 +86,7 @@ evals:
   - id: compiles-check
     prompt: "Write a Go program in main.go that prints 'hello'."
     correctness:
-      compiles: true
+      compiles: "go build ./..."
 
   # Verify successful execution
   - id: execute-check

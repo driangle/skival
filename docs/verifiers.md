@@ -4,20 +4,25 @@ Verifiers check that an AI agent's output is correct. Multiple verifiers can be 
 
 ## Compiles
 
-Checks that the code in the eval's working directory compiles successfully. The language is auto-detected from project files:
-
-| Marker | Language | Build command |
-|--------|----------|---------------|
-| `go.mod` or `*.go` files | Go | `go build ./...` |
-| `Cargo.toml` | Rust | `cargo check` |
-| `tsconfig.json` | TypeScript | `npx tsc --noEmit` |
+Runs a user-provided build command in the eval's working directory. Passes if the command exits with code 0.
 
 ```yaml
 correctness:
-  compiles: true
+  compiles: "go build ./..."
 ```
 
-Fails if no recognized language files are found in the directory.
+The value is any shell command:
+
+```yaml
+# Rust
+compiles: "cargo check"
+
+# TypeScript
+compiles: "npx tsc --noEmit"
+
+# C
+compiles: "gcc -o out main.c"
+```
 
 ## Execute
 

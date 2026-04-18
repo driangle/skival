@@ -64,7 +64,7 @@ func countVerifiers(c suite.Correctness) int {
 	if c.Execute != nil && *c.Execute {
 		count++
 	}
-	if c.Compiles != nil && *c.Compiles {
+	if c.Compiles != "" {
 		count++
 	}
 	if len(c.ExpectedOutput) > 0 {

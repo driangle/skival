@@ -72,7 +72,7 @@ evals:
       reset: "npm run reset-db"      # Run between treatments
 
     correctness:
-      compiles: true                 # Code must compile/parse
+      compiles: "go build ./..."     # Build command (exit 0 = pass)
       execute: true                  # Run the generated code
       expected_output:               # Substrings that must appear in stdout
         - "expected string"

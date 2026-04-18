@@ -1,11 +1,12 @@
 ---
 title: "Refactor compiles verifier to use explicit build command"
 id: "01kpfdv88"
-status: pending
+status: completed
 priority: high
 type: chore
 tags: ["verifier", "breaking-change"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Refactor compiles verifier to use explicit build command
@@ -19,13 +20,13 @@ Replace auto-detection logic in the `compiles` verifier with a user-provided bui
 
 ## Tasks
 
-- [ ] Change `Compiles` field in `internal/suite/suite.go` from `*bool` to `string`
-- [ ] Update `CompilesVerifier` in `internal/verifier/compiles.go` to run the provided command string instead of auto-detecting. Remove `detectBuildCommand`, `fileExists`, `hasFilesWithExt`
-- [ ] Update `BuildPipeline` in `internal/verifier/pipeline.go` to check `c.Compiles != ""` instead of `c.Compiles != nil && *c.Compiles`
-- [ ] Update `countVerifiers` in `apps/cli/cmd/validate.go` to check `c.Compiles != ""`
-- [ ] Update tests in `internal/verifier/compiles_test.go` — remove detection tests, test with explicit commands
-- [ ] Update `docs/verifiers.md` — remove auto-detection table, show string usage
-- [ ] Update `docs/examples.md` — change `compiles: true` to `compiles: "go build ./..."`
+- [x] Change `Compiles` field in `internal/suite/suite.go` from `*bool` to `string`
+- [x] Update `CompilesVerifier` in `internal/verifier/compiles.go` to run the provided command string instead of auto-detecting. Remove `detectBuildCommand`, `fileExists`, `hasFilesWithExt`
+- [x] Update `BuildPipeline` in `internal/verifier/pipeline.go` to check `c.Compiles != ""` instead of `c.Compiles != nil && *c.Compiles`
+- [x] Update `countVerifiers` in `apps/cli/cmd/validate.go` to check `c.Compiles != ""`
+- [x] Update tests in `internal/verifier/compiles_test.go` — remove detection tests, test with explicit commands
+- [x] Update `docs/verifiers.md` — remove auto-detection table, show string usage
+- [x] Update `docs/examples.md` — change `compiles: true` to `compiles: "go build ./..."`
 
 ## Acceptance Criteria
 

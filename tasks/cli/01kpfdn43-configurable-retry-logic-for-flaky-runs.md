@@ -1,11 +1,12 @@
 ---
 title: "Configurable retry logic for flaky runs"
 id: "01kpfdn43"
-status: in-progress
+status: completed
 priority: high
 type: feature
 tags: ["executor", "reliability"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Configurable retry logic for flaky runs
