@@ -25,7 +25,7 @@ evals:
       after: |
         rm -f input.txt output.txt
     correctness:
-      execute: true
+      agent_exits_ok: true
     treatments:
       control:
         name: baseline

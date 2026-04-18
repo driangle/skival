@@ -32,7 +32,7 @@ evals:
     prompt: "Create a file called hello.txt containing 'Hello, World!'"
     model: "claude-sonnet-4-6"
     correctness:
-      execute: true
+      agent_exits_ok: true
       script: "cat hello.txt | grep 'Hello, World!'"
     treatments:
       control:

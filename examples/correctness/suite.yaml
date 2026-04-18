@@ -21,11 +21,11 @@ evals:
         - name: opus-model
           model: "claude-opus-4-6"
 
-  # Verify that output executes successfully
-  - id: execute-check
+  # Verify that the agent exits successfully
+  - id: agent-exits-ok-check
     prompt: "Write a shell script run.sh that exits with code 0."
     correctness:
-      execute: true
+      agent_exits_ok: true
     treatments:
       control:
         name: baseline
@@ -97,7 +97,7 @@ evals:
       Write a Python script called calc.py that reads two numbers
       from stdin and prints their sum.
     correctness:
-      execute: true
+      agent_exits_ok: true
       expected_output:
         - "Result:"
       script: "./scripts/verify-calc.sh"

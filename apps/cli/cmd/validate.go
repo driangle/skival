@@ -61,7 +61,7 @@ var validateCmd = &cobra.Command{
 
 func countVerifiers(c suite.Correctness) int {
 	count := 0
-	if c.Execute != nil && *c.Execute {
+	if c.AgentExitsOK != nil && *c.AgentExitsOK {
 		count++
 	}
 	if c.Compiles != "" {

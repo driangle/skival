@@ -373,7 +373,7 @@ evals:
     setup:
       reset: "rm -f fizzbuzz.sh"
     correctness:
-      execute: true
+      agent_exits_ok: true
       script: "./verify.sh"
 
     treatments:

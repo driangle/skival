@@ -13,7 +13,7 @@ evals:
       Write a Python script called primes.py that prints all prime numbers
       less than 100, one per line.
     correctness:
-      execute: true
+      agent_exits_ok: true
     treatments:
       control:
         name: claude-code

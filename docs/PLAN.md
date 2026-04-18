@@ -73,7 +73,7 @@ evals:
 
     correctness:
       compiles: "go build ./..."     # Build command (exit 0 = pass)
-      execute: true                  # Run the generated code
+      agent_exits_ok: true           # Agent process exited with code 0
       expected_output:               # Substrings that must appear in stdout
         - "expected string"
       script: "./verify.sh"          # Custom verification script (exit 0 = pass)
@@ -196,7 +196,7 @@ type VerifyResult struct {
 }
 ```
 
-Built-in verifiers are composed into a pipeline: compile check -> execute -> output match -> state assertions -> script -> judge. Each step is optional based on the eval's `correctness` config. The pipeline short-circuits on first failure.
+Built-in verifiers are composed into a pipeline: compile check -> agent_exits_ok -> output match -> state assertions -> script -> judge. Each step is optional based on the eval's `correctness` config. The pipeline short-circuits on first failure.
 
 ## Execution Flow
 

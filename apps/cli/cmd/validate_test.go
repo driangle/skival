@@ -92,7 +92,7 @@ evals:
     prompt: "do something"
     model: "claude-sonnet-4-6"
     correctness:
-      execute: true
+      agent_exits_ok: true
       expected_output:
         - "hello"
       script: "./verify.sh"

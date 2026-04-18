@@ -30,7 +30,7 @@ func TestBuildPipeline_OutputOnly(t *testing.T) {
 
 func TestBuildPipeline_AllVerifiers(t *testing.T) {
 	p := BuildPipeline(suite.Correctness{
-		Execute:        boolPtr(true),
+		AgentExitsOK:   boolPtr(true),
 		ExpectedOutput: []string{"ok"},
 		State:          []suite.StateAssertion{{URL: "http://localhost", Expect: "up"}},
 		Script:         "exit 0",
@@ -43,7 +43,7 @@ func TestBuildPipeline_AllVerifiers(t *testing.T) {
 		t.Fatalf("expected 4 steps, got %d", len(p.steps))
 	}
 
-	expected := []string{"execute", "output", "state", "script"}
+	expected := []string{"agent_exits_ok", "output", "state", "script"}
 	for i, name := range expected {
 		if p.steps[i].name != name {
 			t.Errorf("step %d: got %q, want %q", i, p.steps[i].name, name)
@@ -51,12 +51,12 @@ func TestBuildPipeline_AllVerifiers(t *testing.T) {
 	}
 }
 
-func TestBuildPipeline_ExecuteFalseSkipped(t *testing.T) {
+func TestBuildPipeline_AgentExitsOKFalseSkipped(t *testing.T) {
 	p := BuildPipeline(suite.Correctness{
-		Execute: boolPtr(false),
+		AgentExitsOK: boolPtr(false),
 	}, "")
 	if p != nil {
-		t.Fatal("expected nil pipeline when execute=false and nothing else configured")
+		t.Fatal("expected nil pipeline when agent_exits_ok=false and nothing else configured")
 	}
 }
 

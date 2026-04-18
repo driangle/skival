@@ -24,13 +24,13 @@ compiles: "npx tsc --noEmit"
 compiles: "gcc -o out main.c"
 ```
 
-## Execute
+## Agent Exits OK
 
 Checks that the agent process exited with code 0.
 
 ```yaml
 correctness:
-  execute: true
+  agent_exits_ok: true
 ```
 
 ## Expected Output
@@ -105,11 +105,11 @@ correctness:
 
 ## Combining Verifiers
 
-Verifiers are evaluated in order: compiles, execute, output, state, script, judge. Evaluation stops at the first failure.
+Verifiers are evaluated in order: compiles, agent_exits_ok, output, state, script, judge. Evaluation stops at the first failure.
 
 ```yaml
 correctness:
-  execute: true
+  agent_exits_ok: true
   expected_output:
     - "All tests passed"
   script: "./check-coverage.sh"

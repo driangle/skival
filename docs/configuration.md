@@ -70,7 +70,7 @@ evals:
     samples: 5
     model: "claude-sonnet-4-6"
     correctness:
-      execute: true
+      agent_exits_ok: true
     setup:
       before: "mkdir -p workspace"
       reset: "rm -rf workspace/*"

@@ -81,7 +81,7 @@ evals:
 
 ## Correctness Verification
 
-Every verification mode in one suite: `compiles`, `execute`, `expected_output`, `script`, `state`, and `judge`.
+Every verification mode in one suite: `compiles`, `agent_exits_ok`, `expected_output`, `script`, `state`, and `judge`.
 
 ```yaml
 evals:
@@ -91,11 +91,11 @@ evals:
     correctness:
       compiles: "go build ./..."
 
-  # Verify successful execution
-  - id: execute-check
+  # Verify the agent exits successfully
+  - id: agent-exits-ok-check
     prompt: "Write a shell script run.sh that exits with code 0."
     correctness:
-      execute: true
+      agent_exits_ok: true
 
   # Verify expected strings in output
   - id: expected-output-check
@@ -132,7 +132,7 @@ evals:
   - id: combined-check
     prompt: "Write calc.py that reads two numbers and prints their sum."
     correctness:
-      execute: true
+      agent_exits_ok: true
       expected_output:
         - "Result:"
       script: "./scripts/verify-calc.sh"
@@ -157,7 +157,7 @@ evals:
       after: |
         rm -f input.txt output.txt
     correctness:
-      execute: true
+      agent_exits_ok: true
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/setup-hooks)
@@ -226,7 +226,7 @@ evals:
   - id: cross-runner
     prompt: "Write primes.py that prints all primes less than 100."
     correctness:
-      execute: true
+      agent_exits_ok: true
     treatments:
       control:
         name: claude-code
@@ -380,7 +380,7 @@ evals:
     setup:
       reset: "rm -f fizzbuzz.sh"
     correctness:
-      execute: true
+      agent_exits_ok: true
       script: "./verify.sh"
     treatments:
       control:

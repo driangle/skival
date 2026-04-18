@@ -1,11 +1,12 @@
 ---
 title: "Rename correctness.execute to correctness.agent_exits_ok"
 id: "01kpgsavd"
-status: pending
+status: completed
 priority: low
 type: chore
 tags: ["naming", "correctness"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Rename correctness.execute to correctness.agent_exits_ok
@@ -16,11 +17,11 @@ Rename the `correctness.execute` field to `correctness.agent_exits_ok` to better
 
 ## Tasks
 
-- [ ] Rename `Execute` field to `AgentExitsOK` in `suite.Correctness` struct and update YAML tag
-- [ ] Update `BuildPipeline()` in `internal/verifier/pipeline.go` to reference new field
-- [ ] Update all `suite.yaml` files (examples, tests) to use `agent_exits_ok`
-- [ ] Update loader/validation logic if it references the field by name
-- [ ] Update documentation referencing `execute`
+- [x] Rename `Execute` field to `AgentExitsOK` in `suite.Correctness` struct and update YAML tag
+- [x] Update `BuildPipeline()` in `internal/verifier/pipeline.go` to reference new field
+- [x] Update all `suite.yaml` files (examples, tests) to use `agent_exits_ok`
+- [x] Update loader/validation logic if it references the field by name
+- [x] Update documentation referencing `execute`
 
 ## Acceptance Criteria
 

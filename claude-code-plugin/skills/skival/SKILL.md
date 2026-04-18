@@ -46,7 +46,7 @@ evals:                                # REQUIRED. At least one eval.
 
     correctness:                      # Optional. How to verify the agent's output.
       compiles: true                  # Check if generated code compiles.
-      execute: true                   # Execute the generated code.
+      agent_exits_ok: true             # Agent process exited with code 0.
       expected_output:                # Substrings that MUST appear in stdout.
         - "expected string"
       script: "./verify.sh"           # Custom script (exit 0 = pass, non-zero = fail).
@@ -171,7 +171,7 @@ treatments:
 Combine verifiers for thorough correctness checking:
 ```yaml
 correctness:
-  execute: true
+  agent_exits_ok: true
   expected_output:
     - "All tests passed"
   script: "./verify.sh"

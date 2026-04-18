@@ -73,7 +73,7 @@ type Setup struct {
 // Correctness defines how to verify an eval's output.
 type Correctness struct {
 	Compiles       string           `yaml:"compiles"`
-	Execute        *bool            `yaml:"execute"`
+	AgentExitsOK   *bool            `yaml:"agent_exits_ok"`
 	ExpectedOutput []string         `yaml:"expected_output"`
 	Script         string           `yaml:"script"`
 	State          []StateAssertion `yaml:"state"`

@@ -47,9 +47,9 @@ func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) 
 		})
 	}
 
-	if c.Execute != nil && *c.Execute {
+	if c.AgentExitsOK != nil && *c.AgentExitsOK {
 		steps = append(steps, namedVerifier{
-			name:     "execute",
+			name:     "agent_exits_ok",
 			verifier: &ExecuteVerifier{},
 		})
 	}
