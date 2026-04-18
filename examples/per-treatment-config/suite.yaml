@@ -5,6 +5,9 @@
 version: 1
 description: "Per-treatment prompt and config_dir"
 
+defaults:
+  runner: claude-code
+
 evals:
   # Example 1: Different prompts per treatment.
   - id: prompt-comparison

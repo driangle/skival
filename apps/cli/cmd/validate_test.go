@@ -14,6 +14,8 @@ func TestValidateCmd_ValidSuite(t *testing.T) {
 	content := `
 version: 1
 description: "test suite"
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     name: "Test Eval"
@@ -83,6 +85,8 @@ func TestValidateCmd_VerifierCount(t *testing.T) {
 	path := filepath.Join(dir, "suite.yaml")
 	content := `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "do something"

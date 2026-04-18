@@ -86,7 +86,7 @@ func TestExecuteEval_BeforeHookRuns(t *testing.T) {
 				Before: "touch " + marker,
 			},
 			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl"},
+				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -118,7 +118,7 @@ func TestExecuteEval_BeforeHookFailure(t *testing.T) {
 				Before: "exit 1",
 			},
 			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl"},
+				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -152,8 +152,8 @@ func TestExecuteEval_ResetBetweenTreatments(t *testing.T) {
 				Reset: "echo x >> " + counter,
 			},
 			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl"},
-				Variations: []suite.Treatment{{Name: "v1"}, {Name: "v2"}},
+				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}, {Name: "v2", Runner: "claude-code"}},
 			},
 		}},
 	}
@@ -198,7 +198,7 @@ func TestExecuteEval_AfterHookRunsOnError(t *testing.T) {
 				After:  "touch " + marker,
 			},
 			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl"},
+				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -226,8 +226,8 @@ func TestExecuteEval_ResetHookFailure(t *testing.T) {
 				Reset: "exit 1",
 			},
 			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl"},
-				Variations: []suite.Treatment{{Name: "v1"}},
+				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}},
 			},
 		}},
 	}
@@ -256,8 +256,8 @@ func TestExecuteEval_BeforeHookFailure_SkipsAllTreatments(t *testing.T) {
 				Before: "echo 'setup broke' >&2; exit 1",
 			},
 			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl"},
-				Variations: []suite.Treatment{{Name: "v1"}, {Name: "v2"}},
+				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}, {Name: "v2", Runner: "claude-code"}},
 			},
 		}},
 	}
@@ -305,8 +305,8 @@ func TestExecuteEval_ResetHookFailure_SkipsRemainingTreatments(t *testing.T) {
 				Reset: "echo 'reset broke' >&2; exit 1",
 			},
 			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl"},
-				Variations: []suite.Treatment{{Name: "v1"}, {Name: "v2"}},
+				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}, {Name: "v2", Runner: "claude-code"}},
 			},
 		}},
 	}
@@ -358,7 +358,7 @@ func TestExecuteEval_BeforeHookFailure_ErrorIncludesOutput(t *testing.T) {
 				Before: "echo 'debug log'; echo 'fatal error' >&2; exit 1",
 			},
 			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl"},
+				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -394,8 +394,8 @@ func TestExecuteEval_AfterHookRunsOnResetFailure(t *testing.T) {
 				After: "touch " + marker,
 			},
 			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl"},
-				Variations: []suite.Treatment{{Name: "v1"}},
+				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}},
 			},
 		}},
 	}
@@ -454,8 +454,8 @@ func TestExecuteEval_BeforeHookFailure_SkippedTreatmentsInProgress(t *testing.T)
 				Before: "exit 1",
 			},
 			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl"},
-				Variations: []suite.Treatment{{Name: "v1"}},
+				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}},
 			},
 		}},
 	}

@@ -112,7 +112,7 @@ func newMinimalSuite() *suite.Suite {
 				Name:   "Test Eval",
 				Prompt: "do something",
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control"},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code"},
 				},
 			},
 		},
@@ -180,7 +180,7 @@ func TestControlBeforeVariations(t *testing.T) {
 
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Variations = []suite.Treatment{
-		{Name: "variation-1"},
+		{Name: "variation-1", Runner: "claude-code"},
 	}
 
 	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
@@ -265,6 +265,7 @@ func TestOptionsMapping(t *testing.T) {
 	s.Evals[0].Timeout = intPtr(30)
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:         "control",
+		Runner:       "claude-code",
 		Env:          map[string]string{"FOO": "bar"},
 		RunnerConfig: map[string]any{"allowed_tools": []string{"Read", "Write"}},
 	}
@@ -301,8 +302,9 @@ func TestTreatmentModelOverridesEval(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Model = "claude-sonnet-4-6"
 	s.Evals[0].Treatments.Control = suite.Treatment{
-		Name:  "control",
-		Model: "claude-opus-4-6",
+		Name:   "control",
+		Runner: "claude-code",
+		Model:  "claude-opus-4-6",
 	}
 
 	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
@@ -339,11 +341,12 @@ func TestTreatmentResultModelOverride(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Model = "claude-sonnet-4-6"
 	s.Evals[0].Treatments.Control = suite.Treatment{
-		Name:  "control",
-		Model: "claude-opus-4-6",
+		Name:   "control",
+		Runner: "claude-code",
+		Model:  "claude-opus-4-6",
 	}
 	s.Evals[0].Treatments.Variations = []suite.Treatment{
-		{Name: "variation"},
+		{Name: "variation", Runner: "claude-code"},
 	}
 
 	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
@@ -368,9 +371,9 @@ func TestFilterEvals(t *testing.T) {
 
 	s := &suite.Suite{
 		Evals: []suite.Eval{
-			{ID: "e1", Name: "Eval 1", Prompt: "p1", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl"}}},
-			{ID: "e2", Name: "Eval 2", Prompt: "p2", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl"}}},
-			{ID: "e3", Name: "Eval 3", Prompt: "p3", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl"}}},
+			{ID: "e1", Name: "Eval 1", Prompt: "p1", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"}}},
+			{ID: "e2", Name: "Eval 2", Prompt: "p2", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"}}},
+			{ID: "e3", Name: "Eval 3", Prompt: "p3", Treatments: suite.Treatments{Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"}}},
 		},
 	}
 
@@ -398,8 +401,8 @@ func TestFilterTreatments(t *testing.T) {
 			{
 				ID: "e1", Name: "Eval 1", Prompt: "p1",
 				Treatments: suite.Treatments{
-					Control:    suite.Treatment{Name: "control"},
-					Variations: []suite.Treatment{{Name: "with-skill"}},
+					Control:    suite.Treatment{Name: "control", Runner: "claude-code"},
+					Variations: []suite.Treatment{{Name: "with-skill", Runner: "claude-code"}},
 				},
 			},
 		},
@@ -432,8 +435,9 @@ func TestSkillFilePassedAsSystemPrompt(t *testing.T) {
 
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
-		Name:  "control",
-		Skill: skillPath,
+		Name:   "control",
+		Runner: "claude-code",
+		Skill:  skillPath,
 	}
 
 	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
@@ -464,6 +468,7 @@ func TestSkillsArrayConcatenated(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:   "control",
+		Runner: "claude-code",
 		Skills: []string{skillA, skillB},
 	}
 
@@ -492,6 +497,7 @@ func TestSkillsArraySingleFile(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:   "control",
+		Runner: "claude-code",
 		Skills: []string{skillPath},
 	}
 
@@ -516,6 +522,7 @@ func TestSkillsArrayMissingFile(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:   "control",
+		Runner: "claude-code",
 		Skills: []string{skillA, "/nonexistent/b.md"},
 	}
 
@@ -537,8 +544,9 @@ func TestSkillFileMissing(t *testing.T) {
 
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
-		Name:  "control",
-		Skill: "/nonexistent/skill.md",
+		Name:   "control",
+		Runner: "claude-code",
+		Skill:  "/nonexistent/skill.md",
 	}
 
 	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
@@ -677,7 +685,7 @@ func TestTreatmentSpecificRunner(t *testing.T) {
 	})
 
 	s := newMinimalSuite()
-	s.Evals[0].Treatments.Control = suite.Treatment{Name: "control"} // defaults to claude-code
+	s.Evals[0].Treatments.Control = suite.Treatment{Name: "control", Runner: "claude-code"}
 	s.Evals[0].Treatments.Variations = []suite.Treatment{
 		{Name: "ollama-variant", Runner: "ollama"},
 	}
@@ -710,9 +718,9 @@ func TestRunnerCachedAcrossTreatments(t *testing.T) {
 	})
 
 	s := newMinimalSuite()
-	s.Evals[0].Treatments.Control = suite.Treatment{Name: "control"}
+	s.Evals[0].Treatments.Control = suite.Treatment{Name: "control", Runner: "claude-code"}
 	s.Evals[0].Treatments.Variations = []suite.Treatment{
-		{Name: "variation"}, // also defaults to claude-code
+		{Name: "variation", Runner: "claude-code"},
 	}
 
 	_, err := Execute(context.Background(), s, reg, nil)
@@ -896,7 +904,7 @@ func TestIsolateGivesUniqueDirsPerSample(t *testing.T) {
 				Isolate: true,
 				Samples: intPtr(3),
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control"},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code"},
 				},
 			},
 		},
@@ -962,7 +970,7 @@ func TestIsolateCopiesFiles(t *testing.T) {
 				Dir:     srcDir,
 				Isolate: true,
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control"},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code"},
 				},
 			},
 		},
@@ -1004,7 +1012,7 @@ func TestIsolateTempDirsCleanedUp(t *testing.T) {
 				Isolate: true,
 				Samples: intPtr(2),
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control"},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code"},
 				},
 			},
 		},
@@ -1065,7 +1073,7 @@ func TestIsolateWithTreatmentDir(t *testing.T) {
 				Dir:     evalDir,
 				Isolate: true,
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control", Dir: treatmentDir},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code", Dir: treatmentDir},
 				},
 			},
 		},
@@ -1098,9 +1106,9 @@ func TestTreatmentPromptOverridesEval(t *testing.T) {
 				Name:   "Eval",
 				Prompt: "eval prompt",
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control", Prompt: "treatment prompt"},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code", Prompt: "treatment prompt"},
 					Variations: []suite.Treatment{
-						{Name: "uses-eval-prompt"},
+						{Name: "uses-eval-prompt", Runner: "claude-code"},
 					},
 				},
 			},
@@ -1131,6 +1139,7 @@ func TestConfigDirSetsEnvVar(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:      "control",
+		Runner:    "claude-code",
 		ConfigDir: "/tmp/custom-claude-config",
 	}
 
@@ -1152,6 +1161,7 @@ func TestConfigDirMergesWithExistingEnv(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:      "control",
+		Runner:    "claude-code",
 		ConfigDir: "/tmp/config",
 		Env:       map[string]string{"FOO": "bar"},
 	}
@@ -1176,6 +1186,7 @@ func TestConfigDirDoesNotMutateOriginalEnv(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Treatments.Control = suite.Treatment{
 		Name:      "control",
+		Runner:    "claude-code",
 		ConfigDir: "/tmp/config",
 		Env:       originalEnv,
 	}
@@ -1347,7 +1358,7 @@ func TestParallelIsolationDirsIndependent(t *testing.T) {
 				Samples:  intPtr(4),
 				Parallel: intPtr(4),
 				Treatments: suite.Treatments{
-					Control: suite.Treatment{Name: "control"},
+					Control: suite.Treatment{Name: "control", Runner: "claude-code"},
 				},
 			},
 		},

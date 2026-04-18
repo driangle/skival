@@ -2,6 +2,7 @@ version: 1
 description: "FizzBuzz benchmark — compare baseline vs shell best-practices skill"
 
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   samples: 3
   timeout: 60

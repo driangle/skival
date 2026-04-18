@@ -14,7 +14,7 @@ func TestValidate_ValidSuite(t *testing.T) {
 				Prompt: "do something",
 				Model:  "claude-sonnet-4-6",
 				Treatments: Treatments{
-					Control: Treatment{Name: "baseline"},
+					Control: Treatment{Name: "baseline", Runner: "claude-code"},
 				},
 			},
 		},
@@ -72,8 +72,8 @@ func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
 				ID:    "e1",
 				Model: "claude-sonnet-4-6",
 				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Prompt: "do A"},
-					Variations: []Treatment{{Name: "v1", Prompt: "do B"}},
+					Control:    Treatment{Name: "ctrl", Prompt: "do A", Runner: "claude-code"},
+					Variations: []Treatment{{Name: "v1", Prompt: "do B", Runner: "claude-code"}},
 				},
 			},
 		},
@@ -128,7 +128,7 @@ func TestValidate_ConfigDirValid(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
 				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", ConfigDir: dir},
+					Control: Treatment{Name: "ctrl", ConfigDir: dir, Runner: "claude-code"},
 				},
 			},
 		},
@@ -169,7 +169,7 @@ func TestValidate_ValidComplexities(t *testing.T) {
 		s := &Suite{
 			Version: 1,
 			Evals: []Eval{
-				{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Complexity: c, Treatments: Treatments{Control: Treatment{Name: "c"}}},
+				{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Complexity: c, Treatments: Treatments{Control: Treatment{Name: "c", Runner: "claude-code"}}},
 			},
 		}
 		if err := validate(s); err != nil {
@@ -243,8 +243,8 @@ func TestValidate_EvalModelCoversAllTreatments(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
 				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl"},
-					Variations: []Treatment{{Name: "v1"}},
+					Control:    Treatment{Name: "ctrl", Runner: "claude-code"},
+					Variations: []Treatment{{Name: "v1", Runner: "claude-code"}},
 				},
 			},
 		},
@@ -262,8 +262,8 @@ func TestValidate_TreatmentLevelModelsWithoutEvalModel(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Model: "claude-sonnet-4-6"},
-					Variations: []Treatment{{Name: "v1", Model: "claude-opus-4-6"}},
+					Control:    Treatment{Name: "ctrl", Model: "claude-sonnet-4-6", Runner: "claude-code"},
+					Variations: []Treatment{{Name: "v1", Model: "claude-opus-4-6", Runner: "claude-code"}},
 				},
 			},
 		},
@@ -275,7 +275,7 @@ func TestValidate_TreatmentLevelModelsWithoutEvalModel(t *testing.T) {
 }
 
 func TestValidate_ValidRunners(t *testing.T) {
-	for _, runner := range []string{"", "claude-code", "ollama"} {
+	for _, runner := range []string{"claude-code", "ollama", "codex", "aider"} {
 		s := &Suite{
 			Version: 1,
 			Evals: []Eval{
@@ -292,6 +292,41 @@ func TestValidate_ValidRunners(t *testing.T) {
 			t.Errorf("runner %q should be valid, got: %v", runner, err)
 		}
 	}
+}
+
+func TestValidate_MissingRunnerOnControl(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "ctrl"},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `control treatment "ctrl" has no runner`)
+}
+
+func TestValidate_MissingRunnerOnVariation(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control:    Treatment{Name: "ctrl", Runner: "claude-code"},
+					Variations: []Treatment{{Name: "v1", Model: "claude-sonnet-4-6"}},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, `variation[0] "v1" has no runner`)
 }
 
 func TestValidate_UnknownRunnerOnDefaults(t *testing.T) {
@@ -402,7 +437,7 @@ func TestValidate_SkillsAloneIsValid(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
 				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", Skills: []string{"a.md", "b.md"}},
+					Control: Treatment{Name: "ctrl", Skills: []string{"a.md", "b.md"}, Runner: "claude-code"},
 				},
 			},
 		},
@@ -482,7 +517,7 @@ func TestValidate_RetryConfigValid(t *testing.T) {
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
 				Retry: &Retry{MaxAttempts: &attempts, Backoff: "exponential", Delay: "500ms", On: "all"},
 				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl"},
+					Control: Treatment{Name: "ctrl", Runner: "claude-code"},
 				},
 			},
 		},

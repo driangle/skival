@@ -3,6 +3,7 @@ version: 1
 description: "Demonstrates complexity levels"
 
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
 
 evals:

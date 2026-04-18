@@ -21,8 +21,6 @@ import (
 
 // Execute runs all evals in the suite, returning collected results.
 // Runner errors are captured per-run and do not abort the suite.
-// defaultRunner is used when a treatment does not specify a runner.
-const defaultRunner = "claude-code"
 
 func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *Options) (*result.SuiteResult, error) {
 	if opts == nil {
@@ -126,9 +124,6 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 
 func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
 	runnerName := t.Runner
-	if runnerName == "" {
-		runnerName = defaultRunner
-	}
 
 	// Model: treatment > eval.
 	model := eval.Model
@@ -421,11 +416,7 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string, t
 	}
 
 	// Runner-specific options from runner_config.
-	runnerName := t.Runner
-	if runnerName == "" {
-		runnerName = defaultRunner
-	}
-	opts = append(opts, buildRunnerSpecificOpts(runnerName, t.RunnerConfig)...)
+	opts = append(opts, buildRunnerSpecificOpts(t.Runner, t.RunnerConfig)...)
 
 	// Skill file(s) as appended system prompt.
 	skillPrompt, err := loadSkillContent(t)

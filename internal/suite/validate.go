@@ -27,7 +27,6 @@ var validComplexities = map[string]bool{
 }
 
 var validRunners = map[string]bool{
-	"":            true,
 	"claude-code": true,
 	"ollama":      true,
 	"codex":       true,
@@ -66,7 +65,7 @@ func validate(s *Suite) error {
 		errs = append(errs, "at least one eval is required")
 	}
 
-	if !validRunners[s.Defaults.Runner] {
+	if s.Defaults.Runner != "" && !validRunners[s.Defaults.Runner] {
 		errs = append(errs, fmt.Sprintf("defaults: unknown runner %q", s.Defaults.Runner))
 	}
 
@@ -102,7 +101,7 @@ func validate(s *Suite) error {
 			errs = append(errs, fmt.Sprintf("%s: invalid complexity %q (must be low, medium, or high)", prefix, eval.Complexity))
 		}
 
-		if !validRunners[eval.Runner] {
+		if eval.Runner != "" && !validRunners[eval.Runner] {
 			errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))
 		}
 
@@ -110,11 +109,16 @@ func validate(s *Suite) error {
 			errs = append(errs, fmt.Sprintf("%s: control treatment name is required", prefix))
 		}
 
-		if !validRunners[eval.Treatments.Control.Runner] {
+		// Every treatment must resolve to a runner (treatment-level, eval-level, or defaults-level).
+		if eval.Treatments.Control.Runner == "" {
+			errs = append(errs, fmt.Sprintf("%s: control treatment %q has no runner (set runner on the eval, defaults, or treatment)", prefix, eval.Treatments.Control.Name))
+		} else if !validRunners[eval.Treatments.Control.Runner] {
 			errs = append(errs, fmt.Sprintf("%s: control treatment %q: unknown runner %q", prefix, eval.Treatments.Control.Name, eval.Treatments.Control.Runner))
 		}
 		for j, v := range eval.Treatments.Variations {
-			if !validRunners[v.Runner] {
+			if v.Runner == "" {
+				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q has no runner (set runner on the eval, defaults, or treatment)", prefix, j, v.Name))
+			} else if !validRunners[v.Runner] {
 				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: unknown runner %q", prefix, j, v.Name, v.Runner))
 			}
 		}
@@ -259,13 +263,12 @@ func warnTreatmentModelRunner(t Treatment, evalModel string) {
 		return
 	}
 
-	runner := t.Runner
-	if runner == "" {
-		runner = "claude-code"
+	if t.Runner == "" {
+		return
 	}
 
-	if !modelLooksValidForRunner(model, runner) {
-		log.Printf("WARNING: treatment %q: model %q may not be compatible with runner %q", t.Name, model, runner)
+	if !modelLooksValidForRunner(model, t.Runner) {
+		log.Printf("WARNING: treatment %q: model %q may not be compatible with runner %q", t.Name, model, t.Runner)
 	}
 }
 

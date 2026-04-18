@@ -4,6 +4,7 @@ version: 1
 description: "Demonstrates multiple treatment variations"
 
 defaults:
+  runner: claude-code
   samples: 3
   timeout: 90
 

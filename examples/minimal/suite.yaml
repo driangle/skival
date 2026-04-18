@@ -1,6 +1,9 @@
 # Simplest valid suite: one eval, one control treatment, inline prompt.
 version: 1
 
+defaults:
+  runner: claude-code
+
 evals:
   - id: hello
     prompt: "Write a file called hello.txt containing 'Hello, World!'"

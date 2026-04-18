@@ -12,6 +12,8 @@ func TestLoad_MinimalSuite(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "do the thing"
@@ -56,6 +58,8 @@ treatments:
 
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - file: evals/my-eval.yaml
 `)
@@ -95,6 +99,7 @@ func TestLoad_DefaultsMerge(t *testing.T) {
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
 defaults:
+  runner: claude-code
   samples: 5
   timeout: 120
   model: "claude-sonnet"
@@ -128,6 +133,7 @@ func TestLoad_EvalOverridesDefaults(t *testing.T) {
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
 defaults:
+  runner: claude-code
   samples: 5
   timeout: 120
   model: "claude-sonnet"
@@ -201,6 +207,8 @@ func TestLoad_ResolvesEvalDirToSuiteDir(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -228,6 +236,8 @@ func TestLoad_ResolvesRelativeEvalDir(t *testing.T) {
 	}
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -258,6 +268,8 @@ func TestLoad_ResolvesRelativePaths(t *testing.T) {
 	writeSuiteFile(t, dir, "verify.sh", "#!/bin/bash\nexit 0")
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -303,6 +315,8 @@ func TestLoad_PreservesAbsolutePaths(t *testing.T) {
 
 	writeSuiteFile(t, dir, "suite.yaml", fmt.Sprintf(`
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -419,6 +433,8 @@ func TestLoad_MigrateAllowedToolsToRunnerConfig(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -460,6 +476,8 @@ func TestLoad_MigrateAllowedToolsDoesNotOverrideExisting(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -746,6 +764,8 @@ func TestLoad_MatrixSingleDimension(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "compare models"
@@ -779,6 +799,8 @@ func TestLoad_MatrixAndTreatmentsMutuallyExclusive(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "conflict"
@@ -857,6 +879,8 @@ func TestLoad_ResolvesSkillsPaths(t *testing.T) {
 	writeSuiteFile(t, skillsDir, "b.md", "skill B")
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -894,6 +918,8 @@ func TestLoad_SkillsPreservesAbsolutePaths(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -926,6 +952,8 @@ func TestLoad_SkillAndSkillsMutuallyExclusive(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -964,6 +992,8 @@ func TestLoad_IsolateField(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "do the thing"
@@ -1001,6 +1031,8 @@ func TestLoad_ResolvesConfigDirPath(t *testing.T) {
 	}
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -1026,6 +1058,8 @@ func TestLoad_TreatmentPrompt(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     model: "claude-sonnet-4-6"
@@ -1091,6 +1125,7 @@ func TestLoad_RetryConfigParsing(t *testing.T) {
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   retry:
     max_attempts: 3
@@ -1133,6 +1168,7 @@ func TestLoad_RetryInheritsPrecedence(t *testing.T) {
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   retry:
     max_attempts: 2
@@ -1200,6 +1236,8 @@ func TestLoad_RankingWeightsParsing(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 ranking:
   weights:
     correctness: 0.50
@@ -1237,6 +1275,8 @@ func TestLoad_RankingWeightsOmitted(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -1260,6 +1300,8 @@ func TestLoad_RankingWeightsInvalidSum(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 ranking:
   weights:
     correctness: 0.50
@@ -1300,6 +1342,8 @@ func TestLoad_RankingWeightsNegative(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 ranking:
   weights:
     correctness: -0.10
@@ -1340,6 +1384,8 @@ func TestLoad_JudgeModelOnEval(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
@@ -1367,6 +1413,7 @@ func TestLoad_JudgeModelFromDefaults(t *testing.T) {
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   judge_model: "claude-opus-4-6"
 evals:
@@ -1394,6 +1441,7 @@ func TestLoad_JudgeModelEvalOverridesDefaults(t *testing.T) {
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   judge_model: "claude-haiku-4-5-20251001"
 evals:
@@ -1421,6 +1469,8 @@ func TestLoad_JudgeModelOmittedUsesNoOverride(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
+defaults:
+  runner: claude-code
 evals:
   - id: eval-1
     prompt: "task"
