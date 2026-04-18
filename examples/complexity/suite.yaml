@@ -15,6 +15,9 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"
 
   - id: medium-complexity
     name: "REST API endpoint"
@@ -27,6 +30,9 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"
 
   - id: high-complexity
     name: "Full CRUD application"
@@ -39,3 +45,6 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"

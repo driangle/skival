@@ -4,7 +4,7 @@ Self-contained example suites demonstrating the full range of skival configurati
 
 | Directory | Description |
 |-----------|-------------|
-| `minimal/` | Simplest valid suite: one eval, one control treatment, inline prompt |
+| `minimal/` | Simplest valid suite: one eval, two treatments (baseline vs. model comparison) |
 | `defaults/` | Suite-level defaults (model, samples, timeout, runner, runner_config) inherited by evals |
 | `file-refs/` | Evals loaded via `file:` references to separate YAML files |
 | `multi-treatment/` | Control vs. multiple variations with different models, skills, env vars, and runner_config |
@@ -15,4 +15,5 @@ Self-contained example suites demonstrating the full range of skival configurati
 | `multi-runner/` | Different runners (claude-code, codex, aider) across treatments in the same suite |
 | `fizzbuzz/` | Baseline vs. skill comparison with script-based verification |
 | `matrix-comparison/` | Matrix syntax for cross-cutting runner x model evaluation |
+| `per-treatment-config/` | Per-treatment prompt and config_dir overrides |
 | `skillset-comparison/` | Single skill vs. composed skillset comparison |

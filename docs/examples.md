@@ -8,7 +8,7 @@ skival run examples/minimal/suite.yaml
 
 ## Minimal
 
-The simplest valid suite — one eval, one treatment.
+The simplest valid suite — one eval, two treatments.
 
 ```yaml
 version: 1
@@ -20,6 +20,9 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/minimal)

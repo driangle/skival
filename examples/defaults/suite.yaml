@@ -17,6 +17,10 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: fewer-turns
+          runner_config:
+            max_turns: 5
 
   - id: overrides-defaults
     prompt: "Write a script that prints the current date."
@@ -26,3 +30,6 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: sonnet-model
+          model: "claude-sonnet-4-6"

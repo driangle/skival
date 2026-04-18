@@ -23,6 +23,12 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: fewer-tools
+          runner_config:
+            allowed_tools:
+              - Read
+              - Write
 
   # Eval-level overrides merge with defaults
   - id: eval-override
@@ -33,6 +39,10 @@ evals:
     treatments:
       control:
         name: baseline
+      variations:
+        - name: fewer-turns
+          runner_config:
+            max_turns: 15
 
   # Treatment-level overrides merge with eval + defaults
   - id: treatment-override
