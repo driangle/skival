@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/driangle/skival/internal/compare"
 	"github.com/driangle/skival/internal/persist"
@@ -28,7 +27,7 @@ var compareCmd = &cobra.Command{
 		comparison := compare.Compare(baseline, candidate)
 
 		format, _ := cmd.Flags().GetString("format")
-		return compare.Write(os.Stdout, comparison, format)
+		return compare.Write(cmd.OutOrStdout(), comparison, format)
 	},
 }
 

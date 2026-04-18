@@ -95,6 +95,46 @@ Suite is valid
   ...
 ```
 
+## `skival compare`
+
+Compare two result directories and produce a diff report showing how treatments changed between runs. Useful for seeing what improved, regressed, or stayed the same after tweaking skills or prompts.
+
+```bash
+skival compare <baseline-dir> <candidate-dir> [flags]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--format <type>` | `markdown` | Output format: `markdown` or `json` |
+
+### Examples
+
+Compare two runs:
+
+```bash
+skival compare results/run-1 results/run-2
+```
+
+Output as JSON for programmatic consumption:
+
+```bash
+skival compare results/run-1 results/run-2 --format json
+```
+
+### Output
+
+The report shows per-eval, per-treatment deltas for:
+
+- **Pass rate** — percentage point change (e.g. `+50pp ↑`)
+- **Median cost** — absolute USD and percentage change (e.g. `-$0.0200 (-40.0%) ↓`)
+- **Median duration** — absolute and percentage change (e.g. `-2.0s (-20.0%) ↓`)
+
+Treatments that exist in only one run are labeled `added` or `removed` rather than causing errors.
+
+Returns a non-zero exit code if either directory is missing or invalid.
+
 ## `skival version`
 
 Print the current skival version.
