@@ -1,5 +1,8 @@
 # skival
 
+[![CI](https://github.com/driangle/skival/actions/workflows/ci.yaml/badge.svg)](https://github.com/driangle/skival/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/driangle/skival/branch/main/graph/badge.svg)](https://codecov.io/gh/driangle/skival)
+
 A Go CLI for evaluating AI coding skill performance. Measures **time to completion**, **token usage**, **dollar cost**, and **correctness** across configurable eval suites.
 
 Define a control case and N treatment variations, then compare them head-to-head with statistical rigor.
