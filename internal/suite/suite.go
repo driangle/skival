@@ -5,9 +5,22 @@ type Suite struct {
 	Version     int       `yaml:"version"`
 	Description string    `yaml:"description"`
 	Defaults    Defaults  `yaml:"defaults"`
+	Ranking     *Ranking  `yaml:"ranking,omitempty"`
 	Evals       []Eval    `yaml:"evals"`
 }
 
+// Ranking configures how treatments are scored and ranked.
+type Ranking struct {
+	Weights RankingWeights `yaml:"weights"`
+}
+
+// RankingWeights defines the relative importance of each metric in the composite score.
+// All weights must be >= 0 and sum to 1.0.
+type RankingWeights struct {
+	Correctness float64 `yaml:"correctness"`
+	Cost        float64 `yaml:"cost"`
+	Duration    float64 `yaml:"duration"`
+}
 // Retry configures retry behavior for failed sample runs.
 type Retry struct {
 	MaxAttempts *int   `yaml:"max_attempts"` // total attempts including the first (default: 1)

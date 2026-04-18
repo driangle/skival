@@ -9,13 +9,13 @@ import (
 
 // Write writes a report in the specified format to w.
 // Supported formats: "markdown", "json".
-func Write(w io.Writer, sr *result.SuiteResult, format string) error {
+func Write(w io.Writer, sr *result.SuiteResult, format string, weights Weights) error {
 	switch format {
 	case "markdown":
-		WriteMarkdown(w, sr)
+		WriteMarkdown(w, sr, weights)
 		return nil
 	case "json":
-		return WriteJSON(w, sr)
+		return WriteJSON(w, sr, weights)
 	default:
 		return fmt.Errorf("unsupported format: %q (use \"markdown\" or \"json\")", format)
 	}

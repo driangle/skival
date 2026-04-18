@@ -1196,6 +1196,146 @@ evals:
 	}
 }
 
+func TestLoad_RankingWeightsParsing(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+ranking:
+  weights:
+    correctness: 0.50
+    cost: 0.30
+    duration: 0.20
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Ranking == nil {
+		t.Fatal("expected ranking config to be set")
+	}
+	if s.Ranking.Weights.Correctness != 0.50 {
+		t.Errorf("expected correctness=0.50, got %g", s.Ranking.Weights.Correctness)
+	}
+	if s.Ranking.Weights.Cost != 0.30 {
+		t.Errorf("expected cost=0.30, got %g", s.Ranking.Weights.Cost)
+	}
+	if s.Ranking.Weights.Duration != 0.20 {
+		t.Errorf("expected duration=0.20, got %g", s.Ranking.Weights.Duration)
+	}
+}
+
+func TestLoad_RankingWeightsOmitted(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Ranking != nil {
+		t.Error("expected ranking to be nil when omitted")
+	}
+}
+
+func TestLoad_RankingWeightsInvalidSum(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+ranking:
+  weights:
+    correctness: 0.50
+    cost: 0.30
+    duration: 0.30
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected validation error for weights not summing to 1.0")
+	}
+
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+
+	found := false
+	for _, e := range ve.Errors {
+		if contains(e, "must sum to 1.0") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected error about weights sum, got: %v", ve.Errors)
+	}
+}
+
+func TestLoad_RankingWeightsNegative(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+ranking:
+  weights:
+    correctness: -0.10
+    cost: 0.80
+    duration: 0.30
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected validation error for negative weight")
+	}
+
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected ValidationError, got %T: %v", err, err)
+	}
+
+	found := false
+	for _, e := range ve.Errors {
+		if contains(e, "must be >= 0") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected error about negative weight, got: %v", ve.Errors)
+	}
+}
+
 func writeSuiteFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

@@ -1,11 +1,12 @@
 ---
 title: "Configurable ranking weights"
 id: "01kpfdpda"
-status: in-progress
+status: completed
 priority: medium
 type: feature
 tags: ["reporting", "configuration"]
 created: "2026-04-18"
+completed_at: 2026-04-18
 ---
 
 # Configurable ranking weights
@@ -28,14 +29,14 @@ Weights must sum to 1.0. When omitted, current defaults apply.
 
 ## Tasks
 
-- [ ] Add `Ranking` struct with `Weights` to suite schema (correctness, cost, duration floats)
-- [ ] Add validation: all weights >= 0, weights sum to 1.0 (with small epsilon tolerance)
-- [ ] Update `RankTreatments()` in `report/rank.go` to accept weights as a parameter instead of using constants
-- [ ] Keep current constants as defaults when no ranking config is provided
-- [ ] Thread ranking config from loaded suite through to report generation
-- [ ] Add suite loader tests for ranking config parsing and validation
-- [ ] Add ranking tests with custom weights
-- [ ] Update documentation (configuration.md) with ranking config
+- [x] Add `Ranking` struct with `Weights` to suite schema (correctness, cost, duration floats)
+- [x] Add validation: all weights >= 0, weights sum to 1.0 (with small epsilon tolerance)
+- [x] Update `RankTreatments()` in `report/rank.go` to accept weights as a parameter instead of using constants
+- [x] Keep current constants as defaults when no ranking config is provided
+- [x] Thread ranking config from loaded suite through to report generation
+- [x] Add suite loader tests for ranking config parsing and validation
+- [x] Add ranking tests with custom weights
+- [x] Update documentation (configuration.md) with ranking config
 
 ## Acceptance Criteria
 

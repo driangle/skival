@@ -21,7 +21,7 @@ var reportCmd = &cobra.Command{
 		}
 
 		format, _ := cmd.Flags().GetString("format")
-		return report.Write(os.Stdout, sr, format)
+		return report.Write(os.Stdout, sr, format, report.DefaultWeights())
 	},
 }
 

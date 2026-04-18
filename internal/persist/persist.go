@@ -13,7 +13,7 @@ import (
 
 // Save writes all result data to a timestamped directory under baseDir.
 // Returns the created directory path.
-func Save(baseDir string, sr *result.SuiteResult) (string, error) {
+func Save(baseDir string, sr *result.SuiteResult, weights report.Weights) (string, error) {
 	timestamp := sr.StartedAt.Format("20060102-150405")
 	dir := filepath.Join(baseDir, timestamp)
 
@@ -25,7 +25,7 @@ func Save(baseDir string, sr *result.SuiteResult) (string, error) {
 		return "", err
 	}
 
-	if err := writeSummary(dir, sr); err != nil {
+	if err := writeSummary(dir, sr, weights); err != nil {
 		return "", err
 	}
 
@@ -59,9 +59,9 @@ func writeEvals(dir string, sr *result.SuiteResult) error {
 	return nil
 }
 
-func writeSummary(dir string, sr *result.SuiteResult) error {
+func writeSummary(dir string, sr *result.SuiteResult, weights report.Weights) error {
 	// summary.json
-	if err := writeAtomicJSON(filepath.Join(dir, "summary.json"), buildSummaryJSON(sr)); err != nil {
+	if err := writeAtomicJSON(filepath.Join(dir, "summary.json"), buildSummaryJSON(sr, weights)); err != nil {
 		return fmt.Errorf("writing summary.json: %w", err)
 	}
 
@@ -71,7 +71,7 @@ func writeSummary(dir string, sr *result.SuiteResult) error {
 	if err != nil {
 		return fmt.Errorf("creating temp file for summary.md: %w", err)
 	}
-	report.WriteMarkdown(f, sr)
+	report.WriteMarkdown(f, sr, weights)
 	f.Close()
 	if err := os.Rename(f.Name(), summaryPath); err != nil {
 		os.Remove(f.Name())
@@ -173,12 +173,12 @@ type summaryJSON struct {
 	Rankings    []report.TreatmentRank `json:"rankings,omitempty"`
 }
 
-func buildSummaryJSON(sr *result.SuiteResult) summaryJSON {
+func buildSummaryJSON(sr *result.SuiteResult, weights report.Weights) summaryJSON {
 	return summaryJSON{
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format(time.RFC3339),
 		FinishedAt:  sr.FinishedAt.Format(time.RFC3339),
-		Rankings:    report.RankTreatments(sr),
+		Rankings:    report.RankTreatments(sr, weights),
 	}
 }
 

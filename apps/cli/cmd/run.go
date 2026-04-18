@@ -50,9 +50,11 @@ var runCmd = &cobra.Command{
 			return fmt.Errorf("executing suite: %w", err)
 		}
 
+		weights := rankingWeights(s)
+
 		resultsDir, _ := cmd.Flags().GetString("results-dir")
 		if resultsDir != "" {
-			outDir, err := persist.Save(resultsDir, sr)
+			outDir, err := persist.Save(resultsDir, sr, weights)
 			if err != nil {
 				return fmt.Errorf("saving results: %w", err)
 			}
@@ -60,8 +62,19 @@ var runCmd = &cobra.Command{
 		}
 
 		format, _ := cmd.Flags().GetString("format")
-		return report.Write(os.Stdout, sr, format)
+		return report.Write(os.Stdout, sr, format, weights)
 	},
+}
+
+func rankingWeights(s *suite.Suite) report.Weights {
+	if s.Ranking == nil {
+		return report.DefaultWeights()
+	}
+	return report.Weights{
+		Correctness: s.Ranking.Weights.Correctness,
+		Cost:        s.Ranking.Weights.Cost,
+		Duration:    s.Ranking.Weights.Duration,
+	}
 }
 
 func defaultRegistry() *registry.Registry {

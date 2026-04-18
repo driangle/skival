@@ -11,7 +11,7 @@ import (
 func TestWrite_Markdown(t *testing.T) {
 	sr := &result.SuiteResult{StartedAt: time.Now(), FinishedAt: time.Now()}
 	var buf bytes.Buffer
-	err := Write(&buf, sr, "markdown")
+	err := Write(&buf, sr, "markdown", DefaultWeights())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestWrite_Markdown(t *testing.T) {
 func TestWrite_JSON(t *testing.T) {
 	sr := &result.SuiteResult{StartedAt: time.Now(), FinishedAt: time.Now()}
 	var buf bytes.Buffer
-	err := Write(&buf, sr, "json")
+	err := Write(&buf, sr, "json", DefaultWeights())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestWrite_JSON(t *testing.T) {
 func TestWrite_InvalidFormat(t *testing.T) {
 	sr := &result.SuiteResult{StartedAt: time.Now(), FinishedAt: time.Now()}
 	var buf bytes.Buffer
-	err := Write(&buf, sr, "xml")
+	err := Write(&buf, sr, "xml", DefaultWeights())
 	if err == nil {
 		t.Error("expected error for unsupported format")
 	}

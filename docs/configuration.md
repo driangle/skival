@@ -24,6 +24,7 @@ evals:
 | `version` | Yes | Schema version (currently `1`) |
 | `description` | No | Human-readable suite description |
 | `defaults` | No | Default values inherited by all evals |
+| `ranking` | No | Ranking weight configuration (see [Ranking](#ranking)) |
 | `evals` | Yes | List of evaluations |
 
 ## Defaults
@@ -203,6 +204,26 @@ Each value in a dimension can override any treatment-level field:
 ::: warning
 `matrix` and `treatments` are mutually exclusive within the same eval.
 :::
+
+## Ranking
+
+Configure how treatments are scored and ranked. The composite score is a weighted sum of normalized correctness, cost, and duration metrics.
+
+```yaml
+ranking:
+  weights:
+    correctness: 0.60    # default: 0.60
+    cost: 0.28           # default: 0.28
+    duration: 0.12       # default: 0.12
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `weights.correctness` | `0.60` | Weight for pass rate (higher is better) |
+| `weights.cost` | `0.28` | Weight for median cost (lower is better) |
+| `weights.duration` | `0.12` | Weight for median duration (lower is better) |
+
+All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is omitted, the default weights apply.
 
 ## Retry
 

@@ -17,7 +17,7 @@ func TestWriteMarkdown_Header(t *testing.T) {
 		FinishedAt:  time.Date(2026, 3, 19, 10, 5, 0, 0, time.UTC),
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "# Eval Report") {
@@ -46,7 +46,7 @@ func TestWriteMarkdown_ResultsTable(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "fizzbuzz") {
@@ -78,7 +78,7 @@ func TestWriteMarkdown_RankingTable(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "## Rankings") {
@@ -100,7 +100,7 @@ func TestWriteMarkdown_NoRankingForSingleTreatment(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if strings.Contains(out, "## Rankings") {
@@ -119,7 +119,7 @@ func TestWriteMarkdown_EvalError(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "broken eval") {
@@ -149,7 +149,7 @@ func TestWriteMarkdown_NoErrorsSectionWhenAllPass(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 
 	if strings.Contains(buf.String(), "## Errors") {
 		t.Error("should not show errors section when there are no eval errors")
@@ -169,7 +169,7 @@ func TestWriteMarkdown_RunnerAnnotationMultipleRunners(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "a (claude-code)") {
@@ -193,7 +193,7 @@ func TestWriteMarkdown_NoRunnerAnnotationSingleRunner(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if strings.Contains(out, "(claude-code)") {
@@ -213,7 +213,7 @@ func TestWriteMarkdown_RankingRunnerColumn(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "RUNNER") {
@@ -237,7 +237,7 @@ func TestWriteMarkdown_ModelAnnotationMultipleModels(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "claude-sonnet-4-6") {
@@ -261,7 +261,7 @@ func TestWriteMarkdown_NoModelAnnotationSingleModel(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if strings.Contains(out, "claude-sonnet-4-6") {
@@ -281,7 +281,7 @@ func TestWriteMarkdown_RankingModelColumn(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "MODEL") {
@@ -312,7 +312,7 @@ func TestWriteMarkdown_AggregateRow(t *testing.T) {
 		}},
 	}
 	var buf bytes.Buffer
-	WriteMarkdown(&buf, sr)
+	WriteMarkdown(&buf, sr, DefaultWeights())
 	out := buf.String()
 
 	if !strings.Contains(out, "agg") {

@@ -66,8 +66,8 @@ type jsonRanking struct {
 }
 
 // WriteJSON writes a machine-readable JSON report to w.
-func WriteJSON(w io.Writer, sr *result.SuiteResult) error {
-	report := buildJSONReport(sr)
+func WriteJSON(w io.Writer, sr *result.SuiteResult, weights Weights) error {
+	report := buildJSONReport(sr, weights)
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
@@ -77,7 +77,7 @@ func WriteJSON(w io.Writer, sr *result.SuiteResult) error {
 	return nil
 }
 
-func buildJSONReport(sr *result.SuiteResult) jsonReport {
+func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 	r := jsonReport{
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -127,7 +127,7 @@ func buildJSONReport(sr *result.SuiteResult) jsonReport {
 		r.Evals = append(r.Evals, je)
 	}
 
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, weights)
 	for _, rank := range ranks {
 		r.Rankings = append(r.Rankings, jsonRanking{
 			Rank:           rank.Rank,

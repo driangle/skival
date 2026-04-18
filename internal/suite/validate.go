@@ -3,6 +3,7 @@ package suite
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -155,6 +156,9 @@ func validate(s *Suite) error {
 		}
 	}
 
+	// Validate ranking weights.
+	errs = append(errs, validateRankingWeights(s.Ranking)...)
+
 	// Validate retry config at all levels.
 	errs = append(errs, validateRetryConfig(s.Defaults.Retry, "defaults.retry")...)
 	for i, eval := range s.Evals {
@@ -170,6 +174,28 @@ func validate(s *Suite) error {
 		return &ValidationError{Errors: errs}
 	}
 	return nil
+}
+
+func validateRankingWeights(r *Ranking) []string {
+	if r == nil {
+		return nil
+	}
+	var errs []string
+	w := r.Weights
+	if w.Correctness < 0 {
+		errs = append(errs, fmt.Sprintf("ranking.weights.correctness must be >= 0, got %g", w.Correctness))
+	}
+	if w.Cost < 0 {
+		errs = append(errs, fmt.Sprintf("ranking.weights.cost must be >= 0, got %g", w.Cost))
+	}
+	if w.Duration < 0 {
+		errs = append(errs, fmt.Sprintf("ranking.weights.duration must be >= 0, got %g", w.Duration))
+	}
+	sum := w.Correctness + w.Cost + w.Duration
+	if math.Abs(sum-1.0) > 1e-9 {
+		errs = append(errs, fmt.Sprintf("ranking.weights must sum to 1.0, got %g", sum))
+	}
+	return errs
 }
 
 var validBackoffs = map[string]bool{

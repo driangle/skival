@@ -10,7 +10,7 @@ import (
 )
 
 // WriteMarkdown writes a human-readable markdown report to w.
-func WriteMarkdown(w io.Writer, sr *result.SuiteResult) {
+func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	fmt.Fprintf(w, "# Eval Report\n\n")
 	if sr.Description != "" {
 		fmt.Fprintf(w, "%s\n\n", sr.Description)
@@ -22,7 +22,7 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult) {
 	multiModel := hasMultipleModels(sr)
 	writeResultsTable(w, sr, multi, multiModel)
 	writeErrorsSection(w, sr)
-	writeRankingTable(w, sr, multi, multiModel)
+	writeRankingTable(w, sr, multi, multiModel, weights)
 }
 
 // hasMultipleRunners returns true when the suite contains more than one distinct runner name.
@@ -149,8 +149,8 @@ func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintln(w)
 }
 
-func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiModel bool) {
-	ranks := RankTreatments(sr)
+func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiModel bool, weights Weights) {
+	ranks := RankTreatments(sr, weights)
 	if len(ranks) < 2 {
 		return
 	}

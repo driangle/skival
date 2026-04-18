@@ -7,8 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/driangle/skival/internal/report"
 	"github.com/driangle/skival/internal/result"
 )
+
+func defaultWeights() report.Weights { return report.DefaultWeights() }
 
 func boolPtr(b bool) *bool { return &b }
 
@@ -42,7 +45,7 @@ func TestSaveAndLoad_RoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
@@ -102,7 +105,7 @@ func TestSave_TimestampedDir(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
@@ -117,7 +120,7 @@ func TestSave_RunJSONContent(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
 
-	outDir, _ := Save(tmpDir, sr)
+	outDir, _ := Save(tmpDir, sr, defaultWeights())
 
 	data, err := os.ReadFile(filepath.Join(outDir, "evals", "eval1", "control", "run-1.json"))
 	if err != nil {
@@ -143,7 +146,7 @@ func TestSave_SummaryJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
 
-	outDir, _ := Save(tmpDir, sr)
+	outDir, _ := Save(tmpDir, sr, defaultWeights())
 
 	data, err := os.ReadFile(filepath.Join(outDir, "summary.json"))
 	if err != nil {
@@ -177,7 +180,7 @@ func TestSave_WithConversations(t *testing.T) {
 		json.RawMessage(`{"role":"assistant","text":"PASS: ok"}`),
 	}
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
@@ -202,7 +205,7 @@ func TestSave_WithoutConversations_NoJSONLFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
@@ -223,7 +226,7 @@ func TestSaveAndLoad_ConversationRoundTrip(t *testing.T) {
 		json.RawMessage(`{"role":"assistant","text":"PASS"}`),
 	}
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
@@ -252,7 +255,7 @@ func TestLoad_BackwardsCompat_NoJSONLFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
@@ -278,7 +281,7 @@ func TestSave_EmptySuite(t *testing.T) {
 		FinishedAt: time.Date(2026, 1, 1, 0, 1, 0, 0, time.UTC),
 	}
 
-	outDir, err := Save(tmpDir, sr)
+	outDir, err := Save(tmpDir, sr, defaultWeights())
 	if err != nil {
 		t.Fatalf("Save error: %v", err)
 	}

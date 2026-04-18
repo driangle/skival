@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/driangle/skival/internal/persist"
+	"github.com/driangle/skival/internal/report"
 	"github.com/driangle/skival/internal/result"
 )
 
 func saveTestResults(t *testing.T, dir string, sr *result.SuiteResult) string {
 	t.Helper()
-	saved, err := persist.Save(dir, sr)
+	saved, err := persist.Save(dir, sr, report.DefaultWeights())
 	if err != nil {
 		t.Fatalf("saving test results: %v", err)
 	}

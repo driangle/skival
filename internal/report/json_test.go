@@ -34,7 +34,7 @@ func TestWriteJSON_ValidJSON(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := WriteJSON(&buf, sr)
+	err := WriteJSON(&buf, sr, DefaultWeights())
 	if err != nil {
 		t.Fatalf("WriteJSON error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestWriteJSON_Rankings(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := WriteJSON(&buf, sr); err != nil {
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
 		t.Fatalf("WriteJSON error: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestWriteJSON_RunnerField(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := WriteJSON(&buf, sr); err != nil {
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
 		t.Fatalf("WriteJSON error: %v", err)
 	}
 
@@ -143,7 +143,7 @@ func TestWriteJSON_ModelField(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := WriteJSON(&buf, sr); err != nil {
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
 		t.Fatalf("WriteJSON error: %v", err)
 	}
 
@@ -184,7 +184,7 @@ func TestWriteJSON_EvalError(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := WriteJSON(&buf, sr); err != nil {
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
 		t.Fatalf("WriteJSON error: %v", err)
 	}
 
@@ -226,7 +226,7 @@ func TestWriteJSON_RunStatus(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := WriteJSON(&buf, sr); err != nil {
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
 		t.Fatalf("WriteJSON error: %v", err)
 	}
 

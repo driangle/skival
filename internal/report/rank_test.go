@@ -11,7 +11,7 @@ func boolPtr(b bool) *bool { return &b }
 
 func TestRankTreatments_Empty(t *testing.T) {
 	sr := &result.SuiteResult{}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if ranks != nil {
 		t.Fatalf("expected nil, got %v", ranks)
 	}
@@ -28,7 +28,7 @@ func TestRankTreatments_SingleTreatment(t *testing.T) {
 			}},
 		}},
 	}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if len(ranks) != 1 {
 		t.Fatalf("expected 1 rank, got %d", len(ranks))
 	}
@@ -62,7 +62,7 @@ func TestRankTreatments_BestTreatmentRanksFirst(t *testing.T) {
 			},
 		}},
 	}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if len(ranks) != 2 {
 		t.Fatalf("expected 2 ranks, got %d", len(ranks))
 	}
@@ -93,7 +93,7 @@ func TestRankTreatments_Ties(t *testing.T) {
 			},
 		}},
 	}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if len(ranks) != 2 {
 		t.Fatalf("expected 2 ranks, got %d", len(ranks))
 	}
@@ -127,7 +127,7 @@ func TestRankTreatments_PassRateDominates(t *testing.T) {
 			},
 		}},
 	}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if ranks[0].Name != "passes" {
 		t.Errorf("pass rate should dominate, got %q first", ranks[0].Name)
 	}
@@ -150,7 +150,7 @@ func TestRankTreatments_MultipleEvals(t *testing.T) {
 			},
 		},
 	}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if ranks[0].Name != "a" {
 		t.Errorf("expected 'a' first (better pass rate + lower cost), got %q", ranks[0].Name)
 	}
@@ -176,16 +176,106 @@ func TestRankTreatments_UnverifiedRuns(t *testing.T) {
 			}},
 		}},
 	}
-	ranks := RankTreatments(sr)
+	ranks := RankTreatments(sr, DefaultWeights())
 	if ranks[0].PassRate != 0 {
 		t.Errorf("expected 0 pass rate for unverified, got %f", ranks[0].PassRate)
 	}
 }
 
 func TestWeightsSum(t *testing.T) {
-	sum := WeightPass + WeightCost + WeightDuration
+	sum := DefaultWeightPass + DefaultWeightCost + DefaultWeightDuration
 	if math.Abs(sum-1.0) > 1e-10 {
 		t.Errorf("weights sum to %f, expected 1.0", sum)
+	}
+}
+
+func TestRankTreatments_CustomWeightsCostDominates(t *testing.T) {
+	// With cost weight at 0.90, a cheap-but-failing treatment should rank above
+	// an expensive-but-passing treatment.
+	sr := &result.SuiteResult{
+		Evals: []result.EvalResult{{
+			Treatments: []result.TreatmentResult{
+				{
+					Name: "expensive-passing",
+					Runs: []result.RunResult{
+						{CostUSD: 100.0, DurationMs: 1000, Pass: boolPtr(true)},
+					},
+				},
+				{
+					Name: "cheap-failing",
+					Runs: []result.RunResult{
+						{CostUSD: 0.01, DurationMs: 1000, Pass: boolPtr(false)},
+					},
+				},
+			},
+		}},
+	}
+
+	costHeavy := Weights{Correctness: 0.05, Cost: 0.90, Duration: 0.05}
+	ranks := RankTreatments(sr, costHeavy)
+	if ranks[0].Name != "cheap-failing" {
+		t.Errorf("with cost weight 0.90, cheap treatment should rank first, got %q", ranks[0].Name)
+	}
+
+	// With default weights, the passing treatment should rank first.
+	defaultRanks := RankTreatments(sr, DefaultWeights())
+	if defaultRanks[0].Name != "expensive-passing" {
+		t.Errorf("with default weights, passing treatment should rank first, got %q", defaultRanks[0].Name)
+	}
+}
+
+func TestRankTreatments_CustomWeightsDurationDominates(t *testing.T) {
+	sr := &result.SuiteResult{
+		Evals: []result.EvalResult{{
+			Treatments: []result.TreatmentResult{
+				{
+					Name: "fast-failing",
+					Runs: []result.RunResult{
+						{CostUSD: 5.0, DurationMs: 100, Pass: boolPtr(false)},
+					},
+				},
+				{
+					Name: "slow-passing",
+					Runs: []result.RunResult{
+						{CostUSD: 5.0, DurationMs: 10000, Pass: boolPtr(true)},
+					},
+				},
+			},
+		}},
+	}
+
+	durationHeavy := Weights{Correctness: 0.05, Cost: 0.05, Duration: 0.90}
+	ranks := RankTreatments(sr, durationHeavy)
+	if ranks[0].Name != "fast-failing" {
+		t.Errorf("with duration weight 0.90, fast treatment should rank first, got %q", ranks[0].Name)
+	}
+}
+
+func TestRankTreatments_ZeroWeight(t *testing.T) {
+	// With correctness weight at 0, pass rate shouldn't affect ranking.
+	sr := &result.SuiteResult{
+		Evals: []result.EvalResult{{
+			Treatments: []result.TreatmentResult{
+				{
+					Name: "all-pass-expensive",
+					Runs: []result.RunResult{
+						{CostUSD: 100.0, DurationMs: 5000, Pass: boolPtr(true)},
+					},
+				},
+				{
+					Name: "all-fail-cheap",
+					Runs: []result.RunResult{
+						{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(false)},
+					},
+				},
+			},
+		}},
+	}
+
+	noCorrWeight := Weights{Correctness: 0, Cost: 0.50, Duration: 0.50}
+	ranks := RankTreatments(sr, noCorrWeight)
+	if ranks[0].Name != "all-fail-cheap" {
+		t.Errorf("with correctness=0, cheap/fast treatment should rank first, got %q", ranks[0].Name)
 	}
 }
 

@@ -7,10 +7,26 @@ import (
 )
 
 const (
-	WeightPass     = 0.60
-	WeightCost     = 0.28
-	WeightDuration = 0.12
+	DefaultWeightPass     = 0.60
+	DefaultWeightCost     = 0.28
+	DefaultWeightDuration = 0.12
 )
+
+// Weights defines the relative importance of each metric in the composite score.
+type Weights struct {
+	Correctness float64
+	Cost        float64
+	Duration    float64
+}
+
+// DefaultWeights returns the default ranking weights.
+func DefaultWeights() Weights {
+	return Weights{
+		Correctness: DefaultWeightPass,
+		Cost:        DefaultWeightCost,
+		Duration:    DefaultWeightDuration,
+	}
+}
 
 // TreatmentRank holds the ranking data for a single treatment.
 type TreatmentRank struct {
@@ -26,7 +42,7 @@ type TreatmentRank struct {
 
 // RankTreatments computes a weighted composite score for each treatment
 // across all evals in a suite result and returns them sorted best-first.
-func RankTreatments(sr *result.SuiteResult) []TreatmentRank {
+func RankTreatments(sr *result.SuiteResult, w Weights) []TreatmentRank {
 	stats := collectStats(sr)
 	if len(stats) == 0 {
 		return nil
@@ -44,7 +60,7 @@ func RankTreatments(sr *result.SuiteResult) []TreatmentRank {
 		})
 	}
 
-	normalize(ranks)
+	normalize(ranks, w)
 
 	sort.Slice(ranks, func(i, j int) bool {
 		if ranks[i].CompositeScore != ranks[j].CompositeScore {
@@ -135,7 +151,7 @@ func collectStats(sr *result.SuiteResult) map[string]*treatmentStats {
 
 // normalize computes composite scores. For pass rate, higher is better (1.0 = best).
 // For cost and duration, lower is better, so normalization is inverted.
-func normalize(ranks []TreatmentRank) {
+func normalize(ranks []TreatmentRank, w Weights) {
 	if len(ranks) == 0 {
 		return
 	}
@@ -176,7 +192,7 @@ func normalize(ranks []TreatmentRank) {
 		costNorm := normLowerBetter(ranks[i].MedianCostUSD, minCost, maxCost)
 		durNorm := normLowerBetter(float64(ranks[i].MedianDuration), float64(minDur), float64(maxDur))
 
-		ranks[i].CompositeScore = WeightPass*passNorm + WeightCost*costNorm + WeightDuration*durNorm
+		ranks[i].CompositeScore = w.Correctness*passNorm + w.Cost*costNorm + w.Duration*durNorm
 	}
 }
 
