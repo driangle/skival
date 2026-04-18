@@ -83,6 +83,7 @@ evals:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `id` | Yes | Unique identifier for this eval |
+| `name` | No | Human-readable display name for this eval |
 | `prompt` | Yes | The task prompt sent to the AI agent |
 | `dir` | No | Working directory for execution |
 | `isolate` | No | Create a temporary copy of `dir` for each sample |
@@ -90,6 +91,8 @@ evals:
 | `timeout` | No | Override default timeout (seconds) |
 | `samples` | No | Override default sample count |
 | `model` | No | Override default model |
+| `runner` | No | Override default runner |
+| `runner_config` | No | Runner-specific config (deep-merged with defaults) |
 | `correctness` | No | Verification configuration (see [Verifiers](/verifiers)) |
 | `setup` | No | Lifecycle hooks |
 | `treatments` | Yes* | Treatment definitions (*or use `matrix`) |

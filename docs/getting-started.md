@@ -2,7 +2,15 @@
 
 ## Installation
 
-Build from source (requires Go 1.22+):
+### Homebrew
+
+```bash
+brew install driangle/tap/skival
+```
+
+### From source
+
+Requires Go 1.22+:
 
 ```bash
 git clone https://github.com/driangle/skival.git

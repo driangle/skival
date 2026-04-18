@@ -2,6 +2,23 @@
 
 Verifiers check that an AI agent's output is correct. Multiple verifiers can be combined -- all must pass for a sample to be marked as correct.
 
+## Compiles
+
+Checks that the code in the eval's working directory compiles successfully. The language is auto-detected from project files:
+
+| Marker | Language | Build command |
+|--------|----------|---------------|
+| `go.mod` or `*.go` files | Go | `go build ./...` |
+| `Cargo.toml` | Rust | `cargo check` |
+| `tsconfig.json` | TypeScript | `npx tsc --noEmit` |
+
+```yaml
+correctness:
+  compiles: true
+```
+
+Fails if no recognized language files are found in the directory.
+
 ## Execute
 
 Checks that the agent process exited with code 0.
@@ -72,7 +89,7 @@ The judge receives the original prompt, the agent's output, and each criterion, 
 
 ## Combining Verifiers
 
-Verifiers are evaluated in order: execute, output, state, script, judge. Evaluation stops at the first failure.
+Verifiers are evaluated in order: compiles, execute, output, state, script, judge. Evaluation stops at the first failure.
 
 ```yaml
 correctness:

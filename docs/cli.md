@@ -87,3 +87,11 @@ Suite is valid
   Evals:       3
   ...
 ```
+
+## `skival version`
+
+Print the current skival version.
+
+```bash
+skival version
+```
