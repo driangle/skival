@@ -12,4 +12,6 @@ type Options struct {
 	Progress io.Writer
 	// Samples overrides the per-eval sample count when set (> 0).
 	Samples int
+	// Parallel sets the max number of concurrent samples. 0 or 1 = sequential.
+	Parallel int
 }

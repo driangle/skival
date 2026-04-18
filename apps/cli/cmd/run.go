@@ -34,13 +34,15 @@ var runCmd = &cobra.Command{
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
 		samples, _ := cmd.Flags().GetInt("samples")
-		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples)
+		parallel, _ := cmd.Flags().GetInt("parallel")
+		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "parallel", parallel)
 
 		execOpts := &executor.Options{
 			EvalIDs:    evalIDs,
 			Treatments: treatments,
 			Progress:   os.Stderr,
 			Samples:    samples,
+			Parallel:   parallel,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
@@ -75,10 +77,11 @@ func defaultRegistry() *registry.Registry {
 
 func init() {
 	runCmd.Flags().Int("samples", 1, "Number of runs per treatment")
+	runCmd.Flags().IntP("parallel", "p", 0, "Max concurrent samples (default: sequential)")
 	runCmd.Flags().String("results-dir", "", "Directory for results output")
 	runCmd.Flags().StringSlice("treatments", nil, "Filter to specific treatments")
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
-runCmd.Flags().String("format", "markdown", "Output format: markdown, json")
+	runCmd.Flags().String("format", "markdown", "Output format: markdown, json")
 
 	rootCmd.AddCommand(runCmd)
 }

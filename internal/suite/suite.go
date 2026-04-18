@@ -12,6 +12,7 @@ type Suite struct {
 type Defaults struct {
 	Samples      *int           `yaml:"samples"`
 	Timeout      *int           `yaml:"timeout"`
+	Parallel     *int           `yaml:"parallel"`
 	Model        string         `yaml:"model"`
 	Runner       string         `yaml:"runner"`
 	RunnerConfig map[string]any `yaml:"runner_config"`
@@ -28,6 +29,7 @@ type Eval struct {
 	Complexity   string         `yaml:"complexity"`
 	Samples      *int           `yaml:"samples"`
 	Timeout      *int           `yaml:"timeout"`
+	Parallel     *int           `yaml:"parallel"`
 	Model        string         `yaml:"model"`
 	Runner       string         `yaml:"runner"`
 	RunnerConfig map[string]any `yaml:"runner_config"`

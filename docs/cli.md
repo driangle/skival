@@ -19,6 +19,7 @@ skival run <suite.yaml> [flags]
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--samples N` | `1` | Number of runs per treatment |
+| `-p, --parallel N` | `0` | Max concurrent samples (`0` or `1` = sequential) |
 | `--results-dir <path>` | | Save results to disk for later reporting |
 | `--treatments <names>` | | Comma-separated list of treatment names to run |
 | `--evals <ids>` | | Comma-separated list of eval IDs to run |
@@ -42,6 +43,12 @@ Run only the control treatment and save results:
 
 ```bash
 skival run suite.yaml --treatments control --results-dir ./results
+```
+
+Run with 4 concurrent samples:
+
+```bash
+skival run suite.yaml --samples 10 --parallel 4
 ```
 
 ## `skival report`

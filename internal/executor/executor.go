@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	agentrunner "github.com/driangle/agentrunner/go"
@@ -146,67 +147,103 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		samples = opts.Samples
 	}
 
-	for i := 0; i < samples; i++ {
-		prog.sampleStart(eval.Name, t.Name, i+1, samples)
-		slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "total", samples)
+	parallel := 1
+	if eval.Parallel != nil {
+		parallel = *eval.Parallel
+	}
+	if opts.Parallel > 0 {
+		parallel = opts.Parallel
+	}
+	if parallel > samples {
+		parallel = samples
+	}
 
-		sampleDir := ""
-		if eval.Isolate {
-			var err error
-			sampleDir, err = createIsolatedDir(eval, t)
-			if err != nil {
-				tr.Runs = append(tr.Runs, result.RunResult{Sample: i + 1, Err: fmt.Errorf("creating isolated dir: %w", err)})
-				prog.sampleDone(0, nil)
-				continue
-			}
-			defer os.RemoveAll(sampleDir)
+	if parallel <= 1 {
+		// Sequential execution (default).
+		for i := 0; i < samples; i++ {
+			run := runSample(ctx, eval, t, i, samples, runner, prog)
+			tr.Runs = append(tr.Runs, run)
 		}
+	} else {
+		// Parallel execution with bounded concurrency.
+		runs := make([]result.RunResult, samples)
+		sem := make(chan struct{}, parallel)
+		var wg sync.WaitGroup
 
-		run := executeSingleRun(ctx, eval, t, i+1, runner, sampleDir)
-		if run.Err != nil {
-			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", i+1, "err", run.Err)
-		} else {
-			slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", i+1,
-				"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
+		for i := 0; i < samples; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				runs[idx] = runSample(ctx, eval, t, idx, samples, runner, prog)
+			}(i)
 		}
-
-		verifyDir := eval.Dir
-		if sampleDir != "" {
-			verifyDir = sampleDir
-		}
-		// Prompt: treatment > eval (for judge context).
-		judgePrompt := eval.Prompt
-		if t.Prompt != "" {
-			judgePrompt = t.Prompt
-		}
-		var pipelineOpts []verifier.PipelineOption
-		if len(eval.Correctness.Judge) > 0 {
-			pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, judgePrompt))
-		}
-		pipeline := verifier.BuildPipeline(eval.Correctness, verifyDir, pipelineOpts...)
-
-		if pipeline != nil && run.Err == nil {
-			slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", i+1)
-			input := verifier.VerifyInput{
-				RunOutput: run.Text,
-				ExitCode:  run.ExitCode,
-			}
-			pr := pipeline.Run(ctx, input)
-			run.Pass = &pr.Pass
-			for _, step := range pr.Steps {
-				slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
-				if step.Name == "judge" && step.Result.Conversation != nil {
-					run.JudgeConversation = step.Result.Conversation
-				}
-			}
-		}
-		prog.sampleDone(run.CostUSD, run.Pass)
-		tr.Runs = append(tr.Runs, run)
+		wg.Wait()
+		tr.Runs = runs
 	}
 
 	tr.Aggregate = result.ComputeAggregate(tr.Runs)
 
 	return tr
+}
+
+// runSample executes a single sample, including isolation, running, and verification.
+func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, samples int, runner agentrunner.Runner, prog *progress) result.RunResult {
+	sample := idx + 1
+	prog.sampleStart(eval.Name, t.Name, sample, samples)
+	slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", sample, "total", samples)
+
+	sampleDir := ""
+	if eval.Isolate {
+		var err error
+		sampleDir, err = createIsolatedDir(eval, t)
+		if err != nil {
+			prog.sampleDone(0, nil)
+			return result.RunResult{Sample: sample, Err: fmt.Errorf("creating isolated dir: %w", err)}
+		}
+		defer os.RemoveAll(sampleDir)
+	}
+
+	run := executeSingleRun(ctx, eval, t, sample, runner, sampleDir)
+	if run.Err != nil {
+		slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", sample, "err", run.Err)
+	} else {
+		slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", sample,
+			"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
+	}
+
+	verifyDir := eval.Dir
+	if sampleDir != "" {
+		verifyDir = sampleDir
+	}
+	judgePrompt := eval.Prompt
+	if t.Prompt != "" {
+		judgePrompt = t.Prompt
+	}
+	var pipelineOpts []verifier.PipelineOption
+	if len(eval.Correctness.Judge) > 0 {
+		pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, judgePrompt))
+	}
+	pipeline := verifier.BuildPipeline(eval.Correctness, verifyDir, pipelineOpts...)
+
+	if pipeline != nil && run.Err == nil {
+		slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", sample)
+		input := verifier.VerifyInput{
+			RunOutput: run.Text,
+			ExitCode:  run.ExitCode,
+		}
+		pr := pipeline.Run(ctx, input)
+		run.Pass = &pr.Pass
+		for _, step := range pr.Steps {
+			slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
+			if step.Name == "judge" && step.Result.Conversation != nil {
+				run.JudgeConversation = step.Result.Conversation
+			}
+		}
+	}
+	prog.sampleDone(run.CostUSD, run.Pass)
+	return run
 }
 
 // createIsolatedDir creates a temporary directory and copies the eval/treatment working directory into it.

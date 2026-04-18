@@ -1,7 +1,7 @@
 ---
 title: "Parallel execution for evals and samples"
 id: "01kpfdfbx"
-status: pending
+status: in-progress
 priority: high
 type: feature
 tags: ["performance", "executor"]
@@ -16,15 +16,15 @@ Enable parallel execution of independent work units (evals, treatments, samples)
 
 ## Tasks
 
-- [ ] Add a `--parallel` / `-p` CLI flag to `skival run` controlling max concurrency (default: 1 for backwards compatibility)
-- [ ] Add an optional `parallel` field to suite-level defaults in the YAML schema
-- [ ] Refactor `executeEval` to run samples concurrently using a worker pool (bounded by concurrency limit)
-- [ ] Ensure per-sample directory isolation works correctly under concurrency (each goroutine gets its own temp dir)
-- [ ] Make progress reporting thread-safe (protect stderr writes with synchronization)
-- [ ] Make result collection thread-safe (aggregate `RunResult` slices safely across goroutines)
-- [ ] Ensure lifecycle hooks run in the correct order: `before` once → parallel samples (each with its own `reset`) → `after` once
-- [ ] Add concurrency-aware tests to the executor package
-- [ ] Update documentation (cli.md, configuration.md) with the new flag and field
+- [x] Add a `--parallel` / `-p` CLI flag to `skival run` controlling max concurrency (default: 1 for backwards compatibility)
+- [x] Add an optional `parallel` field to suite-level defaults in the YAML schema
+- [x] Refactor `executeEval` to run samples concurrently using a worker pool (bounded by concurrency limit)
+- [x] Ensure per-sample directory isolation works correctly under concurrency (each goroutine gets its own temp dir)
+- [x] Make progress reporting thread-safe (protect stderr writes with synchronization)
+- [x] Make result collection thread-safe (aggregate `RunResult` slices safely across goroutines)
+- [x] Ensure lifecycle hooks run in the correct order: `before` once → parallel samples (each with its own `reset`) → `after` once
+- [x] Add concurrency-aware tests to the executor package
+- [x] Update documentation (cli.md, configuration.md) with the new flag and field
 
 ## Acceptance Criteria
 

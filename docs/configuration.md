@@ -40,6 +40,7 @@ defaults:
       - "Write"
   samples: 3
   timeout: 300
+  parallel: 4
 ```
 
 | Field | Description |
@@ -49,6 +50,7 @@ defaults:
 | `runner_config` | Runner-specific configuration (deep-merged) |
 | `samples` | Number of runs per treatment |
 | `timeout` | Timeout in seconds |
+| `parallel` | Max concurrent samples per treatment (default: sequential) |
 
 ## Evals
 
@@ -90,6 +92,7 @@ evals:
 | `complexity` | No | Metadata: `low`, `medium`, or `high` |
 | `timeout` | No | Override default timeout (seconds) |
 | `samples` | No | Override default sample count |
+| `parallel` | No | Override default max concurrency |
 | `model` | No | Override default model |
 | `runner` | No | Override default runner |
 | `runner_config` | No | Runner-specific config (deep-merged with defaults) |

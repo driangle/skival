@@ -156,6 +156,9 @@ func mergeDefaults(s *Suite) {
 		if e.Timeout == nil && d.Timeout != nil {
 			e.Timeout = d.Timeout
 		}
+		if e.Parallel == nil && d.Parallel != nil {
+			e.Parallel = d.Parallel
+		}
 		if e.Model == "" && d.Model != "" {
 			e.Model = d.Model
 		}
