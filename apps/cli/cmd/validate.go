@@ -64,13 +64,13 @@ func countVerifiers(c suite.Correctness) int {
 	if c.AgentExitsOK != nil && *c.AgentExitsOK {
 		count++
 	}
-	if c.Compiles != "" {
+	if c.Check != "" {
 		count++
 	}
 	if len(c.Output.Contains) > 0 {
 		count++
 	}
-	if c.Script != "" {
+	if c.CheckOutput != "" {
 		count++
 	}
 	if len(c.State) > 0 {

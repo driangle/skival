@@ -96,7 +96,7 @@ evals:
       output:
         contains:
           - "hello"
-      script: "./verify.sh"
+      check_output: "./verify.sh"
     treatments:
       control:
         name: "baseline"

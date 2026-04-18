@@ -90,8 +90,8 @@ func resolvePaths(s *Suite, suiteDir string) {
 			e.Dir = filepath.Join(suiteDir, e.Dir)
 		}
 
-		if e.Correctness.Script != "" && !filepath.IsAbs(e.Correctness.Script) {
-			e.Correctness.Script = filepath.Join(suiteDir, e.Correctness.Script)
+		if e.Correctness.CheckOutput != "" && !filepath.IsAbs(e.Correctness.CheckOutput) {
+			e.Correctness.CheckOutput = filepath.Join(suiteDir, e.Correctness.CheckOutput)
 		}
 
 		resolveTreatmentPaths(&e.Treatments.Control, suiteDir)

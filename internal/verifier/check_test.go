@@ -8,21 +8,21 @@ import (
 	"time"
 )
 
-func TestCompilesVerifier_GoSuccess(t *testing.T) {
+func TestCheckVerifier_GoSuccess(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module test\n\ngo 1.22\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
 
 func main() {}
 `)
-	v := &CompilesVerifier{Dir: dir, Command: "go build ./..."}
+	v := &CheckVerifier{Dir: dir, Command: "go build ./..."}
 	r := v.Verify(context.Background(), VerifyInput{})
 	if !r.Pass {
 		t.Fatalf("expected pass, got fail: %s", r.Reason)
 	}
 }
 
-func TestCompilesVerifier_GoFailure(t *testing.T) {
+func TestCheckVerifier_GoFailure(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module test\n\ngo 1.22\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
@@ -31,7 +31,7 @@ func main() {
 	undefined()
 }
 `)
-	v := &CompilesVerifier{Dir: dir, Command: "go build ./..."}
+	v := &CheckVerifier{Dir: dir, Command: "go build ./..."}
 	r := v.Verify(context.Background(), VerifyInput{})
 	if r.Pass {
 		t.Fatal("expected fail for code with undefined function")
@@ -41,28 +41,28 @@ func main() {
 	}
 }
 
-func TestCompilesVerifier_CustomCommand(t *testing.T) {
+func TestCheckVerifier_CustomCommand(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "hello.txt"), "hello\n")
 
-	v := &CompilesVerifier{Dir: dir, Command: "test -f hello.txt"}
+	v := &CheckVerifier{Dir: dir, Command: "test -f hello.txt"}
 	r := v.Verify(context.Background(), VerifyInput{})
 	if !r.Pass {
 		t.Fatalf("expected pass, got fail: %s", r.Reason)
 	}
 }
 
-func TestCompilesVerifier_CustomCommandFailure(t *testing.T) {
+func TestCheckVerifier_CustomCommandFailure(t *testing.T) {
 	dir := t.TempDir()
 
-	v := &CompilesVerifier{Dir: dir, Command: "test -f nonexistent.txt"}
+	v := &CheckVerifier{Dir: dir, Command: "test -f nonexistent.txt"}
 	r := v.Verify(context.Background(), VerifyInput{})
 	if r.Pass {
 		t.Fatal("expected fail for missing file")
 	}
 }
 
-func TestCompilesVerifier_RespectsContextCancellation(t *testing.T) {
+func TestCheckVerifier_RespectsContextCancellation(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module test\n\ngo 1.22\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
@@ -73,15 +73,15 @@ func main() {}
 	defer cancel()
 	time.Sleep(5 * time.Millisecond)
 
-	v := &CompilesVerifier{Dir: dir, Command: "go build ./..."}
+	v := &CheckVerifier{Dir: dir, Command: "go build ./..."}
 	r := v.Verify(ctx, VerifyInput{})
 	if r.Pass {
 		t.Fatal("expected fail on cancelled context")
 	}
 }
 
-func TestCompilesVerifier_ImplementsVerifier(t *testing.T) {
-	var _ Verifier = &CompilesVerifier{}
+func TestCheckVerifier_ImplementsVerifier(t *testing.T) {
+	var _ Verifier = &CheckVerifier{}
 }
 
 func writeFile(t *testing.T, path, content string) {

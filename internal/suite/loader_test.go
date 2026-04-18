@@ -275,7 +275,7 @@ evals:
     prompt: "task"
     model: "claude-sonnet-4-6"
     correctness:
-      script: "./verify.sh"
+      check_output: "./verify.sh"
     treatments:
       control:
         name: baseline
@@ -291,9 +291,9 @@ evals:
 	}
 
 	e := s.Evals[0]
-	expectedScript := filepath.Join(dir, "verify.sh")
-	if e.Correctness.Script != expectedScript {
-		t.Errorf("expected script path %q, got %q", expectedScript, e.Correctness.Script)
+	expectedCheckOutput := filepath.Join(dir, "verify.sh")
+	if e.Correctness.CheckOutput != expectedCheckOutput {
+		t.Errorf("expected script path %q, got %q", expectedCheckOutput, e.Correctness.CheckOutput)
 	}
 
 	expectedSkill := filepath.Join(dir, "skills", "my-skill.md")
@@ -310,7 +310,7 @@ evals:
 func TestLoad_PreservesAbsolutePaths(t *testing.T) {
 	dir := t.TempDir()
 	absDir := "/absolute/path"
-	absScript := "/absolute/verify.sh"
+	absCheckOutput := "/absolute/verify.sh"
 	absSkill := "/absolute/skill.md"
 
 	writeSuiteFile(t, dir, "suite.yaml", fmt.Sprintf(`
@@ -323,7 +323,7 @@ evals:
     model: "claude-sonnet-4-6"
     dir: "%s"
     correctness:
-      script: "%s"
+      check_output: "%s"
     treatments:
       control:
         name: baseline
@@ -331,7 +331,7 @@ evals:
         - name: v1
           skill: "%s"
           dir: "%s"
-`, absDir, absScript, absSkill, absDir))
+`, absDir, absCheckOutput, absSkill, absDir))
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
 	if err != nil {
@@ -342,8 +342,8 @@ evals:
 	if e.Dir != absDir {
 		t.Errorf("expected eval dir %q preserved, got %q", absDir, e.Dir)
 	}
-	if e.Correctness.Script != absScript {
-		t.Errorf("expected script %q preserved, got %q", absScript, e.Correctness.Script)
+	if e.Correctness.CheckOutput != absCheckOutput {
+		t.Errorf("expected script %q preserved, got %q", absCheckOutput, e.Correctness.CheckOutput)
 	}
 	if e.Treatments.Variations[0].Skill != absSkill {
 		t.Errorf("expected skill %q preserved, got %q", absSkill, e.Treatments.Variations[0].Skill)

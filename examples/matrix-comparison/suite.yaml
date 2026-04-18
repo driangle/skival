@@ -14,7 +14,7 @@ evals:
     setup:
       reset: "rm -f hello.sh"
     correctness:
-      script: "./verify.sh"
+      check_output: "./verify.sh"
     matrix:
       dimensions:
         - name: runner

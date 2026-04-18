@@ -93,8 +93,8 @@ func validate(s *Suite) error {
 			}
 		}
 
-		if eval.Correctness.Compiles == "true" || eval.Correctness.Compiles == "false" {
-			errs = append(errs, fmt.Sprintf("%s: compiles must be a build command string (e.g. \"go build ./...\"), not a boolean", prefix))
+		if eval.Correctness.Check == "true" || eval.Correctness.Check == "false" {
+			errs = append(errs, fmt.Sprintf("%s: check must be a shell command string (e.g. \"go build ./...\"), not a boolean", prefix))
 		}
 
 		if !validComplexities[eval.Complexity] {

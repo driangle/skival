@@ -9,11 +9,11 @@ defaults:
   timeout: 60
 
 evals:
-  # Verify that output compiles
-  - id: compiles-check
+  # Verify via a shell command (check)
+  - id: check-verify
     prompt: "Write a Go program in main.go that prints 'hello'."
     correctness:
-      compiles: "go build ./..."
+      check: "go build ./..."
     treatments:
       control:
         name: baseline
@@ -48,11 +48,11 @@ evals:
         - name: opus-model
           model: "claude-opus-4-6"
 
-  # Verify via a custom script
-  - id: script-check
+  # Verify via check_output (agent output piped to stdin)
+  - id: check-output-verify
     prompt: "Create a file called output.txt containing exactly 'hello world'."
     correctness:
-      script: "./scripts/verify-output.sh"
+      check_output: "./scripts/verify-output.sh"
     treatments:
       control:
         name: baseline
@@ -102,7 +102,7 @@ evals:
       output:
         contains:
           - "Result:"
-      script: "./scripts/verify-calc.sh"
+      check_output: "./scripts/verify-calc.sh"
     treatments:
       control:
         name: baseline

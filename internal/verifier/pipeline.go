@@ -40,10 +40,10 @@ func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) 
 	}
 	var steps []namedVerifier
 
-	if c.Compiles != "" {
+	if c.Check != "" {
 		steps = append(steps, namedVerifier{
-			name:     "compiles",
-			verifier: &CompilesVerifier{Dir: evalDir, Command: c.Compiles},
+			name:     "check",
+			verifier: &CheckVerifier{Dir: evalDir, Command: c.Check},
 		})
 	}
 
@@ -76,10 +76,10 @@ func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) 
 		})
 	}
 
-	if c.Script != "" {
+	if c.CheckOutput != "" {
 		steps = append(steps, namedVerifier{
-			name:     "script",
-			verifier: &ScriptVerifier{Script: c.Script, Dir: evalDir},
+			name:     "check_output",
+			verifier: &CheckOutputVerifier{Command: c.CheckOutput, Dir: evalDir},
 		})
 	}
 

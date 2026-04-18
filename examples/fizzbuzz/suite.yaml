@@ -20,7 +20,7 @@ evals:
       reset: "rm -f fizzbuzz.sh"
     correctness:
       agent_exits_ok: true
-      script: "./verify.sh"
+      check_output: "./verify.sh"
     treatments:
       control:
         name: "baseline"

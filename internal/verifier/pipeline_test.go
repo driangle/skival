@@ -33,7 +33,7 @@ func TestBuildPipeline_AllVerifiers(t *testing.T) {
 		AgentExitsOK:   boolPtr(true),
 		Output:         suite.Output{Contains: []string{"ok"}},
 		State:          []suite.StateAssertion{{URL: "http://localhost", Expect: "up"}},
-		Script:         "exit 0",
+		CheckOutput:    "exit 0",
 	}, "/tmp")
 
 	if p == nil {
@@ -43,7 +43,7 @@ func TestBuildPipeline_AllVerifiers(t *testing.T) {
 		t.Fatalf("expected 4 steps, got %d", len(p.steps))
 	}
 
-	expected := []string{"agent_exits_ok", "output", "state", "script"}
+	expected := []string{"agent_exits_ok", "output", "state", "check_output"}
 	for i, name := range expected {
 		if p.steps[i].name != name {
 			t.Errorf("step %d: got %q, want %q", i, p.steps[i].name, name)
