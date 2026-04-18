@@ -40,6 +40,13 @@ func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) 
 	}
 	var steps []namedVerifier
 
+	if c.Compiles != nil && *c.Compiles {
+		steps = append(steps, namedVerifier{
+			name:     "compiles",
+			verifier: &CompilesVerifier{Dir: evalDir},
+		})
+	}
+
 	if c.Execute != nil && *c.Execute {
 		steps = append(steps, namedVerifier{
 			name:     "execute",
