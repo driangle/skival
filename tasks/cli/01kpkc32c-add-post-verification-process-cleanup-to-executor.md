@@ -1,11 +1,12 @@
 ---
 title: "Add post-verification process cleanup to executor"
 id: "01kpkc32c"
-status: pending
+status: cancelled
 priority: high
 type: feature
 tags: ["executor", "cleanup"]
 created: "2026-04-19"
+cancelled_at: 2026-04-19
 ---
 
 # Add post-verification process cleanup to executor
