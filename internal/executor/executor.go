@@ -37,7 +37,7 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 	evals := filterEvals(s.Evals, opts.EvalIDs)
 
 	for i := range evals {
-		prog.evalStart(i+1, len(evals), evals[i].Name)
+		prog.evalStart(i+1, len(evals), evalLabel(&evals[i]))
 		evalResult := executeEval(ctx, &evals[i], reg, opts, prog)
 		sr.Evals = append(sr.Evals, evalResult)
 	}
@@ -53,6 +53,8 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 		EvalName: eval.Name,
 	}
 
+	label := evalLabel(eval)
+
 	// Always run after hook, even on error.
 	defer runAfterHook(ctx, eval.Setup, eval.Dir)
 
@@ -67,8 +69,8 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 				Reason: "before hook failed",
 			})
 		}
-		prog.evalError(eval.Name, err)
-		prog.skippedVariants(eval.Name, er.Skipped)
+		prog.evalError(label, err)
+		prog.skippedVariants(label, er.Skipped)
 		return er
 	}
 
@@ -91,7 +93,7 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 				defer func() { <-sem }()
 				cache := make(map[string]agentrunner.Runner)
 				v := variants[idx]
-				results[idx] = executeVariant(ctx, eval, v.variant, v.isControl, reg, cache, opts, prog)
+				results[idx] = executeVariant(ctx, eval, label, v.variant, v.isControl, reg, cache, opts, prog)
 			}(i)
 		}
 		wg.Wait()
@@ -112,14 +114,14 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 							Reason: fmt.Sprintf("reset hook failed after variant %q", variants[i-1].variant.Name),
 						})
 					}
-					prog.evalError(eval.Name, er.Err)
-					prog.skippedVariants(eval.Name, er.Skipped)
+					prog.evalError(label, er.Err)
+					prog.skippedVariants(label, er.Skipped)
 					return er
 				}
 			}
 
 			v := variants[i]
-			vr := executeVariant(ctx, eval, v.variant, v.isControl, reg, runnerCache, opts, prog)
+			vr := executeVariant(ctx, eval, label, v.variant, v.isControl, reg, runnerCache, opts, prog)
 			er.Variants = append(er.Variants, vr)
 		}
 	}
@@ -146,7 +148,7 @@ func collectVariants(eval *suite.Eval, filter []string) []variantEntry {
 	return entries
 }
 
-func executeVariant(ctx context.Context, eval *suite.Eval, v *suite.Variant, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.VariantResult {
+func executeVariant(ctx context.Context, eval *suite.Eval, label string, v *suite.Variant, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.VariantResult {
 	runnerName := v.Runner
 
 	vr := result.VariantResult{
@@ -192,7 +194,7 @@ func executeVariant(ctx context.Context, eval *suite.Eval, v *suite.Variant, isC
 	if parallel <= 1 {
 		// Sequential execution (default).
 		for i := 0; i < samples; i++ {
-			run := runSample(ctx, eval, v, i, samples, runner, prog, timeoutOverride)
+			run := runSample(ctx, eval, label, v, i, samples, runner, prog, timeoutOverride)
 			vr.Runs = append(vr.Runs, run)
 		}
 	} else {
@@ -207,7 +209,7 @@ func executeVariant(ctx context.Context, eval *suite.Eval, v *suite.Variant, isC
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
-				runs[idx] = runSample(ctx, eval, v, idx, samples, runner, prog, timeoutOverride)
+				runs[idx] = runSample(ctx, eval, label, v, idx, samples, runner, prog, timeoutOverride)
 			}(i)
 		}
 		wg.Wait()
@@ -221,17 +223,17 @@ func executeVariant(ctx context.Context, eval *suite.Eval, v *suite.Variant, isC
 
 // runSample executes a single sample, including isolation, running, verification,
 // and retry logic based on the variant's retry config.
-func runSample(ctx context.Context, eval *suite.Eval, v *suite.Variant, idx, samples int, runner agentrunner.Runner, prog *progress, timeoutOverride int) result.RunResult {
+func runSample(ctx context.Context, eval *suite.Eval, label string, v *suite.Variant, idx, samples int, runner agentrunner.Runner, prog *progress, timeoutOverride int) result.RunResult {
 	sample := idx + 1
-	prog.sampleStart(eval.Name, v.Name, sample, samples)
-	slog.Debug("Running sample", "eval", eval.Name, "variant", v.Name, "sample", sample, "total", samples)
+	prog.sampleStart(label, v.Name, sample, samples)
+	slog.Debug("Running sample", "eval", label, "variant", v.Name, "sample", sample, "total", samples)
 
 	sampleDir := ""
 	if eval.Isolate != nil && *eval.Isolate {
 		var err error
 		sampleDir, err = createIsolatedDir(eval, v)
 		if err != nil {
-			prog.sampleDone(0, nil)
+			prog.sampleDone(label, v.Name, sample, 0, nil)
 			return result.RunResult{Sample: sample, Err: fmt.Errorf("creating isolated dir: %w", err)}
 		}
 	}
@@ -246,7 +248,7 @@ func runSample(ctx context.Context, eval *suite.Eval, v *suite.Variant, idx, sam
 		}
 	}
 	if workdir != "" {
-		prog.workdir(eval.Name, v.Name, workdir)
+		prog.workdir(label, v.Name, workdir)
 	}
 
 	retryCfg := resolveRetryConfig(v.Retry)
@@ -270,27 +272,29 @@ func runSample(ctx context.Context, eval *suite.Eval, v *suite.Variant, idx, sam
 	for attempt := 1; attempt <= retryCfg.maxAttempts; attempt++ {
 		if attempt > 1 {
 			delay := backoffDelay(attempt-1, retryCfg)
-			slog.Debug("Retrying sample", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt, "delay", delay)
+			slog.Debug("Retrying sample", "eval", label, "variant", v.Name, "sample", sample, "attempt", attempt, "delay", delay)
 			time.Sleep(delay)
 		}
 
 		run := executeSingleRun(ctx, eval, v, sample, runner, sampleDir, timeoutOverride)
 		if run.Err != nil {
-			slog.Debug("Sample error", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt, "err", run.Err)
+			slog.Debug("Sample error", "eval", label, "variant", v.Name, "sample", sample, "attempt", attempt, "err", run.Err)
 		} else {
-			slog.Debug("Sample complete", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt,
+			slog.Debug("Sample complete", "eval", label, "variant", v.Name, "sample", sample, "attempt", attempt,
 				"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
+			prog.sessionID(label, v.Name, run.SessionID)
 		}
 
 		// Run verification if execution succeeded.
 		if pipeline != nil && run.Err == nil {
-			slog.Debug("Running verification pipeline", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt)
+			slog.Debug("Running verification pipeline", "eval", label, "variant", v.Name, "sample", sample, "attempt", attempt)
 			input := verifier.VerifyInput{
 				RunOutput: run.Text,
 				ExitCode:  run.ExitCode,
 			}
 			pr := pipeline.Run(ctx, input)
 			run.Pass = &pr.Pass
+			prog.verifyResults(label, v.Name, pr.Steps)
 			for _, step := range pr.Steps {
 				slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
 				if step.Name == "judge" && step.Result.Conversation != nil {
@@ -321,7 +325,7 @@ func runSample(ctx context.Context, eval *suite.Eval, v *suite.Variant, idx, sam
 	}
 
 	bestRun.WorkDir = workdir
-	prog.sampleDone(bestRun.CostUSD, bestRun.Pass)
+	prog.sampleDone(label, v.Name, sample, bestRun.CostUSD, bestRun.Pass)
 	return bestRun
 }
 
@@ -656,6 +660,14 @@ func shouldInclude(name string, filterSet map[string]bool) bool {
 		return true
 	}
 	return filterSet[name]
+}
+
+// evalLabel returns a display label for the eval, preferring Name over ID.
+func evalLabel(eval *suite.Eval) string {
+	if eval.Name != "" {
+		return eval.Name
+	}
+	return eval.ID
 }
 
 func hasJudgeStep(steps []suite.VerifyStep) bool {

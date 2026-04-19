@@ -65,8 +65,9 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	fmt.Fprintf(tw, "----\t---------\t------\t------\t----\t--------\n")
 
 	for _, eval := range sr.Evals {
+		name := evalDisplayName(eval)
 		if eval.Err != nil {
-			fmt.Fprintf(tw, "%s\t—\t—\tERROR\t—\t—\n", eval.EvalName)
+			fmt.Fprintf(tw, "%s\t—\t—\tERROR\t—\t—\n", name)
 			continue
 		}
 		for _, v := range eval.Variants {
@@ -77,11 +78,11 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 				duration := formatDuration(run.DurationMs)
 
 				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\n",
-					eval.EvalName, label, run.Sample, status, cost, duration)
+					name, label, run.Sample, status, cost, duration)
 			}
 
 			if agg := v.Aggregate; agg != nil && len(v.Runs) >= 2 {
-				writeAggregateRow(tw, eval.EvalName, label, agg)
+				writeAggregateRow(tw, name, label, agg)
 			}
 		}
 	}
@@ -151,11 +152,12 @@ func writeWorkdirsSection(w io.Writer, sr *result.SuiteResult) {
 
 	fmt.Fprintf(w, "## Workdirs\n\n")
 	for _, eval := range sr.Evals {
+		name := evalDisplayName(eval)
 		for _, v := range eval.Variants {
 			for _, run := range v.Runs {
 				if run.WorkDir != "" {
 					fmt.Fprintf(w, "- **%s** > %s > sample %d: `%s`\n",
-						eval.EvalName, v.Name, run.Sample, run.WorkDir)
+						name, v.Name, run.Sample, run.WorkDir)
 				}
 			}
 		}
@@ -248,6 +250,14 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 
 	tw.Flush()
 	fmt.Fprintln(w)
+}
+
+// evalDisplayName returns the eval name, falling back to ID.
+func evalDisplayName(eval result.EvalResult) string {
+	if eval.EvalName != "" {
+		return eval.EvalName
+	}
+	return eval.EvalID
 }
 
 func runStatus(run result.RunResult) string {

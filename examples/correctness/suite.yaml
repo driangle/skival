@@ -18,8 +18,6 @@ evals:
         run: "go build ./..."
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify that the agent exits successfully
   - id: agent-exits-ok-check
@@ -29,22 +27,17 @@ evals:
       - type: agent_exits_ok
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
-  # Verify expected output strings appear
+  # Verify expected output strings appear in agent conversation output
   - id: expected-output-check
     dir: "./workdir"
-    prompt: "Write a script that prints 'PASS: all tests green'."
+    prompt: "What is 7 * 6? Reply with just the number."
     verify:
       - type: output_contains
         values:
-          - "PASS"
-          - "all tests green"
+          - "42"
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify via check_output (agent output piped to stdin)
   - id: check-output-verify
@@ -55,8 +48,6 @@ evals:
         run: "./scripts/verify-output.sh"
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify via HTTP checks
   - id: http-check
@@ -74,8 +65,6 @@ evals:
         body_contains: "ready"
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify via file_contains
   - id: file-contains-check
@@ -88,8 +77,6 @@ evals:
         contains: "hello world"
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify via command
   - id: command-check
@@ -101,8 +88,6 @@ evals:
         exits: 0
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify via TCP check
   - id: tcp-check
@@ -114,8 +99,6 @@ evals:
         port: 9090
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Verify via LLM judge
   - id: judge-check
@@ -128,8 +111,6 @@ evals:
           - "Does it include instructions for running tests?"
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
 
   # Multiple verify steps combined
   - id: combined-check
@@ -146,5 +127,3 @@ evals:
         run: "./scripts/verify-calc.sh"
     variants:
       - name: baseline
-      - name: opus-model
-        model: "claude-opus-4-6"
