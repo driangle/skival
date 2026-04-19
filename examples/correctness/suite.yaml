@@ -11,6 +11,7 @@ defaults:
 evals:
   # Verify via a shell command (check)
   - id: check-verify
+    dir: "./workdir"
     prompt: "Write a Go program in main.go that prints 'hello'."
     verify:
       - type: check
@@ -22,6 +23,7 @@ evals:
 
   # Verify that the agent exits successfully
   - id: agent-exits-ok-check
+    dir: "./workdir"
     prompt: "Write a shell script run.sh that exits with code 0."
     verify:
       - type: agent_exits_ok
@@ -32,6 +34,7 @@ evals:
 
   # Verify expected output strings appear
   - id: expected-output-check
+    dir: "./workdir"
     prompt: "Write a script that prints 'PASS: all tests green'."
     verify:
       - type: output_contains
@@ -45,6 +48,7 @@ evals:
 
   # Verify via check_output (agent output piped to stdin)
   - id: check-output-verify
+    dir: "./workdir"
     prompt: "Create a file called output.txt containing exactly 'hello world'."
     verify:
       - type: check_output
@@ -56,6 +60,7 @@ evals:
 
   # Verify via HTTP checks
   - id: http-check
+    dir: "./workdir"
     prompt: "Start a web server on port 8080 that responds to GET /health with 'ok'."
     verify:
       - type: http_check
@@ -74,6 +79,7 @@ evals:
 
   # Verify via file_contains
   - id: file-contains-check
+    dir: "./workdir"
     prompt: "Create a file called output.txt containing 'hello world'."
     verify:
       - type: file_contains
@@ -87,6 +93,7 @@ evals:
 
   # Verify via command
   - id: command-check
+    dir: "./workdir"
     prompt: "Write a Go program in main.go that prints 'hello'."
     verify:
       - type: command
@@ -99,6 +106,7 @@ evals:
 
   # Verify via TCP check
   - id: tcp-check
+    dir: "./workdir"
     prompt: "Start a TCP server on port 9090."
     verify:
       - type: tcp_check
@@ -111,6 +119,7 @@ evals:
 
   # Verify via LLM judge
   - id: judge-check
+    dir: "./workdir"
     prompt: "Write a README.md explaining how to set up a Go project."
     verify:
       - type: judge
@@ -124,6 +133,7 @@ evals:
 
   # Multiple verify steps combined
   - id: combined-check
+    dir: "./workdir"
     prompt: |
       Write a Python script called calc.py that reads two numbers
       from stdin and prints their sum.

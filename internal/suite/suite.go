@@ -48,7 +48,7 @@ type Eval struct {
 	Name         string         `yaml:"name"`
 	Prompt       string         `yaml:"prompt"`
 	Dir          string         `yaml:"dir"`
-	Isolate      bool           `yaml:"isolate"`
+	Isolate      *bool          `yaml:"isolate"`
 Samples      *int           `yaml:"samples"`
 	Timeout      *int           `yaml:"timeout"`
 	Parallel     *int           `yaml:"parallel"`

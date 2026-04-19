@@ -8,6 +8,7 @@ defaults:
 evals:
   - id: hello-world
     name: "Hello World"
+    dir: "./workdir"
     prompt: |
       Write a file called hello.sh that prints "Hello, World!" to stdout.
     setup:

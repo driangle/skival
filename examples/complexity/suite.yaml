@@ -9,6 +9,7 @@ defaults:
 evals:
   - id: simple-task
     name: "Simple file creation"
+    dir: "./workdir"
     prompt: "Create a file called hello.txt containing 'hello'."
     samples: 5
     timeout: 30
@@ -19,6 +20,7 @@ evals:
 
   - id: medium-task
     name: "REST API endpoint"
+    dir: "./workdir"
     prompt: |
       Write a Python Flask app in app.py with a GET /users endpoint
       that returns a JSON list of users.
@@ -31,6 +33,7 @@ evals:
 
   - id: large-task
     name: "Full CRUD application"
+    dir: "./workdir"
     prompt: |
       Build a complete TODO application with a SQLite backend.
       Include CRUD endpoints, input validation, and error handling.

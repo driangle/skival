@@ -13,6 +13,7 @@ defaults:
 
 evals:
   - id: uses-defaults
+    dir: "./workdir"
     prompt: "Create a file called greeting.txt with a friendly greeting."
     variants:
       - name: baseline
@@ -21,6 +22,7 @@ evals:
           max_turns: 5
 
   - id: overrides-defaults
+    dir: "./workdir"
     prompt: "Write a script that prints the current date."
     samples: 3
     timeout: 60

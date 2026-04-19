@@ -13,7 +13,7 @@ evals:
   - id: prompt-comparison
     name: "Prompt Comparison"
     model: "claude-sonnet-4-6"
-    dir: "."
+    dir: "./workdir"
     variants:
       - name: baseline
         prompt: |
@@ -30,7 +30,7 @@ evals:
     name: "Config Dir Comparison"
     prompt: "List the files in the current directory"
     model: "claude-sonnet-4-6"
-    dir: "."
+    dir: "./workdir"
     variants:
       - name: strict-config
         config_dir: "./configs/strict"

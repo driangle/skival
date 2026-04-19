@@ -10,6 +10,7 @@ defaults:
 evals:
   - id: fizzbuzz-skillset
     name: "FizzBuzz with skillsets"
+    dir: "./workdir"
     prompt: |
       Write a file called fizzbuzz.sh that prints FizzBuzz output for numbers 1 through 20.
       Rules: print "Fizz" for multiples of 3, "Buzz" for multiples of 5,

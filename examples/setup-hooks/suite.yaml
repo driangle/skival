@@ -11,9 +11,9 @@ defaults:
 evals:
   - id: with-hooks
     name: "Eval with full lifecycle hooks"
+    dir: "./workdir"
     prompt: |
       Read the file input.txt and write its contents reversed to output.txt.
-    isolate: true
     setup:
       # Runs once before the eval starts (e.g., create fixtures)
       before: |

@@ -19,6 +19,7 @@ defaults:
 evals:
   # Inherits all defaults as-is
   - id: inherits-defaults
+    dir: "./workdir"
     prompt: "Write hello.py that prints 'hello'."
     variants:
       - name: baseline
@@ -30,6 +31,7 @@ evals:
 
   # Eval-level overrides merge with defaults
   - id: eval-override
+    dir: "./workdir"
     prompt: "Write a test suite for a calculator module."
     runner_config:
       max_turns: 30              # overrides default of 20
@@ -42,6 +44,7 @@ evals:
 
   # Variant-level overrides merge with eval + defaults
   - id: treatment-override
+    dir: "./workdir"
     prompt: "Refactor the utils module into smaller files."
     runner_config:
       max_turns: 25

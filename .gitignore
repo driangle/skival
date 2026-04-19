@@ -3,3 +3,7 @@ apps/cli/skival
 
 # Claude
 settings.local.json
+
+# Example workdirs (agent output)
+examples/*/workdir*/*
+!examples/*/workdir*/.gitkeep

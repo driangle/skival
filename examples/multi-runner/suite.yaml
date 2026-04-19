@@ -9,6 +9,7 @@ defaults:
 evals:
   - id: cross-runner
     name: "Cross-runner comparison"
+    dir: "./workdir"
     prompt: |
       Write a Python script called primes.py that prints all prime numbers
       less than 100, one per line.

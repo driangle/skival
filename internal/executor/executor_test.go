@@ -102,7 +102,8 @@ func (f *fakeRunner) Start(_ context.Context, prompt string, opts ...agentrunner
 	}), nil
 }
 
-func intPtr(n int) *int { return &n }
+func intPtr(n int) *int    { return &n }
+func boolPtr(b bool) *bool { return &b }
 
 func newMinimalSuite() *suite.Suite {
 	return &suite.Suite{
@@ -913,7 +914,7 @@ func TestIsolateGivesUniqueDirsPerSample(t *testing.T) {
 				Name:    "Isolated Eval",
 				Prompt:  "do something",
 				Dir:     srcDir,
-				Isolate: true,
+				Isolate: boolPtr(true),
 				Samples: intPtr(3),
 				Variants: []suite.Treatment{
 					{Name: "control", Runner: "claude-code"},
@@ -980,7 +981,7 @@ func TestIsolateCopiesFiles(t *testing.T) {
 				Name:    "Isolated Eval",
 				Prompt:  "do something",
 				Dir:     srcDir,
-				Isolate: true,
+				Isolate: boolPtr(true),
 				Variants: []suite.Treatment{
 					{Name: "control", Runner: "claude-code"},
 				},
@@ -1021,7 +1022,7 @@ func TestIsolateTempDirsCleanedUp(t *testing.T) {
 				Name:    "Isolated Eval",
 				Prompt:  "do something",
 				Dir:     srcDir,
-				Isolate: true,
+				Isolate: boolPtr(true),
 				Samples: intPtr(2),
 				Variants: []suite.Treatment{
 					{Name: "control", Runner: "claude-code"},
@@ -1051,6 +1052,7 @@ func TestNoIsolateBehaviorUnchanged(t *testing.T) {
 
 	s := newMinimalSuite()
 	s.Evals[0].Dir = "/tmp/eval-dir"
+	s.Evals[0].Isolate = boolPtr(false)
 
 	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
@@ -1083,7 +1085,7 @@ func TestIsolateWithTreatmentDir(t *testing.T) {
 				Name:    "Isolated Eval",
 				Prompt:  "do something",
 				Dir:     evalDir,
-				Isolate: true,
+				Isolate: boolPtr(true),
 				Variants: []suite.Treatment{
 					{Name: "control", Runner: "claude-code", Dir: treatmentDir},
 				},
@@ -1370,7 +1372,7 @@ func TestParallelIsolationDirsIndependent(t *testing.T) {
 				Name:     "Isolated Parallel",
 				Prompt:   "do something",
 				Dir:      srcDir,
-				Isolate:  true,
+				Isolate:  boolPtr(true),
 				Samples:  intPtr(4),
 				Parallel: intPtr(4),
 				Variants: []suite.Treatment{

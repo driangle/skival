@@ -227,7 +227,7 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 	slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", sample, "total", samples)
 
 	sampleDir := ""
-	if eval.Isolate {
+	if eval.Isolate != nil && *eval.Isolate {
 		var err error
 		sampleDir, err = createIsolatedDir(eval, t)
 		if err != nil {

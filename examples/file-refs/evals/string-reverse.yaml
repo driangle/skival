@@ -1,5 +1,6 @@
 id: string-reverse
 name: "String Reversal"
+dir: "./workdir"
 prompt: |
   Write a function that reverses a string in-place.
   Save it to reverse.py.

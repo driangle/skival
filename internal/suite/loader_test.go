@@ -1044,6 +1044,12 @@ evals:
     model: "claude-sonnet-4-6"
     variants:
       - name: baseline
+  - id: eval-3
+    prompt: "yet another thing"
+    model: "claude-sonnet-4-6"
+    isolate: false
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1051,11 +1057,14 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !s.Evals[0].Isolate {
-		t.Error("expected eval-1 isolate to be true")
+	if s.Evals[0].Isolate == nil || !*s.Evals[0].Isolate {
+		t.Error("expected eval-1 isolate to be true (explicit)")
 	}
-	if s.Evals[1].Isolate {
-		t.Error("expected eval-2 isolate to be false (default)")
+	if s.Evals[1].Isolate == nil || !*s.Evals[1].Isolate {
+		t.Error("expected eval-2 isolate to be true (default)")
+	}
+	if s.Evals[2].Isolate == nil || *s.Evals[2].Isolate {
+		t.Error("expected eval-3 isolate to be false (explicit)")
 	}
 }
 

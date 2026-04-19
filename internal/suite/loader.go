@@ -308,6 +308,10 @@ func mergeDefaults(s *Suite) {
 				}
 			}
 		}
+		if e.Isolate == nil {
+			t := true
+			e.Isolate = &t
+		}
 		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
 		if e.Retry == nil && d.Retry != nil {
 			e.Retry = d.Retry

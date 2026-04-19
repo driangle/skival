@@ -6,6 +6,7 @@ defaults:
 
 evals:
   - id: hello
+    dir: "./workdir"
     prompt: "Write a file called hello.txt containing 'Hello, World!'"
     variants:
       - name: baseline
