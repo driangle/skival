@@ -117,7 +117,7 @@ evals:
     dir: "./workdir"
     prompt: |
       Write a Python script called calc.py that reads two numbers
-      from stdin and prints their sum.
+      from stdin and prints their sum prefixed with "Result:".
     verify:
       - type: agent_exits_ok
       - type: output_contains
