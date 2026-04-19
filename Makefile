@@ -20,10 +20,11 @@ test:
 
 # ── Validation ──────────────────────────────────────────────────────
 validate-examples: build
-	@for f in examples/*/suite.yaml; do \
-		echo "validating $$f"; \
-		./apps/cli/skival validate "$$f" || exit 1; \
-	done
+	@fail=0; \
+	for f in examples/*/suite.yaml; do \
+		output=$$(./apps/cli/skival validate "$$f" 2>&1) || { echo "FAIL $$f"; echo "$$output"; fail=1; }; \
+	done; \
+	if [ $$fail -eq 0 ]; then echo "all example suites valid"; else exit 1; fi
 
 # ── Composite targets ───────────────────────────────────────────────
 check-lite: vet lint build validate-examples  ## Compile + lint + validate examples. No tests.
