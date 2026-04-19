@@ -18,7 +18,14 @@ lint:
 test:
 	go test ./...
 
+# ── Validation ──────────────────────────────────────────────────────
+validate-examples: build
+	@for f in examples/*/suite.yaml; do \
+		echo "validating $$f"; \
+		./apps/cli/skival validate "$$f" || exit 1; \
+	done
+
 # ── Composite targets ───────────────────────────────────────────────
-check-lite: vet lint build  ## Compile + lint. No tests.
+check-lite: vet lint build validate-examples  ## Compile + lint + validate examples. No tests.
 
 check: check-lite test      ## Full validation: compile, lint, tests.
