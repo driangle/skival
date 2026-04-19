@@ -96,13 +96,8 @@ func resolvePaths(s *Suite, suiteDir string) {
 			e.Correctness.CheckOutput = filepath.Join(suiteDir, e.Correctness.CheckOutput)
 		}
 
-		for j := range e.Correctness.Probes {
-			if fp := e.Correctness.Probes[j].File; fp != nil {
-				if fp.Path != "" && !filepath.IsAbs(fp.Path) {
-					e.Correctness.Probes[j].File.Path = filepath.Join(suiteDir, fp.Path)
-				}
-			}
-		}
+		// file_contains paths in probes are resolved at runtime against the workdir,
+		// not at load time against the suite dir.
 
 		for j := range e.Verify {
 			step := &e.Verify[j]
@@ -112,9 +107,8 @@ func resolvePaths(s *Suite, suiteDir string) {
 					step.Run = filepath.Join(suiteDir, step.Run)
 				}
 			case "file_contains":
-				if step.Path != "" && !filepath.IsAbs(step.Path) {
-					step.Path = filepath.Join(suiteDir, step.Path)
-				}
+				// file_contains paths are resolved at runtime against the workdir,
+				// not at load time against the suite dir.
 			}
 		}
 

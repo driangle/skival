@@ -14,6 +14,8 @@ evals:
     name: "Prompt Comparison"
     model: "claude-sonnet-4-6"
     dir: "./workdir"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         prompt: |
@@ -31,6 +33,8 @@ evals:
     prompt: "List the files in the current directory"
     model: "claude-sonnet-4-6"
     dir: "./workdir"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: strict-config
         config_dir: "./configs/strict"

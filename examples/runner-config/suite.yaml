@@ -21,6 +21,8 @@ evals:
   - id: inherits-defaults
     dir: "./workdir"
     prompt: "Write hello.py that prints 'hello'."
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: fewer-tools
@@ -33,6 +35,8 @@ evals:
   - id: eval-override
     dir: "./workdir"
     prompt: "Write a test suite for a calculator module."
+    verify:
+      - type: agent_exits_ok
     runner_config:
       max_turns: 30              # overrides default of 20
       permission_mode: "plan"    # adds new key, defaults keys preserved
@@ -46,6 +50,8 @@ evals:
   - id: variant-override
     dir: "./workdir"
     prompt: "Refactor the utils module into smaller files."
+    verify:
+      - type: agent_exits_ok
     runner_config:
       max_turns: 25
     variants:

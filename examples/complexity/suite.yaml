@@ -11,6 +11,8 @@ evals:
     name: "Simple file creation"
     dir: "./workdir"
     prompt: "Create a file called hello.txt containing 'hello'."
+    verify:
+      - type: agent_exits_ok
     samples: 5
     timeout: 30
     variants:
@@ -21,6 +23,8 @@ evals:
   - id: medium-task
     name: "REST API endpoint"
     dir: "./workdir"
+    verify:
+      - type: agent_exits_ok
     prompt: |
       Write a Python Flask app in app.py with a GET /users endpoint
       that returns a JSON list of users.
@@ -34,6 +38,8 @@ evals:
   - id: large-task
     name: "Full CRUD application"
     dir: "./workdir"
+    verify:
+      - type: agent_exits_ok
     prompt: |
       Build a complete TODO application with a SQLite backend.
       Include CRUD endpoints, input validation, and error handling.

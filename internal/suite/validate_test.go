@@ -12,6 +12,7 @@ func TestValidate_ValidSuite(t *testing.T) {
 			{
 				ID:     "eval-1",
 				Prompt: "do something",
+				Verify: []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{
 					{Name: "baseline", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
@@ -68,7 +69,8 @@ func TestValidate_VariantPromptOverridesEvalPrompt(t *testing.T) {
 		Version: 1,
 		Evals: []Eval{
 			{
-				ID: "e1",
+				ID:     "e1",
+				Verify: []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{
 					{Name: "ctrl", Prompt: "do A", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v1", Prompt: "do B", Runner: "claude-code", Model: "claude-sonnet-4-6"},
@@ -124,6 +126,7 @@ func TestValidate_ConfigDirValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
+				Verify: []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{
 					{Name: "ctrl", ConfigDir: dir, Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
@@ -157,6 +160,24 @@ func TestValidate_AtLeastOneVariantRequired(t *testing.T) {
 
 	err := validate(s)
 	assertValidationContains(t, err, "at least one variant is required")
+}
+
+func TestValidate_AtLeastOneVerifyStepRequired(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID:     "e1",
+				Prompt: "p",
+				Variants: []Variant{
+					{Name: "ctrl", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+				},
+			},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, "at least one verify step is required")
 }
 
 func TestValidate_VariantNameRequired(t *testing.T) {
@@ -244,6 +265,7 @@ func TestValidate_VariantLevelModelsWithoutEvalModel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
+				Verify: []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{
 					{Name: "ctrl", Model: "claude-sonnet-4-6", Runner: "claude-code"},
 					{Name: "v1", Model: "claude-opus-4-6", Runner: "claude-code"},
@@ -265,6 +287,7 @@ func TestValidate_ValidRunners(t *testing.T) {
 				{
 					ID: "e1", Prompt: "p",
 					Runner:   runner,
+					Verify:   []VerifyStep{{Type: "agent_exits_ok"}},
 					Variants: []Variant{{Name: "ctrl", Runner: runner, Model: "claude-sonnet-4-6"}},
 				},
 			},
@@ -375,6 +398,7 @@ func TestValidate_SkillsAloneIsValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
+				Verify: []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{
 					{Name: "ctrl", Skills: []string{"a.md", "b.md"}, Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
@@ -451,6 +475,7 @@ func TestValidate_RetryConfigValid(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Retry:    &Retry{MaxAttempts: &attempts, Backoff: "exponential", Delay: "500ms", On: "all"},
+				Verify:   []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{{Name: "ctrl", Runner: "claude-code", Model: "claude-sonnet-4-6"}},
 			},
 		},
@@ -668,6 +693,7 @@ func validSuiteWith(modify func(*Eval)) *Suite {
 			{
 				ID:     "eval-1",
 				Prompt: "do something",
+				Verify: []VerifyStep{{Type: "agent_exits_ok"}},
 				Variants: []Variant{
 					{Name: "baseline", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},

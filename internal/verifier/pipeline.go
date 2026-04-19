@@ -107,6 +107,7 @@ func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...Pipel
 							Contains: step.Contains,
 						},
 					},
+					Dir: evalDir,
 				},
 			})
 		case "http_check":

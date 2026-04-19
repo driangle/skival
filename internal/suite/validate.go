@@ -82,6 +82,10 @@ func validate(s *Suite) error {
 			}
 		}
 
+		if len(eval.Verify) == 0 {
+			errs = append(errs, fmt.Sprintf("%s: at least one verify step is required", prefix))
+		}
+
 		errs = append(errs, validateVerifySteps(eval.Verify, prefix)...)
 
 		if eval.Runner != "" && !validRunners[eval.Runner] {

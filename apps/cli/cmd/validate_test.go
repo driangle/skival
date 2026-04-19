@@ -21,6 +21,8 @@ evals:
     name: "Test Eval"
     prompt: "do something"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: "baseline"
       - name: "variant-1"

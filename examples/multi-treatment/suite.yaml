@@ -11,6 +11,8 @@ defaults:
 evals:
   - id: sort-algorithm
     name: "Sorting Algorithm"
+    verify:
+      - type: agent_exits_ok
     prompt: |
       Write a file called sort.py that reads integers from stdin (one per line)
       and prints them sorted in ascending order.

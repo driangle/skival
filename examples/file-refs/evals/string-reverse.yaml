@@ -4,6 +4,8 @@ dir: "./workdir"
 prompt: |
   Write a function that reverses a string in-place.
   Save it to reverse.py.
+verify:
+  - type: agent_exits_ok
 variants:
   - name: baseline
   - name: opus-model

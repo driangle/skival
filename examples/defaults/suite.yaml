@@ -15,6 +15,8 @@ evals:
   - id: uses-defaults
     dir: "./workdir"
     prompt: "Create a file called greeting.txt with a friendly greeting."
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: fewer-turns
@@ -24,6 +26,8 @@ evals:
   - id: overrides-defaults
     dir: "./workdir"
     prompt: "Write a script that prints the current date."
+    verify:
+      - type: agent_exits_ok
     samples: 3
     timeout: 60
     model: "claude-opus-4-6"

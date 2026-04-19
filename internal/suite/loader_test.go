@@ -18,6 +18,8 @@ evals:
   - id: eval-1
     prompt: "do the thing"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -50,6 +52,8 @@ func TestLoad_FileReference(t *testing.T) {
 id: file-eval
 prompt: "from file"
 model: "claude-sonnet-4-6"
+verify:
+  - type: agent_exits_ok
 variants:
   - name: baseline
 `)
@@ -104,6 +108,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -140,6 +146,8 @@ evals:
     samples: 10
     timeout: 30
     model: "claude-opus"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -171,6 +179,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: override
@@ -200,6 +210,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -262,6 +274,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -291,6 +305,8 @@ evals:
     prompt: "task"
     model: "claude-sonnet-4-6"
     dir: workdir
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -419,6 +435,8 @@ evals:
     runner: "codex"
     runner_config:
       sandbox: "full"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         runner: "aider"
@@ -460,6 +478,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -488,6 +508,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         allowed_tools:
@@ -530,6 +552,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         allowed_tools:
@@ -573,6 +597,8 @@ evals:
     runner_config:
       max_turns: 20
       sandbox: "full"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -614,6 +640,8 @@ evals:
     prompt: "task"
     runner_config:
       sandbox: "full"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: v1
@@ -658,6 +686,8 @@ evals:
     prompt: "task"
     runner_config:
       sandbox: "full"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         runner: "aider"
@@ -707,6 +737,8 @@ evals:
     runner_config:
       max_turns: 10
       timeout: 30
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: custom
@@ -768,6 +800,8 @@ evals:
   - id: eval-1
     prompt: "compare runners"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     matrix:
       dimensions:
         - name: runner
@@ -810,6 +844,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "compare models"
+    verify:
+      - type: agent_exits_ok
     matrix:
       dimensions:
         - name: model
@@ -849,6 +885,8 @@ evals:
   - id: eval-1
     prompt: "conflict"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     matrix:
       dimensions:
         - name: model
@@ -888,6 +926,8 @@ evals:
   - id: eval-1
     prompt: "test"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     matrix:
       dimensions:
         - name: runner
@@ -928,6 +968,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: with-skills
@@ -965,6 +1007,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
       - name: v1
@@ -997,6 +1041,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         skill: "a.md"
@@ -1037,17 +1083,23 @@ evals:
     prompt: "do the thing"
     model: "claude-sonnet-4-6"
     isolate: true
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
   - id: eval-2
     prompt: "another thing"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
   - id: eval-3
     prompt: "yet another thing"
     model: "claude-sonnet-4-6"
     isolate: false
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -1082,6 +1134,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         config_dir: "./configs/strict"
@@ -1107,6 +1161,8 @@ defaults:
 evals:
   - id: eval-1
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: ctrl
         prompt: "do A"
@@ -1177,6 +1233,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -1220,6 +1278,8 @@ evals:
     retry:
       max_attempts: 3
       on: all
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: ctrl
       - name: v1
@@ -1227,6 +1287,8 @@ evals:
           max_attempts: 5
   - id: eval-2
     prompt: "task2"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: ctrl2
 `)
@@ -1285,6 +1347,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -1318,6 +1382,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
 `)
@@ -1593,7 +1659,7 @@ evals:
 	}
 }
 
-func TestLoad_FileContainsPathResolved(t *testing.T) {
+func TestLoad_FileContainsPathKeptRelative(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
@@ -1621,13 +1687,13 @@ evals:
 	if step == nil {
 		t.Fatal("expected file_contains verify step")
 	}
-	expected := filepath.Join(dir, "output.txt")
-	if step.Path != expected {
-		t.Errorf("file_contains path = %q, want %q", step.Path, expected)
+	// file_contains paths stay relative — resolved at runtime against the workdir.
+	if step.Path != "output.txt" {
+		t.Errorf("file_contains path = %q, want %q", step.Path, "output.txt")
 	}
 }
 
-func TestLoad_VerifyFileContainsPathResolved(t *testing.T) {
+func TestLoad_VerifyFileContainsPathKeptRelative(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
@@ -1652,9 +1718,9 @@ evals:
 	if step == nil {
 		t.Fatal("expected file_contains verify step")
 	}
-	expected := filepath.Join(dir, "output.txt")
-	if step.Path != expected {
-		t.Errorf("file_contains path = %q, want %q", step.Path, expected)
+	// file_contains paths stay relative — resolved at runtime against the workdir.
+	if step.Path != "output.txt" {
+		t.Errorf("file_contains path = %q, want %q", step.Path, "output.txt")
 	}
 }
 
