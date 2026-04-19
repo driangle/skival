@@ -1,6 +1,6 @@
-# All correctness verification modes.
+# All verification modes.
 version: 1
-description: "Demonstrates every correctness verification option"
+description: "Demonstrates every verify step type"
 
 defaults:
   runner: claude-code
@@ -12,8 +12,9 @@ evals:
   # Verify via a shell command (check)
   - id: check-verify
     prompt: "Write a Go program in main.go that prints 'hello'."
-    correctness:
-      check: "go build ./..."
+    verify:
+      - type: check
+        run: "go build ./..."
     treatments:
       control:
         name: baseline
@@ -24,8 +25,8 @@ evals:
   # Verify that the agent exits successfully
   - id: agent-exits-ok-check
     prompt: "Write a shell script run.sh that exits with code 0."
-    correctness:
-      agent_exits_ok: true
+    verify:
+      - type: agent_exits_ok
     treatments:
       control:
         name: baseline
@@ -36,9 +37,9 @@ evals:
   # Verify expected output strings appear
   - id: expected-output-check
     prompt: "Write a script that prints 'PASS: all tests green'."
-    correctness:
-      output:
-        contains:
+    verify:
+      - type: output_contains
+        values:
           - "PASS"
           - "all tests green"
     treatments:
@@ -51,8 +52,9 @@ evals:
   # Verify via check_output (agent output piped to stdin)
   - id: check-output-verify
     prompt: "Create a file called output.txt containing exactly 'hello world'."
-    correctness:
-      check_output: "./scripts/verify-output.sh"
+    verify:
+      - type: check_output
+        run: "./scripts/verify-output.sh"
     treatments:
       control:
         name: baseline
@@ -60,17 +62,62 @@ evals:
         - name: opus-model
           model: "claude-opus-4-6"
 
-  # Verify via HTTP state assertions
-  - id: state-check
+  # Verify via HTTP checks
+  - id: http-check
     prompt: "Start a web server on port 8080 that responds to GET /health with 'ok'."
-    correctness:
-      state:
-        - url: "http://localhost:8080/health"
-          method: GET
-          expect: "ok"
-        - url: "http://localhost:8080/ready"
-          method: GET
-          expect: "ready"
+    verify:
+      - type: http_check
+        url: "http://localhost:8080/health"
+        method: GET
+        status: 200
+        body_contains: "ok"
+      - type: http_check
+        url: "http://localhost:8080/ready"
+        method: GET
+        body_contains: "ready"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"
+
+  # Verify via file_contains
+  - id: file-contains-check
+    prompt: "Create a file called output.txt containing 'hello world'."
+    verify:
+      - type: file_contains
+        path: "output.txt"
+        exists: true
+        contains: "hello world"
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"
+
+  # Verify via command
+  - id: command-check
+    prompt: "Write a Go program in main.go that prints 'hello'."
+    verify:
+      - type: command
+        run: "go build ./..."
+        exits: 0
+    treatments:
+      control:
+        name: baseline
+      variations:
+        - name: opus-model
+          model: "claude-opus-4-6"
+
+  # Verify via TCP check
+  - id: tcp-check
+    prompt: "Start a TCP server on port 9090."
+    verify:
+      - type: tcp_check
+        host: "localhost"
+        port: 9090
     treatments:
       control:
         name: baseline
@@ -81,10 +128,11 @@ evals:
   # Verify via LLM judge
   - id: judge-check
     prompt: "Write a README.md explaining how to set up a Go project."
-    correctness:
-      judge:
-        - "Does the README explain how to initialize a Go module?"
-        - "Does it include instructions for running tests?"
+    verify:
+      - type: judge
+        criteria:
+          - "Does the README explain how to initialize a Go module?"
+          - "Does it include instructions for running tests?"
     treatments:
       control:
         name: baseline
@@ -92,17 +140,18 @@ evals:
         - name: opus-model
           model: "claude-opus-4-6"
 
-  # Multiple correctness checks combined
+  # Multiple verify steps combined
   - id: combined-check
     prompt: |
       Write a Python script called calc.py that reads two numbers
       from stdin and prints their sum.
-    correctness:
-      agent_exits_ok: true
-      output:
-        contains:
+    verify:
+      - type: agent_exits_ok
+      - type: output_contains
+        values:
           - "Result:"
-      check_output: "./scripts/verify-calc.sh"
+      - type: check_output
+        run: "./scripts/verify-calc.sh"
     treatments:
       control:
         name: baseline

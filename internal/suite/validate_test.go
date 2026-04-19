@@ -637,6 +637,125 @@ func assertValidationContains(t *testing.T, err error, substr string) {
 	t.Errorf("expected error containing %q, got: %v", substr, ve.Errors)
 }
 
+func TestValidate_VerifyStepMissingType(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "type is required")
+}
+
+func TestValidate_VerifyStepUnknownType(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "unknown"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, `unknown type "unknown"`)
+}
+
+func TestValidate_HttpCheckMissingURL(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "http_check"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "http_check requires url")
+}
+
+func TestValidate_FileContainsMissingPath(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "file_contains"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "file_contains requires path")
+}
+
+func TestValidate_CommandMissingRun(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "command"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "command requires run")
+}
+
+func TestValidate_TcpCheckMissingHostAndPort(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "tcp_check"}}
+	})
+	err := validate(s)
+	ve := &ValidationError{}
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected ValidationError, got %v", err)
+	}
+	requireValidationError(t, err, "tcp_check requires host")
+	requireValidationError(t, err, "tcp_check requires port")
+}
+
+func TestValidate_CheckBooleanRejected(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "check", Run: "true"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "check run must be a shell command, not a boolean")
+}
+
+func TestValidate_JudgeMissingCriteria(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "judge"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "judge requires criteria")
+}
+
+func TestValidate_ValidVerifySteps(t *testing.T) {
+	trueVal := true
+	exitZero := 0
+	status200 := 200
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{
+			{Type: "agent_exits_ok"},
+			{Type: "check", Run: "go build ./..."},
+			{Type: "check_output", Run: "exit 0"},
+			{Type: "output_contains", Values: []string{"ok"}},
+			{Type: "http_check", URL: "http://localhost", Status: &status200},
+			{Type: "file_contains", Path: "/tmp/test", Exists: &trueVal},
+			{Type: "command", Run: "echo hi", Exits: &exitZero},
+			{Type: "tcp_check", Host: "localhost", Port: 8080},
+			{Type: "judge", Criteria: []string{"is correct"}},
+		}
+	})
+	if err := validate(s); err != nil {
+		t.Fatalf("expected valid verify steps to pass validation: %v", err)
+	}
+}
+
+func validSuiteWith(modify func(*Eval)) *Suite {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{
+				ID:     "eval-1",
+				Prompt: "do something",
+				Model:  "claude-sonnet-4-6",
+				Treatments: Treatments{
+					Control: Treatment{Name: "baseline", Runner: "claude-code"},
+				},
+			},
+		},
+	}
+	modify(&s.Evals[0])
+	return s
+}
+
+func requireValidationError(t *testing.T, err error, substr string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected validation error containing %q, got nil", substr)
+	}
+	if !contains(err.Error(), substr) {
+		t.Fatalf("expected error containing %q, got: %s", substr, err.Error())
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && searchString(s, substr)
 }

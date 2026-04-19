@@ -93,9 +93,7 @@ func validate(s *Suite) error {
 			}
 		}
 
-		if eval.Correctness.Check == "true" || eval.Correctness.Check == "false" {
-			errs = append(errs, fmt.Sprintf("%s: check must be a shell command string (e.g. \"go build ./...\"), not a boolean", prefix))
-		}
+		errs = append(errs, validateVerifySteps(eval.Verify, prefix)...)
 
 		if !validComplexities[eval.Complexity] {
 			errs = append(errs, fmt.Sprintf("%s: invalid complexity %q (must be low, medium, or high)", prefix, eval.Complexity))
@@ -160,10 +158,10 @@ func validate(s *Suite) error {
 		}
 	}
 
-	// Warn if judge_model is set without judge criteria.
+	// Warn if judge_model is set without judge step.
 	for i, eval := range s.Evals {
-		if eval.Correctness.JudgeModel != "" && len(eval.Correctness.Judge) == 0 {
-			log.Printf("WARNING: eval[%d] %q: judge_model is set but no judge criteria are defined", i, eval.ID)
+		if eval.JudgeModel != "" && !hasJudgeStep(eval.Verify) {
+			log.Printf("WARNING: eval[%d] %q: judge_model is set but no judge step in verify", i, eval.ID)
 		}
 	}
 
@@ -287,3 +285,83 @@ func modelLooksValidForRunner(model, runner string) bool {
 		return true
 	}
 }
+
+var validVerifyTypes = map[string]bool{
+	"agent_exits_ok":  true,
+	"check":           true,
+	"check_output":    true,
+	"output_contains": true,
+	"command":         true,
+	"file_contains":   true,
+	"http_check":      true,
+	"tcp_check":       true,
+	"judge":           true,
+}
+
+func validateVerifySteps(steps []VerifyStep, prefix string) []string {
+	var errs []string
+	for i, step := range steps {
+		sp := fmt.Sprintf("%s.verify[%d]", prefix, i)
+
+		if step.Type == "" {
+			errs = append(errs, fmt.Sprintf("%s: type is required", sp))
+			continue
+		}
+		if !validVerifyTypes[step.Type] {
+			errs = append(errs, fmt.Sprintf("%s: unknown type %q", sp, step.Type))
+			continue
+		}
+
+		switch step.Type {
+		case "check":
+			if step.Run == "" {
+				errs = append(errs, fmt.Sprintf("%s: check requires run", sp))
+			}
+			if step.Run == "true" || step.Run == "false" {
+				errs = append(errs, fmt.Sprintf("%s: check run must be a shell command, not a boolean", sp))
+			}
+		case "check_output":
+			if step.Run == "" {
+				errs = append(errs, fmt.Sprintf("%s: check_output requires run", sp))
+			}
+		case "output_contains":
+			if len(step.Values) == 0 {
+				errs = append(errs, fmt.Sprintf("%s: output_contains requires values", sp))
+			}
+		case "command":
+			if step.Run == "" {
+				errs = append(errs, fmt.Sprintf("%s: command requires run", sp))
+			}
+		case "file_contains":
+			if step.Path == "" {
+				errs = append(errs, fmt.Sprintf("%s: file_contains requires path", sp))
+			}
+		case "http_check":
+			if step.URL == "" {
+				errs = append(errs, fmt.Sprintf("%s: http_check requires url", sp))
+			}
+		case "tcp_check":
+			if step.Host == "" {
+				errs = append(errs, fmt.Sprintf("%s: tcp_check requires host", sp))
+			}
+			if step.Port == 0 {
+				errs = append(errs, fmt.Sprintf("%s: tcp_check requires port", sp))
+			}
+		case "judge":
+			if len(step.Criteria) == 0 {
+				errs = append(errs, fmt.Sprintf("%s: judge requires criteria", sp))
+			}
+		}
+	}
+	return errs
+}
+
+func hasJudgeStep(steps []VerifyStep) bool {
+	for _, s := range steps {
+		if s.Type == "judge" {
+			return true
+		}
+	}
+	return false
+}
+

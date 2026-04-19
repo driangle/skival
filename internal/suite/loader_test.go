@@ -292,8 +292,12 @@ evals:
 
 	e := s.Evals[0]
 	expectedCheckOutput := filepath.Join(dir, "verify.sh")
-	if e.Correctness.CheckOutput != expectedCheckOutput {
-		t.Errorf("expected script path %q, got %q", expectedCheckOutput, e.Correctness.CheckOutput)
+	checkOutputStep := findVerifyStep(e.Verify, "check_output")
+	if checkOutputStep == nil {
+		t.Fatal("expected check_output verify step")
+	}
+	if checkOutputStep.Run != expectedCheckOutput {
+		t.Errorf("expected script path %q, got %q", expectedCheckOutput, checkOutputStep.Run)
 	}
 
 	expectedSkill := filepath.Join(dir, "skills", "my-skill.md")
@@ -342,8 +346,12 @@ evals:
 	if e.Dir != absDir {
 		t.Errorf("expected eval dir %q preserved, got %q", absDir, e.Dir)
 	}
-	if e.Correctness.CheckOutput != absCheckOutput {
-		t.Errorf("expected script %q preserved, got %q", absCheckOutput, e.Correctness.CheckOutput)
+	absCheckOutputStep := findVerifyStep(e.Verify, "check_output")
+	if absCheckOutputStep == nil {
+		t.Fatal("expected check_output verify step")
+	}
+	if absCheckOutputStep.Run != absCheckOutput {
+		t.Errorf("expected script %q preserved, got %q", absCheckOutput, absCheckOutputStep.Run)
 	}
 	if e.Treatments.Variations[0].Skill != absSkill {
 		t.Errorf("expected skill %q preserved, got %q", absSkill, e.Treatments.Variations[0].Skill)
@@ -1403,8 +1411,8 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].Correctness.JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q", s.Evals[0].Correctness.JudgeModel, "claude-opus-4-6")
+	if s.Evals[0].JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q", s.Evals[0].JudgeModel, "claude-opus-4-6")
 	}
 }
 
@@ -1431,8 +1439,8 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].Correctness.JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q", s.Evals[0].Correctness.JudgeModel, "claude-opus-4-6")
+	if s.Evals[0].JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q", s.Evals[0].JudgeModel, "claude-opus-4-6")
 	}
 }
 
@@ -1460,8 +1468,8 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].Correctness.JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q (eval should override defaults)", s.Evals[0].Correctness.JudgeModel, "claude-opus-4-6")
+	if s.Evals[0].JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q (eval should override defaults)", s.Evals[0].JudgeModel, "claude-opus-4-6")
 	}
 }
 
@@ -1487,9 +1495,228 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].Correctness.JudgeModel != "" {
-		t.Errorf("judge_model = %q, want empty (default should be applied at runtime)", s.Evals[0].Correctness.JudgeModel)
+	if s.Evals[0].JudgeModel != "" {
+		t.Errorf("judge_model = %q, want empty (default should be applied at runtime)", s.Evals[0].JudgeModel)
 	}
+}
+
+func TestLoad_MigrateStateToVerifySteps(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: state-test
+    prompt: "test"
+    model: "claude-sonnet-4-6"
+    correctness:
+      state:
+        - url: "http://localhost:8080/health"
+          method: GET
+          expect: "ok"
+        - url: "http://localhost:8080/ready"
+          method: POST
+          expect: "ready"
+    treatments:
+      control:
+        name: baseline
+        runner: claude-code
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	v := s.Evals[0].Verify
+	if len(v) != 2 {
+		t.Fatalf("expected 2 verify steps from migration, got %d", len(v))
+	}
+
+	if v[0].Type != "http_check" {
+		t.Errorf("step[0] type = %q, want http_check", v[0].Type)
+	}
+	if v[0].URL != "http://localhost:8080/health" {
+		t.Errorf("step[0] URL = %q, want http://localhost:8080/health", v[0].URL)
+	}
+	if v[0].Method != "GET" {
+		t.Errorf("step[0] Method = %q, want GET", v[0].Method)
+	}
+	if v[0].BodyContains != "ok" {
+		t.Errorf("step[0] BodyContains = %q, want ok", v[0].BodyContains)
+	}
+
+	if v[1].Type != "http_check" {
+		t.Errorf("step[1] type = %q, want http_check", v[1].Type)
+	}
+	if v[1].Method != "POST" {
+		t.Errorf("step[1] Method = %q, want POST", v[1].Method)
+	}
+	if v[1].BodyContains != "ready" {
+		t.Errorf("step[1] BodyContains = %q, want ready", v[1].BodyContains)
+	}
+}
+
+func TestLoad_FileContainsPathResolved(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: file-contains-test
+    prompt: "test"
+    model: "claude-sonnet-4-6"
+    correctness:
+      probes:
+        - file:
+            path: "output.txt"
+            assert:
+              exists: true
+    treatments:
+      control:
+        name: baseline
+        runner: claude-code
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	step := findVerifyStep(s.Evals[0].Verify, "file_contains")
+	if step == nil {
+		t.Fatal("expected file_contains verify step")
+	}
+	expected := filepath.Join(dir, "output.txt")
+	if step.Path != expected {
+		t.Errorf("file_contains path = %q, want %q", step.Path, expected)
+	}
+}
+
+func TestLoad_VerifyFileContainsPathResolved(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+evals:
+  - id: file-contains-test
+    prompt: "test"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: file_contains
+        path: "output.txt"
+    treatments:
+      control:
+        name: baseline
+        runner: claude-code
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	step := findVerifyStep(s.Evals[0].Verify, "file_contains")
+	if step == nil {
+		t.Fatal("expected file_contains verify step")
+	}
+	expected := filepath.Join(dir, "output.txt")
+	if step.Path != expected {
+		t.Errorf("file_contains path = %q, want %q", step.Path, expected)
+	}
+}
+
+func TestLoad_MigrateCorrectnessToVerify(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: migrate-test
+    prompt: "test"
+    model: "claude-sonnet-4-6"
+    correctness:
+      agent_exits_ok: true
+      check: "go build ./..."
+      output:
+        contains: ["hello"]
+      check_output: "./verify.sh"
+      judge: ["is correct"]
+      judge_model: "claude-opus-4-6"
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if len(e.Verify) != 5 {
+		t.Fatalf("expected 5 verify steps, got %d", len(e.Verify))
+	}
+
+	expected := []string{"agent_exits_ok", "check", "output_contains", "check_output", "judge"}
+	for i, typ := range expected {
+		if e.Verify[i].Type != typ {
+			t.Errorf("step[%d] type = %q, want %q", i, e.Verify[i].Type, typ)
+		}
+	}
+
+	if e.JudgeModel != "claude-opus-4-6" {
+		t.Errorf("judge_model = %q, want %q", e.JudgeModel, "claude-opus-4-6")
+	}
+}
+
+func TestLoad_VerifyDirectFormat(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: verify-test
+    prompt: "test"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
+      - type: check
+        run: "go build ./..."
+      - type: output_contains
+        values: ["hello"]
+    treatments:
+      control:
+        name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	e := s.Evals[0]
+	if len(e.Verify) != 3 {
+		t.Fatalf("expected 3 verify steps, got %d", len(e.Verify))
+	}
+
+	if e.Verify[0].Type != "agent_exits_ok" {
+		t.Errorf("step[0] type = %q, want agent_exits_ok", e.Verify[0].Type)
+	}
+	if e.Verify[1].Type != "check" || e.Verify[1].Run != "go build ./..." {
+		t.Errorf("step[1] = %+v, want check with run", e.Verify[1])
+	}
+	if e.Verify[2].Type != "output_contains" || len(e.Verify[2].Values) != 1 {
+		t.Errorf("step[2] = %+v, want output_contains with values", e.Verify[2])
+	}
+}
+
+func findVerifyStep(steps []VerifyStep, typ string) *VerifyStep {
+	for i := range steps {
+		if steps[i].Type == typ {
+			return &steps[i]
+		}
+	}
+	return nil
 }
 
 func writeSuiteFile(t *testing.T, dir, name, content string) {

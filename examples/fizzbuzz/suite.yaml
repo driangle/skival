@@ -18,9 +18,10 @@ evals:
     complexity: low
     setup:
       reset: "rm -f fizzbuzz.sh"
-    correctness:
-      agent_exits_ok: true
-      check_output: "./verify.sh"
+    verify:
+      - type: agent_exits_ok
+      - type: check_output
+        run: "./verify.sh"
     treatments:
       control:
         name: "baseline"

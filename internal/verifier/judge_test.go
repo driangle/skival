@@ -185,8 +185,8 @@ func TestJudgeVerifier_DefaultModelWhenEmpty(t *testing.T) {
 
 func TestBuildPipeline_JudgeModelPropagated(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
-	p := BuildPipeline(suite.Correctness{
-		Judge: []string{"output is correct"},
+	p := BuildPipeline([]suite.VerifyStep{
+		{Type: "judge", Criteria: []string{"output is correct"}},
 	}, "", WithJudge(runner, "do something", "claude-opus-4-6"))
 
 	if p == nil {
@@ -203,8 +203,8 @@ func TestBuildPipeline_JudgeModelPropagated(t *testing.T) {
 
 func TestBuildPipeline_WithJudge(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
-	p := BuildPipeline(suite.Correctness{
-		Judge: []string{"output is correct"},
+	p := BuildPipeline([]suite.VerifyStep{
+		{Type: "judge", Criteria: []string{"output is correct"}},
 	}, "", WithJudge(runner, "do something", ""))
 
 	if p == nil {
@@ -219,8 +219,8 @@ func TestBuildPipeline_WithJudge(t *testing.T) {
 }
 
 func TestBuildPipeline_JudgeWithoutRunner(t *testing.T) {
-	p := BuildPipeline(suite.Correctness{
-		Judge: []string{"output is correct"},
+	p := BuildPipeline([]suite.VerifyStep{
+		{Type: "judge", Criteria: []string{"output is correct"}},
 	}, "")
 
 	if p != nil {
@@ -230,9 +230,9 @@ func TestBuildPipeline_JudgeWithoutRunner(t *testing.T) {
 
 func TestBuildPipeline_JudgeIsLastStep(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
-	p := BuildPipeline(suite.Correctness{
-		Output:         suite.Output{Contains: []string{"hello"}},
-		Judge:          []string{"is good"},
+	p := BuildPipeline([]suite.VerifyStep{
+		{Type: "output_contains", Values: []string{"hello"}},
+		{Type: "judge", Criteria: []string{"is good"}},
 	}, "", WithJudge(runner, "prompt", ""))
 
 	if p == nil {
@@ -241,8 +241,8 @@ func TestBuildPipeline_JudgeIsLastStep(t *testing.T) {
 	if len(p.steps) != 2 {
 		t.Fatalf("expected 2 steps, got %d", len(p.steps))
 	}
-	if p.steps[0].name != "output" {
-		t.Errorf("step 0 should be output, got %q", p.steps[0].name)
+	if p.steps[0].name != "output_contains" {
+		t.Errorf("step 0 should be output_contains, got %q", p.steps[0].name)
 	}
 	if p.steps[1].name != "judge" {
 		t.Errorf("step 1 should be judge, got %q", p.steps[1].name)

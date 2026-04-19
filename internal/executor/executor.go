@@ -231,10 +231,10 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 		judgePrompt = t.Prompt
 	}
 	var pipelineOpts []verifier.PipelineOption
-	if len(eval.Correctness.Judge) > 0 {
-		pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, judgePrompt, eval.Correctness.JudgeModel))
+	if hasJudgeStep(eval.Verify) {
+		pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, judgePrompt, eval.JudgeModel))
 	}
-	pipeline := verifier.BuildPipeline(eval.Correctness, verifyDir, pipelineOpts...)
+	pipeline := verifier.BuildPipeline(eval.Verify, verifyDir, pipelineOpts...)
 
 	var bestRun result.RunResult
 	for attempt := 1; attempt <= retryCfg.maxAttempts; attempt++ {
@@ -630,4 +630,13 @@ func shouldInclude(name string, filterSet map[string]bool) bool {
 		return true
 	}
 	return filterSet[name]
+}
+
+func hasJudgeStep(steps []suite.VerifyStep) bool {
+	for _, s := range steps {
+		if s.Type == "judge" {
+			return true
+		}
+	}
+	return false
 }

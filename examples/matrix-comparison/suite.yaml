@@ -13,8 +13,9 @@ evals:
     complexity: low
     setup:
       reset: "rm -f hello.sh"
-    correctness:
-      check_output: "./verify.sh"
+    verify:
+      - type: check_output
+        run: "./verify.sh"
     matrix:
       dimensions:
         - name: runner

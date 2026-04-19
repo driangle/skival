@@ -1,11 +1,12 @@
 ---
 title: "Introduce typed correctness probes to replace state and unify assertion API"
 id: "01kpgv3xy"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["correctness", "yaml-api"]
 created: "2026-04-18"
+completed_at: 2026-04-19
 ---
 
 # Introduce typed correctness probes to replace state and unify assertion API
@@ -69,20 +70,20 @@ correctness:
 
 ## Tasks
 
-- [ ] Define new Go types: `Probe`, `HTTPProbe`, `FileProbe`, `CommandProbe`, `TCPProbe` and their assert structs in `internal/suite/suite.go`
-- [ ] Add `Probes []Probe` field to `Correctness` struct alongside existing fields
-- [ ] Implement `HTTPProbeVerifier` in `internal/verifier/` (replaces `StateVerifier` logic, adds `status` and future assertion types)
-- [ ] Implement `FileProbeVerifier` in `internal/verifier/`
-- [ ] Implement `CommandProbeVerifier` in `internal/verifier/`
-- [ ] Implement `TCPProbeVerifier` in `internal/verifier/`
-- [ ] Wire probes into `BuildPipeline` in `internal/verifier/pipeline.go`
-- [ ] Add YAML unmarshaling for the discriminator-key pattern (custom `UnmarshalYAML` on `Probe`)
-- [ ] Add validation: exactly one type key per probe entry, required fields per probe type
-- [ ] Migrate `state` → `probes` with backward compat: loader converts old `state` entries to `http` probes (with deprecation warning)
-- [ ] Update `examples/correctness/suite.yaml` to use `probes`
-- [ ] Add tests for each probe verifier
-- [ ] Add tests for the migration path (`state` → `probes`)
-- [ ] Add validation tests (malformed probes, missing assert fields, multiple type keys)
+- [x] Define new Go types: `Probe`, `HTTPProbe`, `FileProbe`, `CommandProbe`, `TCPProbe` and their assert structs in `internal/suite/suite.go`
+- [x] Add `Probes []Probe` field to `Correctness` struct alongside existing fields
+- [x] Implement `HTTPProbeVerifier` in `internal/verifier/` (replaces `StateVerifier` logic, adds `status` and future assertion types)
+- [x] Implement `FileProbeVerifier` in `internal/verifier/`
+- [x] Implement `CommandProbeVerifier` in `internal/verifier/`
+- [x] Implement `TCPProbeVerifier` in `internal/verifier/`
+- [x] Wire probes into `BuildPipeline` in `internal/verifier/pipeline.go`
+- [x] Add YAML unmarshaling for the discriminator-key pattern (custom `UnmarshalYAML` on `Probe`)
+- [x] Add validation: exactly one type key per probe entry, required fields per probe type
+- [x] Migrate `state` → `probes` with backward compat: loader converts old `state` entries to `http` probes (with deprecation warning)
+- [x] Update `examples/correctness/suite.yaml` to use `probes`
+- [x] Add tests for each probe verifier
+- [x] Add tests for the migration path (`state` → `probes`)
+- [x] Add validation tests (malformed probes, missing assert fields, multiple type keys)
 
 ## Acceptance Criteria
 

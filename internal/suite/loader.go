@@ -36,6 +36,8 @@ func Load(path string) (*Suite, error) {
 	}
 	expandMatrices(&s)
 	resolvePaths(&s, suiteDir)
+	migrateStateToProbes(&s)
+	migrateCorrectnessToVerify(&s)
 	migrateAllowedTools(&s)
 	mergeDefaults(&s)
 	resolveRunnerConfig(&s)
@@ -94,6 +96,28 @@ func resolvePaths(s *Suite, suiteDir string) {
 			e.Correctness.CheckOutput = filepath.Join(suiteDir, e.Correctness.CheckOutput)
 		}
 
+		for j := range e.Correctness.Probes {
+			if fp := e.Correctness.Probes[j].File; fp != nil {
+				if fp.Path != "" && !filepath.IsAbs(fp.Path) {
+					e.Correctness.Probes[j].File.Path = filepath.Join(suiteDir, fp.Path)
+				}
+			}
+		}
+
+		for j := range e.Verify {
+			step := &e.Verify[j]
+			switch step.Type {
+			case "check_output":
+				if step.Run != "" && !filepath.IsAbs(step.Run) {
+					step.Run = filepath.Join(suiteDir, step.Run)
+				}
+			case "file_contains":
+				if step.Path != "" && !filepath.IsAbs(step.Path) {
+					step.Path = filepath.Join(suiteDir, step.Path)
+				}
+			}
+		}
+
 		resolveTreatmentPaths(&e.Treatments.Control, suiteDir)
 		for j := range e.Treatments.Variations {
 			resolveTreatmentPaths(&e.Treatments.Variations[j], suiteDir)
@@ -116,6 +140,119 @@ func resolveTreatmentPaths(t *Treatment, suiteDir string) {
 	if t.ConfigDir != "" && !filepath.IsAbs(t.ConfigDir) {
 		t.ConfigDir = filepath.Join(suiteDir, t.ConfigDir)
 	}
+}
+
+// migrateStateToProbes converts deprecated state assertions to http probes
+// and logs a deprecation warning.
+func migrateStateToProbes(s *Suite) {
+	for i := range s.Evals {
+		e := &s.Evals[i]
+		if len(e.Correctness.State) == 0 {
+			continue
+		}
+		log.Printf("WARNING: eval %q uses deprecated state field; use correctness.probes instead", e.ID)
+		for _, sa := range e.Correctness.State {
+			probe := Probe{
+				HTTP: &HTTPProbe{
+					URL:    sa.URL,
+					Method: sa.Method,
+					Assert: HTTPProbeAssert{
+						BodyContains: sa.Expect,
+					},
+				},
+			}
+			e.Correctness.Probes = append(e.Correctness.Probes, probe)
+		}
+		e.Correctness.State = nil
+	}
+}
+
+// migrateCorrectnessToVerify converts deprecated correctness config to verify steps
+// and logs a deprecation warning.
+func migrateCorrectnessToVerify(s *Suite) {
+	for i := range s.Evals {
+		e := &s.Evals[i]
+		c := e.Correctness
+
+		if !hasCorrectnessConfig(c) {
+			continue
+		}
+
+		if len(e.Verify) > 0 {
+			log.Printf("WARNING: eval %q has both verify and correctness; correctness is ignored", e.ID)
+			e.Correctness = Correctness{}
+			continue
+		}
+
+		log.Printf("WARNING: eval %q uses deprecated correctness field; use verify instead", e.ID)
+
+		var steps []VerifyStep
+
+		if c.AgentExitsOK != nil && *c.AgentExitsOK {
+			steps = append(steps, VerifyStep{Type: "agent_exits_ok"})
+		}
+		if c.Check != "" {
+			steps = append(steps, VerifyStep{Type: "check", Run: c.Check})
+		}
+		if len(c.Output.Contains) > 0 {
+			steps = append(steps, VerifyStep{Type: "output_contains", Values: c.Output.Contains})
+		}
+		for _, p := range c.Probes {
+			switch {
+			case p.HTTP != nil:
+				steps = append(steps, VerifyStep{
+					Type:         "http_check",
+					URL:          p.HTTP.URL,
+					Method:       p.HTTP.Method,
+					Status:       p.HTTP.Assert.Status,
+					BodyContains: p.HTTP.Assert.BodyContains,
+				})
+			case p.File != nil:
+				steps = append(steps, VerifyStep{
+					Type:     "file_contains",
+					Path:     p.File.Path,
+					Exists:   p.File.Assert.Exists,
+					Contains: p.File.Assert.Contains,
+				})
+			case p.Command != nil:
+				steps = append(steps, VerifyStep{
+					Type:           "command",
+					Run:            p.Command.Run,
+					Exits:          p.Command.Assert.Exits,
+					StdoutContains: p.Command.Assert.StdoutContains,
+				})
+			case p.TCP != nil:
+				steps = append(steps, VerifyStep{
+					Type: "tcp_check",
+					Host: p.TCP.Host,
+					Port: p.TCP.Port,
+				})
+			}
+		}
+		if c.CheckOutput != "" {
+			steps = append(steps, VerifyStep{Type: "check_output", Run: c.CheckOutput})
+		}
+		if len(c.Judge) > 0 {
+			steps = append(steps, VerifyStep{Type: "judge", Criteria: c.Judge})
+		}
+
+		e.Verify = steps
+		if c.JudgeModel != "" {
+			e.JudgeModel = c.JudgeModel
+		}
+		e.Correctness = Correctness{}
+	}
+}
+
+func hasCorrectnessConfig(c Correctness) bool {
+	return c.Check != "" ||
+		c.AgentExitsOK != nil ||
+		len(c.Output.Contains) > 0 ||
+		c.CheckOutput != "" ||
+		len(c.State) > 0 ||
+		len(c.Probes) > 0 ||
+		len(c.Judge) > 0 ||
+		c.JudgeModel != ""
 }
 
 // migrateAllowedTools moves the deprecated AllowedTools field on treatments
@@ -165,8 +302,8 @@ func mergeDefaults(s *Suite) {
 		if e.Runner == "" && d.Runner != "" {
 			e.Runner = d.Runner
 		}
-		if e.Correctness.JudgeModel == "" && d.JudgeModel != "" {
-			e.Correctness.JudgeModel = d.JudgeModel
+		if e.JudgeModel == "" && d.JudgeModel != "" {
+			e.JudgeModel = d.JudgeModel
 		}
 		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
 		if e.Retry == nil && d.Retry != nil {

@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"context"
+	"fmt"
 
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/suite"
@@ -29,70 +30,131 @@ type namedVerifier struct {
 	verifier Verifier
 }
 
-// BuildPipeline assembles a verification pipeline from the eval's correctness config.
-// Only verifiers whose config fields are present are included.
-// Returns nil if no verifiers are configured.
-// The runner and prompt are only needed when judge criteria are configured.
-func BuildPipeline(c suite.Correctness, evalDir string, opts ...PipelineOption) *Pipeline {
+// BuildPipeline assembles a verification pipeline from verify steps.
+// Steps run in list order. Returns nil if no steps are provided.
+// The runner and prompt are only needed when judge steps are present.
+func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...PipelineOption) *Pipeline {
 	var cfg pipelineConfig
 	for _, o := range opts {
 		o(&cfg)
 	}
 	var steps []namedVerifier
 
-	if c.Check != "" {
-		steps = append(steps, namedVerifier{
-			name:     "check",
-			verifier: &CheckVerifier{Dir: evalDir, Command: c.Check},
-		})
-	}
+	for i, step := range verifySteps {
+		name := step.Name
 
-	if c.AgentExitsOK != nil && *c.AgentExitsOK {
-		steps = append(steps, namedVerifier{
-			name:     "agent_exits_ok",
-			verifier: &ExecuteVerifier{},
-		})
-	}
-
-	if len(c.Output.Contains) > 0 {
-		steps = append(steps, namedVerifier{
-			name:     "output",
-			verifier: &OutputVerifier{ExpectedSubstrings: c.Output.Contains},
-		})
-	}
-
-	if len(c.State) > 0 {
-		assertions := make([]StateAssertion, len(c.State))
-		for i, s := range c.State {
-			assertions[i] = StateAssertion{
-				URL:    s.URL,
-				Method: s.Method,
-				Expect: s.Expect,
+		switch step.Type {
+		case "agent_exits_ok":
+			if name == "" {
+				name = "agent_exits_ok"
+			}
+			steps = append(steps, namedVerifier{
+				name:     name,
+				verifier: &ExecuteVerifier{},
+			})
+		case "check":
+			if name == "" {
+				name = "check"
+			}
+			steps = append(steps, namedVerifier{
+				name:     name,
+				verifier: &CheckVerifier{Dir: evalDir, Command: step.Run},
+			})
+		case "check_output":
+			if name == "" {
+				name = "check_output"
+			}
+			steps = append(steps, namedVerifier{
+				name:     name,
+				verifier: &CheckOutputVerifier{Command: step.Run, Dir: evalDir},
+			})
+		case "output_contains":
+			if name == "" {
+				name = "output_contains"
+			}
+			steps = append(steps, namedVerifier{
+				name:     name,
+				verifier: &OutputVerifier{ExpectedSubstrings: step.Values},
+			})
+		case "command":
+			if name == "" {
+				name = fmt.Sprintf("command[%d]", i)
+			}
+			steps = append(steps, namedVerifier{
+				name: name,
+				verifier: &CommandProbeVerifier{
+					Probe: suite.CommandProbe{
+						Run: step.Run,
+						Assert: suite.CommandProbeAssert{
+							Exits:          step.Exits,
+							StdoutContains: step.StdoutContains,
+						},
+					},
+					Dir: evalDir,
+				},
+			})
+		case "file_contains":
+			if name == "" {
+				name = fmt.Sprintf("file_contains[%d]", i)
+			}
+			steps = append(steps, namedVerifier{
+				name: name,
+				verifier: &FileProbeVerifier{
+					Probe: suite.FileProbe{
+						Path: step.Path,
+						Assert: suite.FileProbeAssert{
+							Exists:   step.Exists,
+							Contains: step.Contains,
+						},
+					},
+				},
+			})
+		case "http_check":
+			if name == "" {
+				name = fmt.Sprintf("http_check[%d]", i)
+			}
+			steps = append(steps, namedVerifier{
+				name: name,
+				verifier: &HTTPProbeVerifier{
+					Probe: suite.HTTPProbe{
+						URL:    step.URL,
+						Method: step.Method,
+						Assert: suite.HTTPProbeAssert{
+							Status:       step.Status,
+							BodyContains: step.BodyContains,
+						},
+					},
+				},
+			})
+		case "tcp_check":
+			if name == "" {
+				name = fmt.Sprintf("tcp_check[%d]", i)
+			}
+			steps = append(steps, namedVerifier{
+				name: name,
+				verifier: &TCPProbeVerifier{
+					Probe: suite.TCPProbe{
+						Host: step.Host,
+						Port: step.Port,
+					},
+				},
+			})
+		case "judge":
+			if cfg.runner != nil {
+				if name == "" {
+					name = "judge"
+				}
+				steps = append(steps, namedVerifier{
+					name: name,
+					verifier: &JudgeVerifier{
+						Runner:   cfg.runner,
+						Criteria: step.Criteria,
+						Prompt:   cfg.evalPrompt,
+						Model:    cfg.judgeModel,
+					},
+				})
 			}
 		}
-		steps = append(steps, namedVerifier{
-			name:     "state",
-			verifier: &StateVerifier{Assertions: assertions},
-		})
-	}
-
-	if c.CheckOutput != "" {
-		steps = append(steps, namedVerifier{
-			name:     "check_output",
-			verifier: &CheckOutputVerifier{Command: c.CheckOutput, Dir: evalDir},
-		})
-	}
-
-	if len(c.Judge) > 0 && cfg.runner != nil {
-		steps = append(steps, namedVerifier{
-			name: "judge",
-			verifier: &JudgeVerifier{
-				Runner:   cfg.runner,
-				Criteria: c.Judge,
-				Prompt:   cfg.evalPrompt,
-				Model:    cfg.judgeModel,
-			},
-		})
 	}
 
 	if len(steps) == 0 {

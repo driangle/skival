@@ -48,38 +48,14 @@ var validateCmd = &cobra.Command{
 			}
 			fmt.Fprintf(out, ")\n")
 
-			verifiers := countVerifiers(eval.Correctness)
-			if verifiers > 0 {
-				fmt.Fprintf(out, "    verifiers:  %d\n", verifiers)
+			if len(eval.Verify) > 0 {
+				fmt.Fprintf(out, "    verifiers:  %d\n", len(eval.Verify))
 			}
 		}
 
 		fmt.Fprintln(out)
 		return nil
 	},
-}
-
-func countVerifiers(c suite.Correctness) int {
-	count := 0
-	if c.AgentExitsOK != nil && *c.AgentExitsOK {
-		count++
-	}
-	if c.Check != "" {
-		count++
-	}
-	if len(c.Output.Contains) > 0 {
-		count++
-	}
-	if c.CheckOutput != "" {
-		count++
-	}
-	if len(c.State) > 0 {
-		count++
-	}
-	if len(c.Judge) > 0 {
-		count++
-	}
-	return count
 }
 
 func init() {

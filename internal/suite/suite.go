@@ -54,13 +54,50 @@ type Eval struct {
 	Timeout      *int           `yaml:"timeout"`
 	Parallel     *int           `yaml:"parallel"`
 	Model        string         `yaml:"model"`
+	JudgeModel   string         `yaml:"judge_model,omitempty"`
 	Runner       string         `yaml:"runner"`
 	RunnerConfig map[string]any `yaml:"runner_config"`
 	Setup        Setup          `yaml:"setup"`
-	Correctness  Correctness    `yaml:"correctness"`
+	Verify       []VerifyStep   `yaml:"verify,omitempty"`
+	Correctness  Correctness    `yaml:"correctness"` // Deprecated: use Verify
 	Retry        *Retry         `yaml:"retry"`
 	Matrix       *Matrix        `yaml:"matrix,omitempty"`
 	Treatments   Treatments     `yaml:"treatments"`
+}
+
+// VerifyStep defines a single verification step.
+// Type determines which fields are relevant.
+type VerifyStep struct {
+	Type string `yaml:"type"`
+	Name string `yaml:"name,omitempty"`
+
+	// check, check_output, command
+	Run string `yaml:"run,omitempty"`
+
+	// command
+	Exits          *int   `yaml:"exits,omitempty"`
+	StdoutContains string `yaml:"stdout_contains,omitempty"`
+
+	// output_contains
+	Values []string `yaml:"values,omitempty"`
+
+	// file_contains
+	Path     string `yaml:"path,omitempty"`
+	Contains string `yaml:"contains,omitempty"`
+	Exists   *bool  `yaml:"exists,omitempty"`
+
+	// http_check
+	URL          string `yaml:"url,omitempty"`
+	Method       string `yaml:"method,omitempty"`
+	Status       *int   `yaml:"status,omitempty"`
+	BodyContains string `yaml:"body_contains,omitempty"`
+
+	// tcp_check
+	Host string `yaml:"host,omitempty"`
+	Port int    `yaml:"port,omitempty"`
+
+	// judge
+	Criteria []string `yaml:"criteria,omitempty"`
 }
 
 // Setup defines lifecycle hooks for an eval.
@@ -77,6 +114,7 @@ type Correctness struct {
 	Output       Output           `yaml:"output"`
 	CheckOutput  string           `yaml:"check_output"`
 	State        []StateAssertion `yaml:"state"`
+	Probes       []Probe          `yaml:"probes"`
 	Judge        []string         `yaml:"judge"`
 	JudgeModel   string           `yaml:"judge_model"`
 }
@@ -87,10 +125,68 @@ type Output struct {
 }
 
 // StateAssertion defines an HTTP assertion to check after execution.
+// Deprecated: use Probe with HTTPProbe instead.
 type StateAssertion struct {
 	URL    string `yaml:"url"`
 	Method string `yaml:"method"`
 	Expect string `yaml:"expect"`
+}
+
+// Probe defines a single typed probe. Exactly one type key must be set.
+type Probe struct {
+	HTTP    *HTTPProbe    `yaml:"http,omitempty"`
+	File    *FileProbe    `yaml:"file,omitempty"`
+	Command *CommandProbe `yaml:"command,omitempty"`
+	TCP     *TCPProbe     `yaml:"tcp,omitempty"`
+}
+
+// HTTPProbe checks an HTTP endpoint.
+type HTTPProbe struct {
+	URL    string          `yaml:"url"`
+	Method string          `yaml:"method"`
+	Assert HTTPProbeAssert `yaml:"assert"`
+}
+
+// HTTPProbeAssert defines assertions for an HTTP probe.
+type HTTPProbeAssert struct {
+	Status       *int   `yaml:"status,omitempty"`
+	BodyContains string `yaml:"body_contains,omitempty"`
+}
+
+// FileProbe checks a file on disk.
+type FileProbe struct {
+	Path   string          `yaml:"path"`
+	Assert FileProbeAssert `yaml:"assert"`
+}
+
+// FileProbeAssert defines assertions for a file probe.
+type FileProbeAssert struct {
+	Exists   *bool  `yaml:"exists,omitempty"`
+	Contains string `yaml:"contains,omitempty"`
+}
+
+// CommandProbe runs a shell command and checks its output.
+type CommandProbe struct {
+	Run    string             `yaml:"run"`
+	Assert CommandProbeAssert `yaml:"assert"`
+}
+
+// CommandProbeAssert defines assertions for a command probe.
+type CommandProbeAssert struct {
+	Exits          *int   `yaml:"exits,omitempty"`
+	StdoutContains string `yaml:"stdout_contains,omitempty"`
+}
+
+// TCPProbe checks TCP connectivity.
+type TCPProbe struct {
+	Host   string         `yaml:"host"`
+	Port   int            `yaml:"port"`
+	Assert TCPProbeAssert `yaml:"assert"`
+}
+
+// TCPProbeAssert defines assertions for a TCP probe.
+type TCPProbeAssert struct {
+	Open *bool `yaml:"open,omitempty"`
 }
 
 // Matrix defines dimensions for generating treatments from a cartesian product.

@@ -24,8 +24,8 @@ evals:
       # Runs once after all samples complete (e.g., tear down services)
       after: |
         rm -f input.txt output.txt
-    correctness:
-      agent_exits_ok: true
+    verify:
+      - type: agent_exits_ok
     treatments:
       control:
         name: baseline
