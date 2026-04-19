@@ -93,16 +93,16 @@ correctness:
 
 The judge receives the original prompt, the agent's output, and each criterion, then returns a pass/fail verdict.
 
-By default the judge uses `claude-haiku-4-5-20251001`. Override it with `judge_model`:
+By default the judge uses `claude-haiku-4-5-20251001`. Override it with `model` on the judge step:
 
 ```yaml
-correctness:
-  judge:
-    - "The code handles edge cases"
-  judge_model: "claude-sonnet-4-6"
+verify:
+  - type: judge
+    criteria: ["The code handles edge cases"]
+    model: "claude-sonnet-4-6"
 ```
 
-`judge_model` can also be set at suite defaults level (see [Configuration](configuration.md)).
+`defaults.judge_model` applies to any judge step that doesn't set its own `model` (see [Configuration](configuration.md)).
 
 ## Combining Verifiers
 

@@ -232,13 +232,14 @@ func migrateCorrectnessToVerify(s *Suite) {
 			steps = append(steps, VerifyStep{Type: "check_output", Run: c.CheckOutput})
 		}
 		if len(c.Judge) > 0 {
-			steps = append(steps, VerifyStep{Type: "judge", Criteria: c.Judge})
+			step := VerifyStep{Type: "judge", Criteria: c.Judge}
+			if c.JudgeModel != "" {
+				step.Model = c.JudgeModel
+			}
+			steps = append(steps, step)
 		}
 
 		e.Verify = steps
-		if c.JudgeModel != "" {
-			e.JudgeModel = c.JudgeModel
-		}
 		e.Correctness = Correctness{}
 	}
 }
@@ -300,8 +301,12 @@ func mergeDefaults(s *Suite) {
 		if e.Runner == "" && d.Runner != "" {
 			e.Runner = d.Runner
 		}
-		if e.JudgeModel == "" && d.JudgeModel != "" {
-			e.JudgeModel = d.JudgeModel
+		if d.JudgeModel != "" {
+			for j := range e.Verify {
+				if e.Verify[j].Type == "judge" && e.Verify[j].Model == "" {
+					e.Verify[j].Model = d.JudgeModel
+				}
+			}
 		}
 		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
 		if e.Retry == nil && d.Retry != nil {

@@ -1,11 +1,12 @@
 ---
 id: "01kpj1nss"
 title: "Move judge_model into judge verify step as model field"
-status: pending
+status: completed
 priority: medium
 dependencies: []
 tags: ["yaml-api", "verify"]
 created_at: 2026-04-19
+completed_at: 2026-04-19
 ---
 
 # Move judge_model into judge verify step as model field
@@ -30,16 +31,16 @@ evals:
 
 ## Tasks
 
-- [ ] Add `Model` field (`yaml:"model,omitempty"`) to `VerifyStep` in `internal/suite/suite.go`
-- [ ] Remove `JudgeModel` field from `Eval` struct
-- [ ] Update `mergeDefaults` to apply `defaults.judge_model` into judge verify steps that lack a `model`
-- [ ] Update `migrateCorrectnessToVerify` to put `Correctness.JudgeModel` on the judge step's `Model` field
-- [ ] Update `BuildPipeline` to read model from the judge step instead of `pipelineConfig`
-- [ ] Simplify `WithJudge` pipeline option (no longer needs judgeModel param)
-- [ ] Update executor to stop passing `eval.JudgeModel` — pipeline reads it from the step
-- [ ] Update judge_model warning in `validate.go` to check judge steps directly
-- [ ] Update tests (loader, pipeline, judge, validate)
-- [ ] Ensure `TestLoad_Examples` passes
+- [x] Add `Model` field (`yaml:"model,omitempty"`) to `VerifyStep` in `internal/suite/suite.go`
+- [x] Remove `JudgeModel` field from `Eval` struct
+- [x] Update `mergeDefaults` to apply `defaults.judge_model` into judge verify steps that lack a `model`
+- [x] Update `migrateCorrectnessToVerify` to put `Correctness.JudgeModel` on the judge step's `Model` field
+- [x] Update `BuildPipeline` to read model from the judge step instead of `pipelineConfig`
+- [x] Simplify `WithJudge` pipeline option (no longer needs judgeModel param)
+- [x] Update executor to stop passing `eval.JudgeModel` — pipeline reads it from the step
+- [x] Update judge_model warning in `validate.go` to check judge steps directly
+- [x] Update tests (loader, pipeline, judge, validate)
+- [x] Ensure `TestLoad_Examples` passes
 
 ## Acceptance Criteria
 

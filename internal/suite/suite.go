@@ -53,7 +53,6 @@ Samples      *int           `yaml:"samples"`
 	Timeout      *int           `yaml:"timeout"`
 	Parallel     *int           `yaml:"parallel"`
 	Model        string         `yaml:"model"`
-	JudgeModel   string         `yaml:"judge_model,omitempty"`
 	Runner       string         `yaml:"runner"`
 	RunnerConfig map[string]any `yaml:"runner_config"`
 	Setup        Setup          `yaml:"setup"`
@@ -97,6 +96,7 @@ type VerifyStep struct {
 
 	// judge
 	Criteria []string `yaml:"criteria,omitempty"`
+	Model    string   `yaml:"model,omitempty"`
 }
 
 // Setup defines lifecycle hooks for an eval.

@@ -186,8 +186,8 @@ func TestJudgeVerifier_DefaultModelWhenEmpty(t *testing.T) {
 func TestBuildPipeline_JudgeModelPropagated(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
 	p := BuildPipeline([]suite.VerifyStep{
-		{Type: "judge", Criteria: []string{"output is correct"}},
-	}, "", WithJudge(runner, "do something", "claude-opus-4-6"))
+		{Type: "judge", Criteria: []string{"output is correct"}, Model: "claude-opus-4-6"},
+	}, "", WithJudge(runner, "do something"))
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -205,7 +205,7 @@ func TestBuildPipeline_WithJudge(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
 	p := BuildPipeline([]suite.VerifyStep{
 		{Type: "judge", Criteria: []string{"output is correct"}},
-	}, "", WithJudge(runner, "do something", ""))
+	}, "", WithJudge(runner, "do something"))
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -233,7 +233,7 @@ func TestBuildPipeline_JudgeIsLastStep(t *testing.T) {
 	p := BuildPipeline([]suite.VerifyStep{
 		{Type: "output_contains", Values: []string{"hello"}},
 		{Type: "judge", Criteria: []string{"is good"}},
-	}, "", WithJudge(runner, "prompt", ""))
+	}, "", WithJudge(runner, "prompt"))
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")

@@ -1374,8 +1374,12 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q", s.Evals[0].JudgeModel, "claude-opus-4-6")
+	judgeStep := findJudgeStep(s.Evals[0].Verify)
+	if judgeStep == nil {
+		t.Fatal("expected judge step in verify")
+	}
+	if judgeStep.Model != "claude-opus-4-6" {
+		t.Errorf("judge step model = %q, want %q", judgeStep.Model, "claude-opus-4-6")
 	}
 }
 
@@ -1401,8 +1405,12 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q", s.Evals[0].JudgeModel, "claude-opus-4-6")
+	judgeStep := findJudgeStep(s.Evals[0].Verify)
+	if judgeStep == nil {
+		t.Fatal("expected judge step in verify")
+	}
+	if judgeStep.Model != "claude-opus-4-6" {
+		t.Errorf("judge step model = %q, want %q", judgeStep.Model, "claude-opus-4-6")
 	}
 }
 
@@ -1429,8 +1437,12 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q (eval should override defaults)", s.Evals[0].JudgeModel, "claude-opus-4-6")
+	judgeStep := findJudgeStep(s.Evals[0].Verify)
+	if judgeStep == nil {
+		t.Fatal("expected judge step in verify")
+	}
+	if judgeStep.Model != "claude-opus-4-6" {
+		t.Errorf("judge step model = %q, want %q (eval should override defaults)", judgeStep.Model, "claude-opus-4-6")
 	}
 }
 
@@ -1455,8 +1467,12 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].JudgeModel != "" {
-		t.Errorf("judge_model = %q, want empty (default should be applied at runtime)", s.Evals[0].JudgeModel)
+	judgeStep := findJudgeStep(s.Evals[0].Verify)
+	if judgeStep == nil {
+		t.Fatal("expected judge step in verify")
+	}
+	if judgeStep.Model != "" {
+		t.Errorf("judge step model = %q, want empty (default should be applied at runtime)", judgeStep.Model)
 	}
 }
 
@@ -1619,8 +1635,12 @@ evals:
 		}
 	}
 
-	if e.JudgeModel != "claude-opus-4-6" {
-		t.Errorf("judge_model = %q, want %q", e.JudgeModel, "claude-opus-4-6")
+	judgeStep := findJudgeStep(e.Verify)
+	if judgeStep == nil {
+		t.Fatal("expected judge step in verify")
+	}
+	if judgeStep.Model != "claude-opus-4-6" {
+		t.Errorf("judge step model = %q, want %q", judgeStep.Model, "claude-opus-4-6")
 	}
 }
 
@@ -1679,4 +1699,13 @@ func writeSuiteFile(t *testing.T, dir, name, content string) {
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func findJudgeStep(steps []VerifyStep) *VerifyStep {
+	for i := range steps {
+		if steps[i].Type == "judge" {
+			return &steps[i]
+		}
+	}
+	return nil
 }

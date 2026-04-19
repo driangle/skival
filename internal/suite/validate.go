@@ -125,13 +125,6 @@ func validate(s *Suite) error {
 		}
 	}
 
-	// Warn if judge_model is set without judge step.
-	for i, eval := range s.Evals {
-		if eval.JudgeModel != "" && !hasJudgeStep(eval.Verify) {
-			log.Printf("WARNING: eval[%d] %q: judge_model is set but no judge step in verify", i, eval.ID)
-		}
-	}
-
 	// Validate ranking weights.
 	errs = append(errs, validateRankingWeights(s.Ranking)...)
 
@@ -319,14 +312,5 @@ func validateVerifySteps(steps []VerifyStep, prefix string) []string {
 		}
 	}
 	return errs
-}
-
-func hasJudgeStep(steps []VerifyStep) bool {
-	for _, s := range steps {
-		if s.Type == "judge" {
-			return true
-		}
-	}
-	return false
 }
 
