@@ -15,7 +15,6 @@ evals:
       Rules: print "Fizz" for multiples of 3, "Buzz" for multiples of 5,
       "FizzBuzz" for multiples of both, and the number itself otherwise.
       Each value on its own line.
-    complexity: low
     setup:
       reset: "rm -f fizzbuzz.sh"
     verify:

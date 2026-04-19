@@ -21,7 +21,6 @@ evals:
     name: "Test Eval"
     prompt: "do something"
     model: "claude-sonnet-4-6"
-    complexity: medium
     variants:
       - name: "baseline"
       - name: "variant-1"
@@ -38,7 +37,6 @@ evals:
 	assertContains(t, out, "evals:       1")
 	assertContains(t, out, `eval "eval-1"`)
 	assertContains(t, out, `name:       Test Eval`)
-	assertContains(t, out, `complexity: medium`)
 	assertContains(t, out, `variants:   2`)
 	assertContains(t, out, `"baseline"`)
 	assertContains(t, out, `"variant-1"`)

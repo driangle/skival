@@ -19,13 +19,6 @@ func (e *ValidationError) Error() string {
 		len(e.Errors), strings.Join(e.Errors, "\n- "))
 }
 
-var validComplexities = map[string]bool{
-	"":       true,
-	"low":    true,
-	"medium": true,
-	"high":   true,
-}
-
 var validRunners = map[string]bool{
 	"claude-code": true,
 	"ollama":      true,
@@ -90,10 +83,6 @@ func validate(s *Suite) error {
 		}
 
 		errs = append(errs, validateVerifySteps(eval.Verify, prefix)...)
-
-		if !validComplexities[eval.Complexity] {
-			errs = append(errs, fmt.Sprintf("%s: invalid complexity %q (must be low, medium, or high)", prefix, eval.Complexity))
-		}
 
 		if eval.Runner != "" && !validRunners[eval.Runner] {
 			errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))

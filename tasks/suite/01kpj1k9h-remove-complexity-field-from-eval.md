@@ -1,11 +1,12 @@
 ---
 id: "01kpj1k9h"
 title: "Remove complexity field from eval"
-status: pending
+status: completed
 priority: low
 dependencies: []
 tags: ["cleanup"]
 created_at: 2026-04-19
+completed_at: 2026-04-19
 ---
 
 # Remove complexity field from eval
@@ -16,12 +17,12 @@ Remove the `complexity` field from `Eval`. It is validated and printed in `skiva
 
 ## Tasks
 
-- [ ] Remove `Complexity` field from `Eval` struct in `internal/suite/suite.go`
-- [ ] Remove `validComplexities` map and complexity validation in `internal/suite/validate.go`
-- [ ] Remove complexity printing in `apps/cli/cmd/validate.go`
-- [ ] Remove `complexity` from all example suite.yaml files
-- [ ] Remove complexity-related tests in `internal/suite/validate_test.go`
-- [ ] Ensure all tests pass
+- [x] Remove `Complexity` field from `Eval` struct in `internal/suite/suite.go`
+- [x] Remove `validComplexities` map and complexity validation in `internal/suite/validate.go`
+- [x] Remove complexity printing in `apps/cli/cmd/validate.go`
+- [x] Remove `complexity` from all example suite.yaml files
+- [x] Remove complexity-related tests in `internal/suite/validate_test.go`
+- [x] Ensure all tests pass
 
 ## Acceptance Criteria
 

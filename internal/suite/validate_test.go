@@ -152,32 +152,6 @@ func TestValidate_DuplicateEvalIDs(t *testing.T) {
 	assertValidationContains(t, err, `duplicate id "dup"`)
 }
 
-func TestValidate_InvalidComplexity(t *testing.T) {
-	s := &Suite{
-		Version: 1,
-		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Complexity: "extreme", Variants: []Treatment{{Name: "c"}}},
-		},
-	}
-
-	err := validate(s)
-	assertValidationContains(t, err, `invalid complexity "extreme"`)
-}
-
-func TestValidate_ValidComplexities(t *testing.T) {
-	for _, c := range []string{"", "low", "medium", "high"} {
-		s := &Suite{
-			Version: 1,
-			Evals: []Eval{
-				{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Complexity: c, Variants: []Treatment{{Name: "c", Runner: "claude-code"}}},
-			},
-		}
-		if err := validate(s); err != nil {
-			t.Errorf("complexity %q should be valid, got: %v", c, err)
-		}
-	}
-}
-
 func TestValidate_AtLeastOneVariantRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
@@ -203,7 +177,7 @@ func TestValidate_VariantNameRequired(t *testing.T) {
 func TestValidate_MultipleErrors(t *testing.T) {
 	s := &Suite{
 		Version: 0,
-		Evals:   []Eval{{Complexity: "wrong"}},
+		Evals:   []Eval{{}},
 	}
 
 	var ve *ValidationError
@@ -212,8 +186,8 @@ func TestValidate_MultipleErrors(t *testing.T) {
 		t.Fatalf("expected ValidationError, got: %v", err)
 	}
 
-	if len(ve.Errors) < 4 {
-		t.Errorf("expected at least 4 errors (version, id, complexity, variants), got %d: %v",
+	if len(ve.Errors) < 3 {
+		t.Errorf("expected at least 3 errors (version, id, variants), got %d: %v",
 			len(ve.Errors), ve.Errors)
 	}
 }

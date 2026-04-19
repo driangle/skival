@@ -3,7 +3,6 @@ name: "String Reversal"
 prompt: |
   Write a function that reverses a string in-place.
   Save it to reverse.py.
-complexity: low
 variants:
   - name: baseline
   - name: opus-model

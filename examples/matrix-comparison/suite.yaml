@@ -10,7 +10,6 @@ evals:
     name: "Hello World"
     prompt: |
       Write a file called hello.sh that prints "Hello, World!" to stdout.
-    complexity: low
     setup:
       reset: "rm -f hello.sh"
     verify:

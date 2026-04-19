@@ -1,16 +1,15 @@
-# Evals at each complexity level with different sample counts.
+# Evals with different sample counts and timeouts.
 version: 1
-description: "Demonstrates complexity levels"
+description: "Demonstrates sample and timeout configuration"
 
 defaults:
   runner: claude-code
   model: "claude-sonnet-4-6"
 
 evals:
-  - id: low-complexity
+  - id: simple-task
     name: "Simple file creation"
     prompt: "Create a file called hello.txt containing 'hello'."
-    complexity: low
     samples: 5
     timeout: 30
     variants:
@@ -18,12 +17,11 @@ evals:
       - name: opus-model
         model: "claude-opus-4-6"
 
-  - id: medium-complexity
+  - id: medium-task
     name: "REST API endpoint"
     prompt: |
       Write a Python Flask app in app.py with a GET /users endpoint
       that returns a JSON list of users.
-    complexity: medium
     samples: 3
     timeout: 120
     variants:
@@ -31,12 +29,11 @@ evals:
       - name: opus-model
         model: "claude-opus-4-6"
 
-  - id: high-complexity
+  - id: large-task
     name: "Full CRUD application"
     prompt: |
       Build a complete TODO application with a SQLite backend.
       Include CRUD endpoints, input validation, and error handling.
-    complexity: high
     samples: 2
     timeout: 300
     variants:

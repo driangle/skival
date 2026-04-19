@@ -36,9 +36,6 @@ var validateCmd = &cobra.Command{
 			if eval.Name != "" {
 				fmt.Fprintf(out, "    name:       %s\n", eval.Name)
 			}
-			if eval.Complexity != "" {
-				fmt.Fprintf(out, "    complexity: %s\n", eval.Complexity)
-			}
 			fmt.Fprintf(out, "    variants:   %d (", len(eval.Variants))
 			for i, v := range eval.Variants {
 				if i > 0 {
