@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/driangle/skival/internal/color"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/spf13/cobra"
 )
@@ -20,11 +21,11 @@ var validateCmd = &cobra.Command{
 
 		s, err := suite.Load(path)
 		if err != nil {
-			fmt.Fprintf(errOut, "FAIL %s\n\n%v\n", path, err)
+			fmt.Fprintf(errOut, "%s %s\n\n%v\n", color.Red("FAIL"), path, err)
 			return err
 		}
 
-		fmt.Fprintf(out, "OK %s\n\n", path)
+		fmt.Fprintf(out, "%s %s\n\n", color.Green("OK"), path)
 		fmt.Fprintf(out, "  version:     %d\n", s.Version)
 		if s.Description != "" {
 			fmt.Fprintf(out, "  description: %s\n", s.Description)

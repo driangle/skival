@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/driangle/skival/internal/color"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/verifier"
 )
@@ -32,7 +33,7 @@ func (p *progress) evalStart(evalNum, totalEvals int, evalLabel string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	fmt.Fprintf(p.w, "\r\033[K[%s] eval %d/%d: %s\n",
-		p.elapsed(), evalNum, totalEvals, evalLabel)
+		color.Dim(p.elapsed()), evalNum, totalEvals, color.Cyan(evalLabel))
 }
 
 func (p *progress) evalError(evalLabel string, err error) {
@@ -41,7 +42,8 @@ func (p *progress) evalError(evalLabel string, err error) {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	fmt.Fprintf(p.w, "\r\033[K[%s] %s: ERROR: %v\n", p.elapsed(), evalLabel, err)
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s: %s: %v\n",
+		color.Dim(p.elapsed()), color.Cyan(evalLabel), color.Red("ERROR"), err)
 }
 
 func (p *progress) sampleStart(evalLabel, variantName string, sample, totalSamples int) {
@@ -50,8 +52,9 @@ func (p *progress) sampleStart(evalLabel, variantName string, sample, totalSampl
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > sample %d/%d (cost: $%.4f)",
-		p.elapsed(), evalLabel, variantName, sample, totalSamples, p.totalCost)
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > sample %d/%d %s",
+		color.Dim(p.elapsed()), color.Cyan(evalLabel), color.Cyan(variantName),
+		sample, totalSamples, color.Dimf("(cost: $%.4f)", p.totalCost))
 }
 
 func (p *progress) workdir(evalLabel, variantName, dir string) {
@@ -61,7 +64,7 @@ func (p *progress) workdir(evalLabel, variantName, dir string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > workdir: %s\n",
-		p.elapsed(), evalLabel, variantName, dir)
+		color.Dim(p.elapsed()), color.Cyan(evalLabel), color.Cyan(variantName), dir)
 }
 
 func (p *progress) sessionID(evalLabel, variantName, sessionID string) {
@@ -71,7 +74,7 @@ func (p *progress) sessionID(evalLabel, variantName, sessionID string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > session: %s\n",
-		p.elapsed(), evalLabel, variantName, sessionID)
+		color.Dim(p.elapsed()), color.Cyan(evalLabel), color.Cyan(variantName), sessionID)
 }
 
 func (p *progress) verifyResults(evalLabel, variantName string, steps []verifier.StepResult) {
@@ -81,14 +84,14 @@ func (p *progress) verifyResults(evalLabel, variantName string, steps []verifier
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, step := range steps {
-		status := "PASS"
+		status := color.Green("PASS")
 		if !step.Result.Pass {
-			status = "FAIL"
+			status = color.Red("FAIL")
 		}
 		line := fmt.Sprintf("\r\033[K[%s] %s > %s > verify %s: %s",
-			p.elapsed(), evalLabel, variantName, step.Name, status)
+			color.Dim(p.elapsed()), color.Cyan(evalLabel), color.Cyan(variantName), step.Name, status)
 		if !step.Result.Pass && step.Result.Reason != "" {
-			line += fmt.Sprintf(" (%s)", step.Result.Reason)
+			line += color.Redf(" (%s)", step.Result.Reason)
 		}
 		fmt.Fprintln(p.w, line)
 	}
@@ -101,16 +104,17 @@ func (p *progress) sampleDone(evalLabel, variantName string, sample int, costUSD
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.totalCost += costUSD
-	status := "done"
+	status := color.Green("done")
 	if pass != nil {
 		if *pass {
-			status = "PASS"
+			status = color.Green("PASS")
 		} else {
-			status = "FAIL"
+			status = color.Red("FAIL")
 		}
 	}
-	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > sample %d: %s (cost: $%.4f)\n",
-		p.elapsed(), evalLabel, variantName, sample, status, costUSD)
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > sample %d: %s %s\n",
+		color.Dim(p.elapsed()), color.Cyan(evalLabel), color.Cyan(variantName),
+		sample, status, color.Dimf("(cost: $%.4f)", costUSD))
 }
 
 func (p *progress) skippedVariants(evalLabel string, skipped []result.SkippedVariant) {
@@ -123,8 +127,9 @@ func (p *progress) skippedVariants(evalLabel string, skipped []result.SkippedVar
 	for i, s := range skipped {
 		names[i] = s.Name
 	}
-	fmt.Fprintf(p.w, "\r\033[K[%s] Skipping %d remaining variants for eval %q: %s\n",
-		p.elapsed(), len(skipped), evalLabel, fmt.Sprintf("%v", names))
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s\n",
+		color.Dim(p.elapsed()),
+		color.Yellowf("Skipping %d remaining variants for eval %q: %v", len(skipped), evalLabel, names))
 }
 
 func (p *progress) finish() {
@@ -133,7 +138,8 @@ func (p *progress) finish() {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	fmt.Fprintf(p.w, "\r\033[K[%s] done, total cost: $%.4f\n", p.elapsed(), p.totalCost)
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s %s\n",
+		color.Dim(p.elapsed()), color.Green("done,"), color.Dimf("total cost: $%.4f", p.totalCost))
 }
 
 func (p *progress) elapsed() string {

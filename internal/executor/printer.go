@@ -5,6 +5,7 @@ import (
 	"io"
 	"text/tabwriter"
 
+	"github.com/driangle/skival/internal/color"
 	"github.com/driangle/skival/internal/result"
 )
 
@@ -24,18 +25,18 @@ func PrintResults(w io.Writer, sr *result.SuiteResult) {
 	for _, eval := range sr.Evals {
 		for _, treat := range eval.Variants {
 			for _, run := range treat.Runs {
-				status := "ok"
+				status := color.Green("ok")
 				if run.Err != nil {
-					status = "error"
+					status = color.Red("error")
 				} else if run.IsError {
-					status = "failed"
+					status = color.Red("failed")
 				}
 
-				cost := fmt.Sprintf("$%.4f", run.CostUSD)
-				duration := formatDuration(run.DurationMs)
+				cost := color.Dimf("$%.4f", run.CostUSD)
+				duration := color.Dim(formatDuration(run.DurationMs))
 
 				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\n",
-					eval.EvalName, treat.Name, run.Sample, status, cost, duration)
+					color.Cyan(eval.EvalName), color.Cyan(treat.Name), run.Sample, status, cost, duration)
 			}
 
 			if agg := treat.Aggregate; agg != nil && len(treat.Runs) >= 2 {
@@ -48,26 +49,26 @@ func PrintResults(w io.Writer, sr *result.SuiteResult) {
 }
 
 func printAggregate(tw *tabwriter.Writer, evalName, treatName string, agg *result.Aggregate) {
-	costRange := fmt.Sprintf("$%.4f [$%.4f–$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
-	durationRange := fmt.Sprintf("%s [%s–%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs))
+	costRange := color.Dimf("$%.4f [$%.4f–$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
+	durationRange := color.Dim(fmt.Sprintf("%s [%s–%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs)))
 
 	passStr := "—"
 	if agg.Pass != nil {
 		if *agg.Pass {
-			passStr = "PASS"
+			passStr = color.Green("PASS")
 		} else {
-			passStr = "FAIL"
+			passStr = color.Red("FAIL")
 		}
 	}
 
 	cvInfo := ""
 	if agg.CostCV != nil {
-		cvInfo += fmt.Sprintf(" cost_cv=%.1f%%", *agg.CostCV*100)
+		cvInfo += color.Dimf(" cost_cv=%.1f%%", *agg.CostCV*100)
 	}
 	if agg.DurationCV != nil {
-		cvInfo += fmt.Sprintf(" dur_cv=%.1f%%", *agg.DurationCV*100)
+		cvInfo += color.Dimf(" dur_cv=%.1f%%", *agg.DurationCV*100)
 	}
 
 	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\n",
-		evalName, treatName, passStr, costRange, durationRange, cvInfo)
+		color.Cyan(evalName), color.Cyan(treatName), passStr, costRange, durationRange, cvInfo)
 }
