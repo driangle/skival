@@ -14,6 +14,9 @@ type Options struct {
 	Samples int
 	// Parallel sets the max number of concurrent samples. 0 or 1 = sequential.
 	Parallel int
+	// ParallelVariants sets the max number of concurrent variants per eval.
+	// 0 or 1 = sequential. When > 1, the reset hook is skipped.
+	ParallelVariants int
 	// Timeout overrides the per-eval timeout (in seconds) when set (> 0).
 	Timeout int
 }

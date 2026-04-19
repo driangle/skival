@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1531,5 +1532,121 @@ func TestParallelOptionOverridesSuiteDefault(t *testing.T) {
 	// Should have run in parallel despite eval setting sequential.
 	if elapsed >= 180*time.Millisecond {
 		t.Errorf("expected parallel execution (CLI override), took %v", elapsed)
+	}
+}
+
+func TestParallelVariantsRunConcurrently(t *testing.T) {
+	runner := &concurrentRunner{
+		result: &agentrunner.Result{Text: "ok", CostUSD: 0.01, Duration: time.Second},
+		delay:  50 * time.Millisecond,
+	}
+
+	s := &suite.Suite{
+		Version: 1,
+		Evals: []suite.Eval{
+			{
+				ID:     "eval-1",
+				Name:   "Test Eval",
+				Prompt: "do something",
+				Variants: []suite.Treatment{
+					{Name: "v1", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+					{Name: "v2", Runner: "claude-code", Model: "claude-opus-4-6"},
+					{Name: "v3", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+					{Name: "v4", Runner: "claude-code", Model: "claude-opus-4-6"},
+				},
+			},
+		},
+	}
+
+	start := time.Now()
+	sr, err := Execute(context.Background(), s, fakeRegistryWith("claude-code", runner), &Options{ParallelVariants: 4})
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(sr.Evals[0].Treatments) != 4 {
+		t.Fatalf("expected 4 treatments, got %d", len(sr.Evals[0].Treatments))
+	}
+
+	// With 4 parallel variants and 50ms delay each, should finish much faster than 4*50ms=200ms.
+	if elapsed >= 180*time.Millisecond {
+		t.Errorf("expected parallel variant execution to be faster, took %v", elapsed)
+	}
+
+	// Verify actual concurrency was observed.
+	if runner.maxSeen.Load() < 2 {
+		t.Errorf("expected at least 2 concurrent variants, peak was %d", runner.maxSeen.Load())
+	}
+}
+
+func TestParallelVariantsOrderPreserved(t *testing.T) {
+	runner := &concurrentRunner{
+		result: &agentrunner.Result{Text: "ok"},
+		delay:  10 * time.Millisecond,
+	}
+
+	s := &suite.Suite{
+		Version: 1,
+		Evals: []suite.Eval{
+			{
+				ID:     "eval-1",
+				Name:   "Test Eval",
+				Prompt: "do something",
+				Variants: []suite.Treatment{
+					{Name: "v1", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+					{Name: "v2", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+					{Name: "v3", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+				},
+			},
+		},
+	}
+
+	sr, err := Execute(context.Background(), s, fakeRegistryWith("claude-code", runner), &Options{ParallelVariants: 3})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	treatments := sr.Evals[0].Treatments
+	if len(treatments) != 3 {
+		t.Fatalf("expected 3 treatments, got %d", len(treatments))
+	}
+	for i, tr := range treatments {
+		expected := fmt.Sprintf("v%d", i+1)
+		if tr.Name != expected {
+			t.Errorf("treatment[%d] name = %q, want %q", i, tr.Name, expected)
+		}
+	}
+}
+
+func TestParallelVariantsDefaultSequential(t *testing.T) {
+	runner := &concurrentRunner{
+		result: &agentrunner.Result{Text: "ok"},
+		delay:  10 * time.Millisecond,
+	}
+
+	s := &suite.Suite{
+		Version: 1,
+		Evals: []suite.Eval{
+			{
+				ID:     "eval-1",
+				Name:   "Test Eval",
+				Prompt: "do something",
+				Variants: []suite.Treatment{
+					{Name: "v1", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+					{Name: "v2", Runner: "claude-code", Model: "claude-sonnet-4-6"},
+				},
+			},
+		},
+	}
+
+	_, err := Execute(context.Background(), s, fakeRegistryWith("claude-code", runner), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Sequential: peak concurrency should be 1.
+	if runner.maxSeen.Load() != 1 {
+		t.Errorf("expected peak concurrency 1 (sequential), got %d", runner.maxSeen.Load())
 	}
 }

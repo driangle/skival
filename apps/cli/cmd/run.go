@@ -35,8 +35,9 @@ var runCmd = &cobra.Command{
 		treatments, _ := cmd.Flags().GetStringSlice("treatments")
 		samples, _ := cmd.Flags().GetInt("samples")
 		parallel, _ := cmd.Flags().GetInt("parallel")
+		parallelVariants, _ := cmd.Flags().GetInt("parallel-variants")
 		timeout, _ := cmd.Flags().GetInt("timeout")
-		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "parallel", parallel, "timeout", timeout)
+		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "parallel", parallel, "parallel-variants", parallelVariants, "timeout", timeout)
 
 		if timeout < 0 {
 			return fmt.Errorf("--timeout must be a positive number of seconds")
@@ -46,12 +47,13 @@ var runCmd = &cobra.Command{
 		}
 
 		execOpts := &executor.Options{
-			EvalIDs:    evalIDs,
-			Treatments: treatments,
-			Progress:   os.Stderr,
-			Samples:    samples,
-			Parallel:   parallel,
-			Timeout:    timeout,
+			EvalIDs:          evalIDs,
+			Treatments:       treatments,
+			Progress:         os.Stderr,
+			Samples:          samples,
+			Parallel:         parallel,
+			ParallelVariants: parallelVariants,
+			Timeout:          timeout,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
@@ -100,6 +102,7 @@ func defaultRegistry() *registry.Registry {
 func init() {
 	runCmd.Flags().Int("samples", 1, "Number of runs per treatment")
 	runCmd.Flags().IntP("parallel", "p", 0, "Max concurrent samples (default: sequential)")
+	runCmd.Flags().Int("parallel-variants", 0, "Max concurrent variants per eval (default: sequential, skips reset hook)")
 	runCmd.Flags().String("results-dir", "", "Directory for results output")
 	runCmd.Flags().StringSlice("treatments", nil, "Filter to specific treatments")
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")

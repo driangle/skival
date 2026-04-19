@@ -72,29 +72,56 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 		return er
 	}
 
-	runnerCache := make(map[string]agentrunner.Runner)
+	pv := opts.ParallelVariants
+	if pv > len(treatments) {
+		pv = len(treatments)
+	}
 
-	for i := range treatments {
-		// Run reset between treatments (not before the first one).
-		if i > 0 {
-			if err := runResetHook(ctx, eval.Setup, eval.Dir); err != nil {
-				er.Err = fmt.Errorf("reset hook failed between treatment %q and %q: %w",
-					treatments[i-1].treatment.Name, treatments[i].treatment.Name, err)
-				for _, t := range treatments[i:] {
-					er.Skipped = append(er.Skipped, result.SkippedTreatment{
-						Name:   t.treatment.Name,
-						Reason: fmt.Sprintf("reset hook failed after treatment %q", treatments[i-1].treatment.Name),
-					})
-				}
-				prog.evalError(eval.Name, er.Err)
-				prog.skippedTreatments(eval.Name, er.Skipped)
-				return er
-			}
+	if pv > 1 {
+		// Parallel variant execution with bounded concurrency.
+		results := make([]result.TreatmentResult, len(treatments))
+		sem := make(chan struct{}, pv)
+		var wg sync.WaitGroup
+
+		for i := range treatments {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				cache := make(map[string]agentrunner.Runner)
+				t := treatments[idx]
+				results[idx] = executeTreatment(ctx, eval, t.treatment, t.isControl, reg, cache, opts, prog)
+			}(i)
 		}
+		wg.Wait()
+		er.Treatments = append(er.Treatments, results...)
+	} else {
+		// Sequential execution (default).
+		runnerCache := make(map[string]agentrunner.Runner)
 
-		t := treatments[i]
-		tr := executeTreatment(ctx, eval, t.treatment, t.isControl, reg, runnerCache, opts, prog)
-		er.Treatments = append(er.Treatments, tr)
+		for i := range treatments {
+			// Run reset between treatments (not before the first one).
+			if i > 0 {
+				if err := runResetHook(ctx, eval.Setup, eval.Dir); err != nil {
+					er.Err = fmt.Errorf("reset hook failed between treatment %q and %q: %w",
+						treatments[i-1].treatment.Name, treatments[i].treatment.Name, err)
+					for _, t := range treatments[i:] {
+						er.Skipped = append(er.Skipped, result.SkippedTreatment{
+							Name:   t.treatment.Name,
+							Reason: fmt.Sprintf("reset hook failed after treatment %q", treatments[i-1].treatment.Name),
+						})
+					}
+					prog.evalError(eval.Name, er.Err)
+					prog.skippedTreatments(eval.Name, er.Skipped)
+					return er
+				}
+			}
+
+			t := treatments[i]
+			tr := executeTreatment(ctx, eval, t.treatment, t.isControl, reg, runnerCache, opts, prog)
+			er.Treatments = append(er.Treatments, tr)
+		}
 	}
 
 	return er
