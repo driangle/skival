@@ -350,9 +350,9 @@ evals:
 		t.Errorf("expected skill path %q, got %q", expectedSkill, e.Variants[1].Skill)
 	}
 
-	expectedTreatDir := filepath.Join(dir, "skills")
-	if e.Variants[1].Dir != expectedTreatDir {
-		t.Errorf("expected treatment dir %q, got %q", expectedTreatDir, e.Variants[1].Dir)
+	expectedVariantDir := filepath.Join(dir, "skills")
+	if e.Variants[1].Dir != expectedVariantDir {
+		t.Errorf("expected variant dir %q, got %q", expectedVariantDir, e.Variants[1].Dir)
 	}
 }
 
@@ -400,7 +400,7 @@ evals:
 		t.Errorf("expected skill %q preserved, got %q", absSkill, e.Variants[1].Skill)
 	}
 	if e.Variants[1].Dir != absDir {
-		t.Errorf("expected treatment dir %q preserved, got %q", absDir, e.Variants[1].Dir)
+		t.Errorf("expected variant dir %q preserved, got %q", absDir, e.Variants[1].Dir)
 	}
 }
 
@@ -441,10 +441,10 @@ evals:
 
 	ctrl := e.Variants[0]
 	if ctrl.Runner != "aider" {
-		t.Errorf("expected treatment runner %q, got %q", "aider", ctrl.Runner)
+		t.Errorf("expected variant runner %q, got %q", "aider", ctrl.Runner)
 	}
 	if ctrl.RunnerConfig["edit_format"] != "diff" {
-		t.Errorf("expected treatment runner_config.edit_format=%q, got %v", "diff", ctrl.RunnerConfig["edit_format"])
+		t.Errorf("expected variant runner_config.edit_format=%q, got %v", "diff", ctrl.RunnerConfig["edit_format"])
 	}
 }
 
@@ -600,7 +600,7 @@ evals:
 	}
 }
 
-func TestLoad_RunnerPropagatesEvalToTreatment(t *testing.T) {
+func TestLoad_RunnerPropagatesEvalToVariant(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
@@ -644,7 +644,7 @@ evals:
 	}
 }
 
-func TestLoad_TreatmentOverridesEvalRunner(t *testing.T) {
+func TestLoad_VariantOverridesEvalRunner(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
@@ -672,15 +672,15 @@ evals:
 	}
 
 	ctrl := s.Evals[0].Variants[0]
-	// Treatment runner is not overwritten
+	// Variant runner is not overwritten
 	if ctrl.Runner != "aider" {
-		t.Errorf("expected control runner %q (treatment override), got %q", "aider", ctrl.Runner)
+		t.Errorf("expected control runner %q (variant override), got %q", "aider", ctrl.Runner)
 	}
-	// Treatment key overrides eval key
+	// Variant key overrides eval key
 	if ctrl.RunnerConfig["sandbox"] != "none" {
-		t.Errorf("expected sandbox=%q (treatment override), got %v", "none", ctrl.RunnerConfig["sandbox"])
+		t.Errorf("expected sandbox=%q (variant override), got %v", "none", ctrl.RunnerConfig["sandbox"])
 	}
-	// Treatment-only key preserved
+	// Variant-only key preserved
 	if ctrl.RunnerConfig["edit_format"] != "diff" {
 		t.Errorf("expected edit_format=%q, got %v", "diff", ctrl.RunnerConfig["edit_format"])
 	}
@@ -747,10 +747,10 @@ evals:
 		t.Errorf("variation runner: want %q, got %q", "codex", v.Runner)
 	}
 	if v.RunnerConfig["max_turns"] != 20 {
-		t.Errorf("variation max_turns: want 20 (treatment), got %v", v.RunnerConfig["max_turns"])
+		t.Errorf("variation max_turns: want 20 (variant), got %v", v.RunnerConfig["max_turns"])
 	}
 	if v.RunnerConfig["custom_flag"] != true {
-		t.Errorf("variation custom_flag: want true (treatment), got %v", v.RunnerConfig["custom_flag"])
+		t.Errorf("variation custom_flag: want true (variant), got %v", v.RunnerConfig["custom_flag"])
 	}
 	if v.RunnerConfig["verbose"] != true {
 		t.Errorf("variation verbose: want true (defaults), got %v", v.RunnerConfig["verbose"])
@@ -1098,7 +1098,7 @@ evals:
 	}
 }
 
-func TestLoad_TreatmentPrompt(t *testing.T) {
+func TestLoad_VariantPrompt(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
@@ -1254,7 +1254,7 @@ evals:
 	// v1 has its own retry, overrides eval
 	v1 := e1.Variants[1]
 	if v1.Retry == nil || *v1.Retry.MaxAttempts != 5 {
-		t.Errorf("v1 should have retry max_attempts=5 (treatment override)")
+		t.Errorf("v1 should have retry max_attempts=5 (variant override)")
 	}
 
 	// eval-2 inherits from defaults

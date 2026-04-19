@@ -54,7 +54,7 @@ func TestWriteHTML_ResultsTable(t *testing.T) {
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
 			EvalName: "fizzbuzz",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "control",
 				Runs: []result.RunResult{
 					{Sample: 1, CostUSD: 0.1234, DurationMs: 2500, Pass: boolPtr(true)},
@@ -80,7 +80,7 @@ func TestWriteHTML_RankingTable(t *testing.T) {
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "a", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
 				{Name: "b", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
 			},
@@ -100,12 +100,12 @@ func TestWriteHTML_RankingTable(t *testing.T) {
 	}
 }
 
-func TestWriteHTML_NoRankingForSingleTreatment(t *testing.T) {
+func TestWriteHTML_NoRankingForSingleVariant(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "only", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100}}},
 			},
 		}},
@@ -116,7 +116,7 @@ func TestWriteHTML_NoRankingForSingleTreatment(t *testing.T) {
 	}
 
 	if strings.Contains(buf.String(), "Rankings") {
-		t.Error("should not show rankings for single treatment")
+		t.Error("should not show rankings for single variant")
 	}
 }
 
@@ -147,7 +147,7 @@ func TestWriteHTML_Errors(t *testing.T) {
 	}
 }
 
-func TestWriteHTML_SkippedTreatments(t *testing.T) {
+func TestWriteHTML_SkippedVariants(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
@@ -155,7 +155,7 @@ func TestWriteHTML_SkippedTreatments(t *testing.T) {
 			EvalID:   "e1",
 			EvalName: "my-eval",
 			Err:      fmt.Errorf("hook failed"),
-			Skipped: []result.SkippedTreatment{
+			Skipped: []result.SkippedVariant{
 				{Name: "ctrl", Reason: "before hook failed"},
 			},
 		}},
@@ -166,11 +166,11 @@ func TestWriteHTML_SkippedTreatments(t *testing.T) {
 	}
 	out := buf.String()
 
-	if !strings.Contains(out, "Skipped Treatments") {
-		t.Error("missing skipped treatments section")
+	if !strings.Contains(out, "Skipped Variants") {
+		t.Error("missing skipped variants section")
 	}
 	if !strings.Contains(out, "ctrl") {
-		t.Error("missing skipped treatment name")
+		t.Error("missing skipped variant name")
 	}
 	if !strings.Contains(out, "before hook failed") {
 		t.Error("missing skip reason")
@@ -183,7 +183,7 @@ func TestWriteHTML_StatusColors(t *testing.T) {
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
 			EvalName: "test",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "ctrl",
 				Runs: []result.RunResult{
 					{Sample: 1, CostUSD: 0.1, DurationMs: 100, Pass: boolPtr(true)},
@@ -232,7 +232,7 @@ func TestWriteHTML_AggregateRow(t *testing.T) {
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
 			EvalName: "test",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "ctrl",
 				Runs: []result.RunResult{
 					{Sample: 1, CostUSD: 1.0, DurationMs: 100},
@@ -265,7 +265,7 @@ func TestWriteHTML_MultiRunnerColumns(t *testing.T) {
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "a", Runner: "claude-code", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
 				{Name: "b", Runner: "ollama", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
 			},

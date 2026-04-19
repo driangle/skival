@@ -26,7 +26,7 @@ var validRunners = map[string]bool{
 	"aider":       true,
 }
 
-// validateMatrixExclusive checks that no eval defines both matrix and treatments.
+// validateMatrixExclusive checks that no eval defines both matrix and variants.
 // This runs before matrix expansion.
 func validateMatrixExclusive(s *Suite) error {
 	var errs []string
@@ -205,18 +205,18 @@ func validateRetryConfig(r *Retry, path string) []string {
 func warnModelRunnerCompat(s *Suite) {
 	for _, eval := range s.Evals {
 		for _, v := range eval.Variants {
-			warnTreatmentModelRunner(v)
+			warnVariantModelRunner(v)
 		}
 	}
 }
 
-func warnTreatmentModelRunner(t Treatment) {
-	if t.Model == "" || t.Runner == "" {
+func warnVariantModelRunner(v Variant) {
+	if v.Model == "" || v.Runner == "" {
 		return
 	}
 
-	if !modelLooksValidForRunner(t.Model, t.Runner) {
-		log.Printf("WARNING: treatment %q: model %q may not be compatible with runner %q", t.Name, t.Model, t.Runner)
+	if !modelLooksValidForRunner(v.Model, v.Runner) {
+		log.Printf("WARNING: variant %q: model %q may not be compatible with runner %q", v.Name, v.Model, v.Runner)
 	}
 }
 

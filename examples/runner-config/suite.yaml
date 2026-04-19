@@ -43,7 +43,7 @@ evals:
           max_turns: 15
 
   # Variant-level overrides merge with eval + defaults
-  - id: treatment-override
+  - id: variant-override
     dir: "./workdir"
     prompt: "Refactor the utils module into smaller files."
     runner_config:

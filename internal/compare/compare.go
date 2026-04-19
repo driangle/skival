@@ -18,15 +18,15 @@ type RunMeta struct {
 	FinishedAt  string `json:"finished_at"`
 }
 
-// EvalComparison holds per-treatment deltas for a single eval.
+// EvalComparison holds per-variant deltas for a single eval.
 type EvalComparison struct {
-	EvalID     string                `json:"eval_id"`
-	EvalName   string                `json:"eval_name"`
-	Treatments []TreatmentComparison `json:"treatments"`
+	EvalID   string              `json:"eval_id"`
+	EvalName string              `json:"eval_name"`
+	Variants []VariantComparison `json:"variants"`
 }
 
-// TreatmentComparison holds the delta between baseline and candidate for one treatment.
-type TreatmentComparison struct {
+// VariantComparison holds the delta between baseline and candidate for one variant.
+type VariantComparison struct {
 	Name   string          `json:"name"`
 	Status ComparisonStatus `json:"status"` // "matched", "added", "removed"
 
@@ -45,7 +45,7 @@ type TreatmentComparison struct {
 	CandidateDuration *int64   `json:"candidate_median_duration_ms,omitempty"`
 }
 
-// ComparisonStatus indicates whether a treatment was matched, added, or removed.
+// ComparisonStatus indicates whether a variant was matched, added, or removed.
 type ComparisonStatus string
 
 const (
@@ -83,10 +83,10 @@ func Compare(baseline, candidate *result.SuiteResult) *Comparison {
 		seen[bEval.EvalID] = true
 		cEval, ok := candEvals[bEval.EvalID]
 		if !ok {
-			// Eval exists in baseline only — all treatments are "removed".
+			// Eval exists in baseline only — all variants are "removed".
 			ec := EvalComparison{EvalID: bEval.EvalID, EvalName: bEval.EvalName}
-			for _, bt := range bEval.Treatments {
-				ec.Treatments = append(ec.Treatments, TreatmentComparison{
+			for _, bt := range bEval.Variants {
+				ec.Variants = append(ec.Variants, VariantComparison{
 					Name:   bt.Name,
 					Status: StatusRemoved,
 				})
@@ -104,8 +104,8 @@ func Compare(baseline, candidate *result.SuiteResult) *Comparison {
 			continue
 		}
 		ec := EvalComparison{EvalID: cEval.EvalID, EvalName: cEval.EvalName}
-		for _, ct := range cEval.Treatments {
-			ec.Treatments = append(ec.Treatments, TreatmentComparison{
+		for _, ct := range cEval.Variants {
+			ec.Variants = append(ec.Variants, VariantComparison{
 				Name:   ct.Name,
 				Status: StatusAdded,
 			})
@@ -119,31 +119,31 @@ func Compare(baseline, candidate *result.SuiteResult) *Comparison {
 func compareEval(baseline, candidate result.EvalResult) EvalComparison {
 	ec := EvalComparison{EvalID: baseline.EvalID, EvalName: baseline.EvalName}
 
-	candTreats := make(map[string]*result.TreatmentResult)
-	for i := range candidate.Treatments {
-		candTreats[candidate.Treatments[i].Name] = &candidate.Treatments[i]
+	candVars := make(map[string]*result.VariantResult)
+	for i := range candidate.Variants {
+		candVars[candidate.Variants[i].Name] = &candidate.Variants[i]
 	}
 
 	seen := make(map[string]bool)
 
-	for _, bt := range baseline.Treatments {
+	for _, bt := range baseline.Variants {
 		seen[bt.Name] = true
-		ct, ok := candTreats[bt.Name]
+		ct, ok := candVars[bt.Name]
 		if !ok {
-			ec.Treatments = append(ec.Treatments, TreatmentComparison{
+			ec.Variants = append(ec.Variants, VariantComparison{
 				Name:   bt.Name,
 				Status: StatusRemoved,
 			})
 			continue
 		}
-		ec.Treatments = append(ec.Treatments, compareTreatment(bt, *ct))
+		ec.Variants = append(ec.Variants, compareVariant(bt, *ct))
 	}
 
-	for _, ct := range candidate.Treatments {
+	for _, ct := range candidate.Variants {
 		if seen[ct.Name] {
 			continue
 		}
-		ec.Treatments = append(ec.Treatments, TreatmentComparison{
+		ec.Variants = append(ec.Variants, VariantComparison{
 			Name:   ct.Name,
 			Status: StatusAdded,
 		})
@@ -152,8 +152,8 @@ func compareEval(baseline, candidate result.EvalResult) EvalComparison {
 	return ec
 }
 
-func compareTreatment(baseline, candidate result.TreatmentResult) TreatmentComparison {
-	tc := TreatmentComparison{
+func compareVariant(baseline, candidate result.VariantResult) VariantComparison {
+	tc := VariantComparison{
 		Name:   baseline.Name,
 		Status: StatusMatched,
 	}
@@ -214,7 +214,7 @@ func passRate(runs []result.RunResult) *float64 {
 	return &rate
 }
 
-func medianCost(t result.TreatmentResult) *float64 {
+func medianCost(t result.VariantResult) *float64 {
 	if t.Aggregate != nil {
 		return &t.Aggregate.MedianCostUSD
 	}
@@ -228,7 +228,7 @@ func medianCost(t result.TreatmentResult) *float64 {
 	return &agg.MedianCostUSD
 }
 
-func medianDuration(t result.TreatmentResult) *int64 {
+func medianDuration(t result.VariantResult) *int64 {
 	if t.Aggregate != nil {
 		return &t.Aggregate.MedianDurationMs
 	}

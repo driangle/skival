@@ -33,7 +33,7 @@ func makeSuiteResult(desc string, passRate float64, cost float64, durationMs int
 			{
 				EvalID:   "eval-1",
 				EvalName: "Test Eval",
-				Treatments: []result.TreatmentResult{
+				Variants: []result.VariantResult{
 					{Name: "control", Runs: runs, Aggregate: result.ComputeAggregate(runs)},
 				},
 			},

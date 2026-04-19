@@ -15,7 +15,7 @@ func TestPrintResultsFormatsTable(t *testing.T) {
 			{
 				EvalID:   "e1",
 				EvalName: "My Eval",
-				Treatments: []result.TreatmentResult{
+				Variants: []result.VariantResult{
 					{
 						Name:      "control",
 						IsControl: true,
@@ -36,8 +36,8 @@ func TestPrintResultsFormatsTable(t *testing.T) {
 	if !strings.Contains(output, "EVAL") {
 		t.Error("missing EVAL column header")
 	}
-	if !strings.Contains(output, "TREATMENT") {
-		t.Error("missing TREATMENT column header")
+	if !strings.Contains(output, "VARIANT") {
+		t.Error("missing VARIANT column header")
 	}
 	if !strings.Contains(output, "SAMPLE") {
 		t.Error("missing SAMPLE column header")
@@ -57,7 +57,7 @@ func TestPrintResultsFormatsTable(t *testing.T) {
 		t.Error("missing eval name in output")
 	}
 	if !strings.Contains(output, "control") {
-		t.Error("missing treatment name in output")
+		t.Error("missing variant name in output")
 	}
 	if !strings.Contains(output, "$0.0512") {
 		t.Errorf("missing cost in output, got:\n%s", output)
@@ -75,7 +75,7 @@ func TestPrintResultsShowsErrorStatus(t *testing.T) {
 		Evals: []result.EvalResult{
 			{
 				EvalName: "Failing",
-				Treatments: []result.TreatmentResult{
+				Variants: []result.VariantResult{
 					{
 						Name: "t1",
 						Runs: []result.RunResult{

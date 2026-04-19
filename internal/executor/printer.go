@@ -19,10 +19,10 @@ func formatDuration(ms int64) string {
 func PrintResults(w io.Writer, sr *result.SuiteResult) {
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 
-	fmt.Fprintf(tw, "EVAL\tTREATMENT\tSAMPLE\tSTATUS\tCOST\tDURATION\n")
+	fmt.Fprintf(tw, "EVAL\tVARIANT\tSAMPLE\tSTATUS\tCOST\tDURATION\n")
 
 	for _, eval := range sr.Evals {
-		for _, treat := range eval.Treatments {
+		for _, treat := range eval.Variants {
 			for _, run := range treat.Runs {
 				status := "ok"
 				if run.Err != nil {

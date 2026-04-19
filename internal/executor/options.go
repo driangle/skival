@@ -6,8 +6,8 @@ import "io"
 type Options struct {
 	// EvalIDs filters to only these eval IDs. Empty means run all.
 	EvalIDs []string
-	// Treatments filters to only these treatment names. Empty means run all.
-	Treatments []string
+	// Variants filters to only these variant names. Empty means run all.
+	Variants []string
 	// Progress receives live progress updates. Nil disables progress.
 	Progress io.Writer
 	// Samples overrides the per-eval sample count when set (> 0).

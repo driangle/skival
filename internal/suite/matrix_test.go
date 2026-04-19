@@ -22,10 +22,10 @@ func TestExpandMatrix_TwoDimensions(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if len(treatments) != 4 {
-		t.Fatalf("expected 4 treatments, got %d", len(treatments))
+	if len(variants) != 4 {
+		t.Fatalf("expected 4 variants, got %d", len(variants))
 	}
 
 	// Verify deterministic naming and field assignment
@@ -41,14 +41,14 @@ func TestExpandMatrix_TwoDimensions(t *testing.T) {
 	}
 
 	for i, exp := range expected {
-		if treatments[i].Name != exp.name {
-			t.Errorf("treatment[%d].Name = %q, want %q", i, treatments[i].Name, exp.name)
+		if variants[i].Name != exp.name {
+			t.Errorf("variant[%d].Name = %q, want %q", i, variants[i].Name, exp.name)
 		}
-		if treatments[i].Runner != exp.runner {
-			t.Errorf("treatment[%d].Runner = %q, want %q", i, treatments[i].Runner, exp.runner)
+		if variants[i].Runner != exp.runner {
+			t.Errorf("variant[%d].Runner = %q, want %q", i, variants[i].Runner, exp.runner)
 		}
-		if treatments[i].Model != exp.model {
-			t.Errorf("treatment[%d].Model = %q, want %q", i, treatments[i].Model, exp.model)
+		if variants[i].Model != exp.model {
+			t.Errorf("variant[%d].Model = %q, want %q", i, variants[i].Model, exp.model)
 		}
 	}
 }
@@ -66,17 +66,17 @@ func TestExpandMatrix_SingleDimension(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if len(treatments) != 2 {
-		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	if len(variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(variants))
 	}
 
-	if treatments[0].Name != "opus" {
-		t.Errorf("expected name %q, got %q", "opus", treatments[0].Name)
+	if variants[0].Name != "opus" {
+		t.Errorf("expected name %q, got %q", "opus", variants[0].Name)
 	}
-	if treatments[1].Name != "sonnet" {
-		t.Errorf("expected name %q, got %q", "sonnet", treatments[1].Name)
+	if variants[1].Name != "sonnet" {
+		t.Errorf("expected name %q, got %q", "sonnet", variants[1].Name)
 	}
 }
 
@@ -98,17 +98,17 @@ func TestExpandMatrix_DimensionValues(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if len(treatments) != 1 {
-		t.Fatalf("expected 1 treatment, got %d", len(treatments))
+	if len(variants) != 1 {
+		t.Fatalf("expected 1 variant, got %d", len(variants))
 	}
 
-	if treatments[0].DimensionValues["runner"] != "claude-code" {
-		t.Errorf("expected dimension runner=%q, got %q", "claude-code", treatments[0].DimensionValues["runner"])
+	if variants[0].DimensionValues["runner"] != "claude-code" {
+		t.Errorf("expected dimension runner=%q, got %q", "claude-code", variants[0].DimensionValues["runner"])
 	}
-	if treatments[0].DimensionValues["model"] != "opus" {
-		t.Errorf("expected dimension model=%q, got %q", "opus", treatments[0].DimensionValues["model"])
+	if variants[0].DimensionValues["model"] != "opus" {
+		t.Errorf("expected dimension model=%q, got %q", "opus", variants[0].DimensionValues["model"])
 	}
 }
 
@@ -125,20 +125,20 @@ func TestExpandMatrix_SkillAndEnv(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if len(treatments) != 2 {
-		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	if len(variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(variants))
 	}
 
-	if treatments[0].Skill != "" {
-		t.Errorf("baseline should have empty skill, got %q", treatments[0].Skill)
+	if variants[0].Skill != "" {
+		t.Errorf("baseline should have empty skill, got %q", variants[0].Skill)
 	}
-	if treatments[1].Skill != "./skills/tools.md" {
-		t.Errorf("with-tools skill = %q, want %q", treatments[1].Skill, "./skills/tools.md")
+	if variants[1].Skill != "./skills/tools.md" {
+		t.Errorf("with-tools skill = %q, want %q", variants[1].Skill, "./skills/tools.md")
 	}
-	if treatments[1].Env["TOOLS"] != "true" {
-		t.Errorf("with-tools env TOOLS = %q, want %q", treatments[1].Env["TOOLS"], "true")
+	if variants[1].Env["TOOLS"] != "true" {
+		t.Errorf("with-tools env TOOLS = %q, want %q", variants[1].Env["TOOLS"], "true")
 	}
 }
 
@@ -155,13 +155,13 @@ func TestExpandMatrix_RunnerConfig(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if treatments[0].RunnerConfig != nil {
-		t.Errorf("default should have nil runner_config, got %v", treatments[0].RunnerConfig)
+	if variants[0].RunnerConfig != nil {
+		t.Errorf("default should have nil runner_config, got %v", variants[0].RunnerConfig)
 	}
-	if treatments[1].RunnerConfig["max_turns"] != 20 {
-		t.Errorf("custom runner_config max_turns = %v, want 20", treatments[1].RunnerConfig["max_turns"])
+	if variants[1].RunnerConfig["max_turns"] != 20 {
+		t.Errorf("custom runner_config max_turns = %v, want 20", variants[1].RunnerConfig["max_turns"])
 	}
 }
 
@@ -174,19 +174,19 @@ func TestExpandMatrix_ThreeDimensions(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if len(treatments) != 8 {
-		t.Fatalf("expected 2*2*2=8 treatments, got %d", len(treatments))
+	if len(variants) != 8 {
+		t.Fatalf("expected 2*2*2=8 variants, got %d", len(variants))
 	}
 
-	// First treatment should be a1_b1_c1
-	if treatments[0].Name != "a1_b1_c1" {
-		t.Errorf("first treatment name = %q, want %q", treatments[0].Name, "a1_b1_c1")
+	// First variant should be a1_b1_c1
+	if variants[0].Name != "a1_b1_c1" {
+		t.Errorf("first variant name = %q, want %q", variants[0].Name, "a1_b1_c1")
 	}
-	// Last treatment should be a2_b2_c2
-	if treatments[7].Name != "a2_b2_c2" {
-		t.Errorf("last treatment name = %q, want %q", treatments[7].Name, "a2_b2_c2")
+	// Last variant should be a2_b2_c2
+	if variants[7].Name != "a2_b2_c2" {
+		t.Errorf("last variant name = %q, want %q", variants[7].Name, "a2_b2_c2")
 	}
 }
 
@@ -234,7 +234,7 @@ func TestExpandMatrices_SkipsEvalsWithoutMatrix(t *testing.T) {
 			ID:       "e1",
 			Prompt:   "test",
 			Model:    "claude-sonnet-4-6",
-			Variants: []Treatment{{Name: "ctrl"}},
+			Variants: []Variant{{Name: "ctrl"}},
 		}},
 	}
 
@@ -258,23 +258,23 @@ func TestExpandMatrix_PromptAndConfigDir(t *testing.T) {
 		},
 	}
 
-	treatments := expandMatrix(m)
+	variants := expandMatrix(m)
 
-	if len(treatments) != 2 {
-		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	if len(variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(variants))
 	}
 
-	if treatments[0].Prompt != "do A" {
-		t.Errorf("default prompt = %q, want %q", treatments[0].Prompt, "do A")
+	if variants[0].Prompt != "do A" {
+		t.Errorf("default prompt = %q, want %q", variants[0].Prompt, "do A")
 	}
-	if treatments[0].ConfigDir != "" {
-		t.Errorf("default config_dir should be empty, got %q", treatments[0].ConfigDir)
+	if variants[0].ConfigDir != "" {
+		t.Errorf("default config_dir should be empty, got %q", variants[0].ConfigDir)
 	}
-	if treatments[1].Prompt != "do B" {
-		t.Errorf("custom prompt = %q, want %q", treatments[1].Prompt, "do B")
+	if variants[1].Prompt != "do B" {
+		t.Errorf("custom prompt = %q, want %q", variants[1].Prompt, "do B")
 	}
-	if treatments[1].ConfigDir != "/tmp/custom-config" {
-		t.Errorf("custom config_dir = %q, want %q", treatments[1].ConfigDir, "/tmp/custom-config")
+	if variants[1].ConfigDir != "/tmp/custom-config" {
+		t.Errorf("custom config_dir = %q, want %q", variants[1].ConfigDir, "/tmp/custom-config")
 	}
 }
 

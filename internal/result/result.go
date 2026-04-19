@@ -21,13 +21,14 @@ type RunResult struct {
 	Pass               *bool
 	Conversation       []json.RawMessage
 	JudgeConversation  []json.RawMessage
-	Attempt            int  // 1-indexed attempt number (0 means no retry was configured)
-	TotalAttempts      int  // total attempts made for this sample
-	Retried            bool // true if this result came from a retry (attempt > 1)
+	WorkDir            string // resolved working directory for this sample
+	Attempt            int    // 1-indexed attempt number (0 means no retry was configured)
+	TotalAttempts      int    // total attempts made for this sample
+	Retried            bool   // true if this result came from a retry (attempt > 1)
 }
 
-// TreatmentResult groups runs for one treatment.
-type TreatmentResult struct {
+// VariantResult groups runs for one variant.
+type VariantResult struct {
 	Name      string `json:"name"`
 	Runner    string `json:"runner,omitempty"`
 	Model     string `json:"model,omitempty"`
@@ -36,9 +37,9 @@ type TreatmentResult struct {
 	Aggregate *Aggregate
 }
 
-// SkippedTreatment records a treatment that was not executed due to a hook failure.
-type SkippedTreatment struct {
-	Name   string // treatment name
+// SkippedVariant records a variant that was not executed due to a hook failure.
+type SkippedVariant struct {
+	Name   string // variant name
 	Reason string // why it was skipped (e.g., "before hook failed")
 }
 
@@ -46,8 +47,8 @@ type SkippedTreatment struct {
 type EvalResult struct {
 	EvalID     string
 	EvalName   string
-	Treatments []TreatmentResult
-	Skipped    []SkippedTreatment
+	Variants []VariantResult
+	Skipped    []SkippedVariant
 	Err        error
 }
 

@@ -85,7 +85,7 @@ func TestExecuteEval_BeforeHookRuns(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "touch " + marker,
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
@@ -117,7 +117,7 @@ func TestExecuteEval_BeforeHookFailure(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "exit 1",
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
@@ -127,12 +127,12 @@ func TestExecuteEval_BeforeHookFailure(t *testing.T) {
 	if sr.Evals[0].Err == nil {
 		t.Error("expected eval error when before hook fails")
 	}
-	if len(sr.Evals[0].Treatments) != 0 {
-		t.Error("no treatments should run when before hook fails")
+	if len(sr.Evals[0].Variants) != 0 {
+		t.Error("no variants should run when before hook fails")
 	}
 }
 
-func TestExecuteEval_ResetBetweenTreatments(t *testing.T) {
+func TestExecuteEval_ResetBetweenVariants(t *testing.T) {
 	dir := t.TempDir()
 	counter := filepath.Join(dir, "reset-count")
 
@@ -151,7 +151,7 @@ func TestExecuteEval_ResetBetweenTreatments(t *testing.T) {
 			Setup: suite.Setup{
 				Reset: "echo x >> " + counter,
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 				{Name: "v1", Runner: "claude-code"},
 				{Name: "v2", Runner: "claude-code"},
@@ -164,7 +164,7 @@ func TestExecuteEval_ResetBetweenTreatments(t *testing.T) {
 		t.Fatalf("eval error: %v", sr.Evals[0].Err)
 	}
 
-	// 3 treatments, reset runs between them = 2 times
+	// 3 variants, reset runs between them = 2 times
 	data, err := os.ReadFile(counter)
 	if err != nil {
 		t.Fatalf("reset hook did not run: %v", err)
@@ -198,7 +198,7 @@ func TestExecuteEval_AfterHookRunsOnError(t *testing.T) {
 				Before: "exit 1",
 				After:  "touch " + marker,
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
@@ -226,7 +226,7 @@ func TestExecuteEval_ResetHookFailure(t *testing.T) {
 			Setup: suite.Setup{
 				Reset: "exit 1",
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 				{Name: "v1", Runner: "claude-code"},
 			},
@@ -237,13 +237,13 @@ func TestExecuteEval_ResetHookFailure(t *testing.T) {
 	if sr.Evals[0].Err == nil {
 		t.Error("expected eval error when reset hook fails")
 	}
-	// First treatment should have run, second should not
-	if len(sr.Evals[0].Treatments) != 1 {
-		t.Errorf("expected 1 treatment (before reset failure), got %d", len(sr.Evals[0].Treatments))
+	// First variant should have run, second should not
+	if len(sr.Evals[0].Variants) != 1 {
+		t.Errorf("expected 1 variant (before reset failure), got %d", len(sr.Evals[0].Variants))
 	}
 }
 
-func TestExecuteEval_BeforeHookFailure_SkipsAllTreatments(t *testing.T) {
+func TestExecuteEval_BeforeHookFailure_SkipsAllVariants(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}},
 	}
@@ -256,7 +256,7 @@ func TestExecuteEval_BeforeHookFailure_SkipsAllTreatments(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "echo 'setup broke' >&2; exit 1",
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 				{Name: "v1", Runner: "claude-code"},
 				{Name: "v2", Runner: "claude-code"},
@@ -274,9 +274,9 @@ func TestExecuteEval_BeforeHookFailure_SkipsAllTreatments(t *testing.T) {
 	if !strings.Contains(eval.Err.Error(), "setup broke") {
 		t.Errorf("error should contain hook stderr, got: %v", eval.Err)
 	}
-	// All 3 treatments should be skipped.
+	// All 3 variants should be skipped.
 	if len(eval.Skipped) != 3 {
-		t.Fatalf("expected 3 skipped treatments, got %d", len(eval.Skipped))
+		t.Fatalf("expected 3 skipped variants, got %d", len(eval.Skipped))
 	}
 	for _, s := range eval.Skipped {
 		if s.Reason != "before hook failed" {
@@ -291,7 +291,7 @@ func TestExecuteEval_BeforeHookFailure_SkipsAllTreatments(t *testing.T) {
 	}
 }
 
-func TestExecuteEval_ResetHookFailure_SkipsRemainingTreatments(t *testing.T) {
+func TestExecuteEval_ResetHookFailure_SkipsRemainingVariants(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{
 			{Text: "r1"}, {Text: "r2"}, {Text: "r3"},
@@ -306,7 +306,7 @@ func TestExecuteEval_ResetHookFailure_SkipsRemainingTreatments(t *testing.T) {
 			Setup: suite.Setup{
 				Reset: "echo 'reset broke' >&2; exit 1",
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 				{Name: "v1", Runner: "claude-code"},
 				{Name: "v2", Runner: "claude-code"},
@@ -324,16 +324,16 @@ func TestExecuteEval_ResetHookFailure_SkipsRemainingTreatments(t *testing.T) {
 	if !strings.Contains(errMsg, "reset broke") {
 		t.Errorf("error should contain hook stderr, got: %v", eval.Err)
 	}
-	// Error should identify the treatments involved.
+	// Error should identify the variants involved.
 	if !strings.Contains(errMsg, "ctrl") || !strings.Contains(errMsg, "v1") {
-		t.Errorf("error should name affected treatments, got: %s", errMsg)
+		t.Errorf("error should name affected variants, got: %s", errMsg)
 	}
 	// ctrl ran, then reset failed before v1 — v1 and v2 should be skipped.
-	if len(eval.Treatments) != 1 {
-		t.Errorf("expected 1 completed treatment, got %d", len(eval.Treatments))
+	if len(eval.Variants) != 1 {
+		t.Errorf("expected 1 completed variant, got %d", len(eval.Variants))
 	}
 	if len(eval.Skipped) != 2 {
-		t.Fatalf("expected 2 skipped treatments, got %d", len(eval.Skipped))
+		t.Fatalf("expected 2 skipped variants, got %d", len(eval.Skipped))
 	}
 	if eval.Skipped[0].Name != "v1" {
 		t.Errorf("skipped[0].Name = %q, want v1", eval.Skipped[0].Name)
@@ -341,9 +341,9 @@ func TestExecuteEval_ResetHookFailure_SkipsRemainingTreatments(t *testing.T) {
 	if eval.Skipped[1].Name != "v2" {
 		t.Errorf("skipped[1].Name = %q, want v2", eval.Skipped[1].Name)
 	}
-	// Skip reason should mention which treatment completed before the failure.
+	// Skip reason should mention which variant completed before the failure.
 	if !strings.Contains(eval.Skipped[0].Reason, "ctrl") {
-		t.Errorf("skip reason should reference completed treatment, got: %s", eval.Skipped[0].Reason)
+		t.Errorf("skip reason should reference completed variant, got: %s", eval.Skipped[0].Reason)
 	}
 }
 
@@ -360,7 +360,7 @@ func TestExecuteEval_BeforeHookFailure_ErrorIncludesOutput(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "echo 'debug log'; echo 'fatal error' >&2; exit 1",
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
@@ -396,7 +396,7 @@ func TestExecuteEval_AfterHookRunsOnResetFailure(t *testing.T) {
 				Reset: "exit 1",
 				After: "touch " + marker,
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 				{Name: "v1", Runner: "claude-code"},
 			},
@@ -441,8 +441,8 @@ func TestHookError_OmitsEmptyOutput(t *testing.T) {
 	}
 }
 
-func TestExecuteEval_BeforeHookFailure_SkippedTreatmentsInProgress(t *testing.T) {
-	// Verify that skipped treatments are reported via progress output.
+func TestExecuteEval_BeforeHookFailure_SkippedVariantsInProgress(t *testing.T) {
+	// Verify that skipped variants are reported via progress output.
 	var buf strings.Builder
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}},
@@ -456,7 +456,7 @@ func TestExecuteEval_BeforeHookFailure_SkippedTreatmentsInProgress(t *testing.T)
 			Setup: suite.Setup{
 				Before: "exit 1",
 			},
-			Variants: []suite.Treatment{
+			Variants: []suite.Variant{
 				{Name: "ctrl", Runner: "claude-code"},
 				{Name: "v1", Runner: "claude-code"},
 			},
@@ -466,19 +466,19 @@ func TestExecuteEval_BeforeHookFailure_SkippedTreatmentsInProgress(t *testing.T)
 	_, _ = Execute(context.Background(), s, fakeRegistry(runner), &Options{Progress: &buf})
 
 	out := buf.String()
-	if !strings.Contains(out, "Skipping 2 remaining treatments") {
+	if !strings.Contains(out, "Skipping 2 remaining variants") {
 		t.Errorf("expected skip message in progress output, got: %s", out)
 	}
 }
 
-// Verify that SkippedTreatment fields are correctly populated.
-func TestSkippedTreatment_Fields(t *testing.T) {
-	s := result.SkippedTreatment{
-		Name:   "my-treatment",
+// Verify that SkippedVariant fields are correctly populated.
+func TestSkippedVariant_Fields(t *testing.T) {
+	s := result.SkippedVariant{
+		Name:   "my-variant",
 		Reason: "before hook failed",
 	}
-	if s.Name != "my-treatment" {
-		t.Errorf("Name = %q, want my-treatment", s.Name)
+	if s.Name != "my-variant" {
+		t.Errorf("Name = %q, want my-variant", s.Name)
 	}
 	if s.Reason != "before hook failed" {
 		t.Errorf("Reason = %q, want 'before hook failed'", s.Reason)

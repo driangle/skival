@@ -19,7 +19,7 @@ func TestWriteJSON_ValidJSON(t *testing.T) {
 		Evals: []result.EvalResult{{
 			EvalID:   "e1",
 			EvalName: "fizzbuzz",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name:      "control",
 				IsControl: true,
 				Runs: []result.RunResult{
@@ -60,7 +60,7 @@ func TestWriteJSON_Rankings(t *testing.T) {
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "a", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
 				{Name: "b", Runs: []result.RunResult{{CostUSD: 5.0, DurationMs: 500, Pass: boolPtr(false)}}},
 			},
@@ -90,7 +90,7 @@ func TestWriteJSON_RunnerField(t *testing.T) {
 		Evals: []result.EvalResult{{
 			EvalID:   "e1",
 			EvalName: "test",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name:   "ctrl",
 				Runner: "claude-code",
 				Runs:   []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100}},
@@ -105,17 +105,17 @@ func TestWriteJSON_RunnerField(t *testing.T) {
 
 	var parsed struct {
 		Evals []struct {
-			Treatments []struct {
+			Variants []struct {
 				Runner string `json:"runner"`
-			} `json:"treatments"`
+			} `json:"variants"`
 		} `json:"evals"`
 	}
 	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
 		t.Fatalf("output is not valid JSON: %v", err)
 	}
 
-	if parsed.Evals[0].Treatments[0].Runner != "claude-code" {
-		t.Errorf("expected runner %q, got %q", "claude-code", parsed.Evals[0].Treatments[0].Runner)
+	if parsed.Evals[0].Variants[0].Runner != "claude-code" {
+		t.Errorf("expected runner %q, got %q", "claude-code", parsed.Evals[0].Variants[0].Runner)
 	}
 }
 
@@ -126,7 +126,7 @@ func TestWriteJSON_ModelField(t *testing.T) {
 		Evals: []result.EvalResult{{
 			EvalID:   "e1",
 			EvalName: "test",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name:   "ctrl",
 					Runner: "claude-code",
@@ -150,9 +150,9 @@ func TestWriteJSON_ModelField(t *testing.T) {
 
 	var parsed struct {
 		Evals []struct {
-			Treatments []struct {
+			Variants []struct {
 				Model string `json:"model"`
-			} `json:"treatments"`
+			} `json:"variants"`
 		} `json:"evals"`
 		Rankings []struct {
 			Model string `json:"model"`
@@ -162,11 +162,11 @@ func TestWriteJSON_ModelField(t *testing.T) {
 		t.Fatalf("output is not valid JSON: %v", err)
 	}
 
-	if parsed.Evals[0].Treatments[0].Model != "claude-sonnet-4-6" {
-		t.Errorf("expected model %q, got %q", "claude-sonnet-4-6", parsed.Evals[0].Treatments[0].Model)
+	if parsed.Evals[0].Variants[0].Model != "claude-sonnet-4-6" {
+		t.Errorf("expected model %q, got %q", "claude-sonnet-4-6", parsed.Evals[0].Variants[0].Model)
 	}
-	if parsed.Evals[0].Treatments[1].Model != "llama3" {
-		t.Errorf("expected model %q, got %q", "llama3", parsed.Evals[0].Treatments[1].Model)
+	if parsed.Evals[0].Variants[1].Model != "llama3" {
+		t.Errorf("expected model %q, got %q", "llama3", parsed.Evals[0].Variants[1].Model)
 	}
 	if len(parsed.Rankings) >= 2 && parsed.Rankings[0].Model == "" {
 		t.Error("expected model field in rankings")
@@ -210,7 +210,7 @@ func TestWriteJSON_EvalError(t *testing.T) {
 	}
 }
 
-func TestWriteJSON_SkippedTreatments(t *testing.T) {
+func TestWriteJSON_SkippedVariants(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
@@ -218,7 +218,7 @@ func TestWriteJSON_SkippedTreatments(t *testing.T) {
 			EvalID:   "e1",
 			EvalName: "test",
 			Err:      fmt.Errorf("setup.before: hook failed: boom"),
-			Skipped: []result.SkippedTreatment{
+			Skipped: []result.SkippedVariant{
 				{Name: "ctrl", Reason: "before hook failed"},
 				{Name: "v1", Reason: "before hook failed"},
 			},
@@ -268,7 +268,7 @@ func TestWriteJSON_NoSkippedWhenNoneSkipped(t *testing.T) {
 		Evals: []result.EvalResult{{
 			EvalID:   "e1",
 			EvalName: "test",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "ctrl",
 				Runs: []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100}},
 			}},
@@ -283,7 +283,7 @@ func TestWriteJSON_NoSkippedWhenNoneSkipped(t *testing.T) {
 	// The "skipped" field should be omitted entirely.
 	raw := buf.String()
 	if strings.Contains(raw, `"skipped"`) {
-		t.Error("should not include skipped field when there are no skipped treatments")
+		t.Error("should not include skipped field when there are no skipped variants")
 	}
 }
 
@@ -292,7 +292,7 @@ func TestWriteJSON_RunStatus(t *testing.T) {
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "t",
 				Runs: []result.RunResult{
 					{Sample: 1, Pass: boolPtr(true)},
@@ -310,18 +310,18 @@ func TestWriteJSON_RunStatus(t *testing.T) {
 
 	var parsed struct {
 		Evals []struct {
-			Treatments []struct {
+			Variants []struct {
 				Runs []struct {
 					Status string `json:"status"`
 				} `json:"runs"`
-			} `json:"treatments"`
+			} `json:"variants"`
 		} `json:"evals"`
 	}
 	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
 		t.Fatalf("output is not valid JSON: %v", err)
 	}
 
-	runs := parsed.Evals[0].Treatments[0].Runs
+	runs := parsed.Evals[0].Variants[0].Runs
 	if runs[0].Status != "pass" {
 		t.Errorf("run 1 status = %q, want pass", runs[0].Status)
 	}

@@ -9,18 +9,18 @@ import (
 
 func boolPtr(b bool) *bool { return &b }
 
-func TestRankTreatments_Empty(t *testing.T) {
+func TestRankVariants_Empty(t *testing.T) {
 	sr := &result.SuiteResult{}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if ranks != nil {
 		t.Fatalf("expected nil, got %v", ranks)
 	}
 }
 
-func TestRankTreatments_SingleTreatment(t *testing.T) {
+func TestRankVariants_SingleVariant(t *testing.T) {
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "control",
 				Runs: []result.RunResult{
 					{CostUSD: 1.0, DurationMs: 1000, Pass: boolPtr(true)},
@@ -28,23 +28,23 @@ func TestRankTreatments_SingleTreatment(t *testing.T) {
 			}},
 		}},
 	}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if len(ranks) != 1 {
 		t.Fatalf("expected 1 rank, got %d", len(ranks))
 	}
 	if ranks[0].Rank != 1 {
 		t.Errorf("expected rank 1, got %d", ranks[0].Rank)
 	}
-	// Single treatment: all normalized to 1.0, composite = 1.0
+	// Single variant: all normalized to 1.0, composite = 1.0
 	if ranks[0].CompositeScore != 1.0 {
 		t.Errorf("expected composite 1.0, got %f", ranks[0].CompositeScore)
 	}
 }
 
-func TestRankTreatments_BestTreatmentRanksFirst(t *testing.T) {
+func TestRankVariants_BestVariantRanksFirst(t *testing.T) {
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name: "expensive-slow-failing",
 					Runs: []result.RunResult{
@@ -62,7 +62,7 @@ func TestRankTreatments_BestTreatmentRanksFirst(t *testing.T) {
 			},
 		}},
 	}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if len(ranks) != 2 {
 		t.Fatalf("expected 2 ranks, got %d", len(ranks))
 	}
@@ -74,10 +74,10 @@ func TestRankTreatments_BestTreatmentRanksFirst(t *testing.T) {
 	}
 }
 
-func TestRankTreatments_Ties(t *testing.T) {
+func TestRankVariants_Ties(t *testing.T) {
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name: "b",
 					Runs: []result.RunResult{
@@ -93,7 +93,7 @@ func TestRankTreatments_Ties(t *testing.T) {
 			},
 		}},
 	}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if len(ranks) != 2 {
 		t.Fatalf("expected 2 ranks, got %d", len(ranks))
 	}
@@ -102,16 +102,16 @@ func TestRankTreatments_Ties(t *testing.T) {
 		t.Errorf("expected alphabetical tiebreak: got %q, %q", ranks[0].Name, ranks[1].Name)
 	}
 	if ranks[0].CompositeScore != ranks[1].CompositeScore {
-		t.Error("tied treatments should have equal scores")
+		t.Error("tied variants should have equal scores")
 	}
 }
 
-func TestRankTreatments_PassRateDominates(t *testing.T) {
-	// Treatment A: 100% pass, expensive. Treatment B: 0% pass, cheap.
+func TestRankVariants_PassRateDominates(t *testing.T) {
+	// Variant A: 100% pass, expensive. Variant B: 0% pass, cheap.
 	// Pass weight (0.6) should dominate cost weight (0.28).
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name: "passes",
 					Runs: []result.RunResult{
@@ -127,35 +127,35 @@ func TestRankTreatments_PassRateDominates(t *testing.T) {
 			},
 		}},
 	}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if ranks[0].Name != "passes" {
 		t.Errorf("pass rate should dominate, got %q first", ranks[0].Name)
 	}
 }
 
-func TestRankTreatments_MultipleEvals(t *testing.T) {
+func TestRankVariants_MultipleEvals(t *testing.T) {
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{
 			{
-				Treatments: []result.TreatmentResult{
+				Variants: []result.VariantResult{
 					{Name: "a", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(true)}}},
 					{Name: "b", Runs: []result.RunResult{{CostUSD: 4.0, DurationMs: 400, Pass: boolPtr(true)}}},
 				},
 			},
 			{
-				Treatments: []result.TreatmentResult{
+				Variants: []result.VariantResult{
 					{Name: "a", Runs: []result.RunResult{{CostUSD: 3.0, DurationMs: 300, Pass: boolPtr(true)}}},
 					{Name: "b", Runs: []result.RunResult{{CostUSD: 5.0, DurationMs: 500, Pass: boolPtr(false)}}},
 				},
 			},
 		},
 	}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if ranks[0].Name != "a" {
 		t.Errorf("expected 'a' first (better pass rate + lower cost), got %q", ranks[0].Name)
 	}
-	// Treatment a: pass rate 2/2=1.0, median cost=2.5, median dur=250
-	// Treatment b: pass rate 1/2=0.5, median cost=4.5, median dur=450
+	// Variant a: pass rate 2/2=1.0, median cost=2.5, median dur=250
+	// Variant b: pass rate 1/2=0.5, median cost=4.5, median dur=450
 	if ranks[0].PassRate != 1.0 {
 		t.Errorf("expected pass rate 1.0, got %f", ranks[0].PassRate)
 	}
@@ -164,10 +164,10 @@ func TestRankTreatments_MultipleEvals(t *testing.T) {
 	}
 }
 
-func TestRankTreatments_UnverifiedRuns(t *testing.T) {
+func TestRankVariants_UnverifiedRuns(t *testing.T) {
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name: "unverified",
 				Runs: []result.RunResult{
 					{CostUSD: 1.0, DurationMs: 100, Pass: nil},
@@ -176,7 +176,7 @@ func TestRankTreatments_UnverifiedRuns(t *testing.T) {
 			}},
 		}},
 	}
-	ranks := RankTreatments(sr, DefaultWeights())
+	ranks := RankVariants(sr, DefaultWeights())
 	if ranks[0].PassRate != 0 {
 		t.Errorf("expected 0 pass rate for unverified, got %f", ranks[0].PassRate)
 	}
@@ -189,12 +189,12 @@ func TestWeightsSum(t *testing.T) {
 	}
 }
 
-func TestRankTreatments_CustomWeightsCostDominates(t *testing.T) {
-	// With cost weight at 0.90, a cheap-but-failing treatment should rank above
-	// an expensive-but-passing treatment.
+func TestRankVariants_CustomWeightsCostDominates(t *testing.T) {
+	// With cost weight at 0.90, a cheap-but-failing variant should rank above
+	// an expensive-but-passing variant.
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name: "expensive-passing",
 					Runs: []result.RunResult{
@@ -212,22 +212,22 @@ func TestRankTreatments_CustomWeightsCostDominates(t *testing.T) {
 	}
 
 	costHeavy := Weights{Correctness: 0.05, Cost: 0.90, Duration: 0.05}
-	ranks := RankTreatments(sr, costHeavy)
+	ranks := RankVariants(sr, costHeavy)
 	if ranks[0].Name != "cheap-failing" {
-		t.Errorf("with cost weight 0.90, cheap treatment should rank first, got %q", ranks[0].Name)
+		t.Errorf("with cost weight 0.90, cheap variant should rank first, got %q", ranks[0].Name)
 	}
 
-	// With default weights, the passing treatment should rank first.
-	defaultRanks := RankTreatments(sr, DefaultWeights())
+	// With default weights, the passing variant should rank first.
+	defaultRanks := RankVariants(sr, DefaultWeights())
 	if defaultRanks[0].Name != "expensive-passing" {
-		t.Errorf("with default weights, passing treatment should rank first, got %q", defaultRanks[0].Name)
+		t.Errorf("with default weights, passing variant should rank first, got %q", defaultRanks[0].Name)
 	}
 }
 
-func TestRankTreatments_CustomWeightsDurationDominates(t *testing.T) {
+func TestRankVariants_CustomWeightsDurationDominates(t *testing.T) {
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name: "fast-failing",
 					Runs: []result.RunResult{
@@ -245,17 +245,17 @@ func TestRankTreatments_CustomWeightsDurationDominates(t *testing.T) {
 	}
 
 	durationHeavy := Weights{Correctness: 0.05, Cost: 0.05, Duration: 0.90}
-	ranks := RankTreatments(sr, durationHeavy)
+	ranks := RankVariants(sr, durationHeavy)
 	if ranks[0].Name != "fast-failing" {
-		t.Errorf("with duration weight 0.90, fast treatment should rank first, got %q", ranks[0].Name)
+		t.Errorf("with duration weight 0.90, fast variant should rank first, got %q", ranks[0].Name)
 	}
 }
 
-func TestRankTreatments_ZeroWeight(t *testing.T) {
+func TestRankVariants_ZeroWeight(t *testing.T) {
 	// With correctness weight at 0, pass rate shouldn't affect ranking.
 	sr := &result.SuiteResult{
 		Evals: []result.EvalResult{{
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{
 					Name: "all-pass-expensive",
 					Runs: []result.RunResult{
@@ -273,9 +273,9 @@ func TestRankTreatments_ZeroWeight(t *testing.T) {
 	}
 
 	noCorrWeight := Weights{Correctness: 0, Cost: 0.50, Duration: 0.50}
-	ranks := RankTreatments(sr, noCorrWeight)
+	ranks := RankVariants(sr, noCorrWeight)
 	if ranks[0].Name != "all-fail-cheap" {
-		t.Errorf("with correctness=0, cheap/fast treatment should rank first, got %q", ranks[0].Name)
+		t.Errorf("with correctness=0, cheap/fast variant should rank first, got %q", ranks[0].Name)
 	}
 }
 

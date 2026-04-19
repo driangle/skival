@@ -11,7 +11,7 @@ import (
 var compareCmd = &cobra.Command{
 	Use:   "compare <baseline-dir> <candidate-dir>",
 	Short: "Compare results between two runs",
-	Long:  "Load two result directories and produce a diff report showing how treatments changed between runs.",
+	Long:  "Load two result directories and produce a diff report showing how variants changed between runs.",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseline, err := persist.Load(args[0])

@@ -24,7 +24,7 @@ type htmlData struct {
 
 type htmlResultRow struct {
 	Eval      string
-	Treatment string
+	Variant string
 	Sample    string
 	Status    string
 	Cost      string
@@ -96,19 +96,19 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 			})
 			continue
 		}
-		for _, treat := range eval.Treatments {
-			label := treatmentLabel(treat, multi, multiModel)
-			for _, run := range treat.Runs {
+		for _, v := range eval.Variants {
+			label := variantLabel(v, multi, multiModel)
+			for _, run := range v.Runs {
 				d.Results = append(d.Results, htmlResultRow{
 					Eval:      eval.EvalName,
-					Treatment: label,
+					Variant: label,
 					Sample:    fmt.Sprintf("%d", run.Sample),
 					Status:    runStatus(run),
 					Cost:      fmt.Sprintf("$%.4f", run.CostUSD),
 					Duration:  formatDuration(run.DurationMs),
 				})
 			}
-			if agg := treat.Aggregate; agg != nil && len(treat.Runs) >= 2 {
+			if agg := v.Aggregate; agg != nil && len(v.Runs) >= 2 {
 				d.Results = append(d.Results, buildHTMLAggRow(eval.EvalName, label, agg))
 			}
 		}
@@ -138,7 +138,7 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 	}
 
 	// Rankings
-	ranks := RankTreatments(sr, weights)
+	ranks := RankVariants(sr, weights)
 	if len(ranks) >= 2 {
 		d.ShowRankings = true
 		for _, r := range ranks {
@@ -158,7 +158,7 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 	return d
 }
 
-func buildHTMLAggRow(evalName, treatName string, agg *result.Aggregate) htmlResultRow {
+func buildHTMLAggRow(evalName, variantName string, agg *result.Aggregate) htmlResultRow {
 	costRange := fmt.Sprintf("$%.4f [$%.4f\u2013$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
 	durationRange := fmt.Sprintf("%s [%s\u2013%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs))
 
@@ -184,7 +184,7 @@ func buildHTMLAggRow(evalName, treatName string, agg *result.Aggregate) htmlResu
 
 	return htmlResultRow{
 		Eval:      evalName,
-		Treatment: treatName,
+		Variant: variantName,
 		Sample:    "agg",
 		Status:    status,
 		Cost:      costRange,
@@ -240,7 +240,7 @@ const htmlTemplate = `<!DOCTYPE html>
 <thead>
 <tr>
   <th onclick="sortTable(this, 0)">Eval</th>
-  <th onclick="sortTable(this, 1)">Treatment</th>
+  <th onclick="sortTable(this, 1)">Variant</th>
   <th onclick="sortTable(this, 2)">Sample</th>
   <th onclick="sortTable(this, 3)">Status</th>
   <th onclick="sortTable(this, 4)">Cost</th>
@@ -250,7 +250,7 @@ const htmlTemplate = `<!DOCTYPE html>
 <tbody>
 {{range .Results}}<tr{{if .IsAgg}} class="agg"{{end}}>
   <td>{{.Eval}}</td>
-  <td>{{.Treatment}}</td>
+  <td>{{.Variant}}</td>
   <td>{{.Sample}}</td>
   <td><span class="status-{{.Status}}">{{.Status}}</span></td>
   <td>{{.Cost}}</td>
@@ -267,7 +267,7 @@ const htmlTemplate = `<!DOCTYPE html>
 {{end}}
 
 {{if .Skipped}}
-<h2>Skipped Treatments</h2>
+<h2>Skipped Variants</h2>
 {{range .Skipped}}<div class="skipped-group">
 <h3>{{.Name}} <span class="eval-id">({{.ID}})</span></h3>
 <ul>
@@ -283,7 +283,7 @@ const htmlTemplate = `<!DOCTYPE html>
 <thead>
 <tr>
   <th onclick="sortTable(this, 0)">Rank</th>
-  <th onclick="sortTable(this, 1)">Treatment</th>
+  <th onclick="sortTable(this, 1)">Variant</th>
   {{if .MultiRunner}}<th onclick="sortTable(this, 2)">Runner</th>{{end}}
   {{if .MultiModel}}<th onclick="sortTable(this, {{if .MultiRunner}}3{{else}}2{{end}})">Model</th>{{end}}
   <th onclick="sortTable(this, {{if .MultiRunner}}{{if .MultiModel}}4{{else}}3{{end}}{{else}}{{if .MultiModel}}3{{else}}2{{end}}{{end}})">Score</th>

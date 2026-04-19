@@ -25,10 +25,10 @@ func writeEvalComparison(w io.Writer, eval EvalComparison) {
 	fmt.Fprintf(w, "## %s\n\n", name)
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(tw, "TREATMENT\tSTATUS\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
-	fmt.Fprintf(tw, "---------\t------\t---------\t-----------\t---------------\n")
+	fmt.Fprintf(tw, "VARIANT\tSTATUS\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n")
+	fmt.Fprintf(tw, "-------\t------\t---------\t-----------\t---------------\n")
 
-	for _, t := range eval.Treatments {
+	for _, t := range eval.Variants {
 		switch t.Status {
 		case StatusAdded:
 			fmt.Fprintf(tw, "%s\tadded\t—\t—\t—\n", t.Name)
@@ -43,7 +43,7 @@ func writeEvalComparison(w io.Writer, eval EvalComparison) {
 	fmt.Fprintln(w)
 }
 
-func writeMatchedRow(tw *tabwriter.Writer, t TreatmentComparison) {
+func writeMatchedRow(tw *tabwriter.Writer, t VariantComparison) {
 	passCol := "—"
 	if t.PassRateDelta != nil {
 		passCol = fmt.Sprintf("%s%.0fpp %s",

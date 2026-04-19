@@ -9,7 +9,7 @@ type Suite struct {
 	Evals       []Eval    `yaml:"evals"`
 }
 
-// Ranking configures how treatments are scored and ranked.
+// Ranking configures how variants are scored and ranked.
 type Ranking struct {
 	Weights RankingWeights `yaml:"weights"`
 }
@@ -60,7 +60,7 @@ Samples      *int           `yaml:"samples"`
 	Correctness  Correctness    `yaml:"correctness"` // Deprecated: use Verify
 	Retry        *Retry         `yaml:"retry"`
 	Matrix       *Matrix        `yaml:"matrix,omitempty"`
-	Variants []Treatment `yaml:"variants"`
+	Variants []Variant `yaml:"variants"`
 }
 
 // VerifyStep defines a single verification step.
@@ -188,9 +188,9 @@ type TCPProbeAssert struct {
 	Open *bool `yaml:"open,omitempty"`
 }
 
-// Matrix defines dimensions for generating treatments from a cartesian product.
+// Matrix defines dimensions for generating variants from a cartesian product.
 // Each dimension has a name and a list of values. The cartesian product of all
-// dimensions produces the full set of treatments.
+// dimensions produces the full set of variants.
 type Matrix struct {
 	Dimensions []MatrixDimension `yaml:"dimensions"`
 }
@@ -203,7 +203,7 @@ type MatrixDimension struct {
 
 // MatrixDimensionValue defines one value within a matrix dimension.
 // Label is required for naming. The remaining fields override the
-// corresponding treatment fields.
+// corresponding variant fields.
 type MatrixDimensionValue struct {
 	Label        string            `yaml:"label"`
 	Prompt       string            `yaml:"prompt,omitempty"`
@@ -216,8 +216,8 @@ type MatrixDimensionValue struct {
 	Env          map[string]string `yaml:"env,omitempty"`
 }
 
-// Treatment defines a single treatment (variant) configuration.
-type Treatment struct {
+// Variant defines a single variant configuration.
+type Variant struct {
 	Name            string            `yaml:"name"`
 	Prompt          string            `yaml:"prompt"`
 	Dir             string            `yaml:"dir"`

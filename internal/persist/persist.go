@@ -36,20 +36,20 @@ func writeEvals(dir string, sr *result.SuiteResult) error {
 	evalsDir := filepath.Join(dir, "evals")
 
 	for _, eval := range sr.Evals {
-		for _, treat := range eval.Treatments {
-			treatDir := filepath.Join(evalsDir, eval.EvalID, treat.Name)
-			if err := os.MkdirAll(treatDir, 0o755); err != nil {
-				return fmt.Errorf("creating treatment dir: %w", err)
+		for _, variant := range eval.Variants {
+			variantDir := filepath.Join(evalsDir, eval.EvalID, variant.Name)
+			if err := os.MkdirAll(variantDir, 0o755); err != nil {
+				return fmt.Errorf("creating variant dir: %w", err)
 			}
 
-			for _, run := range treat.Runs {
-				if err := writeRunJSON(treatDir, run); err != nil {
+			for _, run := range variant.Runs {
+				if err := writeRunJSON(variantDir, run); err != nil {
 					return err
 				}
 			}
 
-			if treat.Aggregate != nil {
-				if err := writeAtomicJSON(filepath.Join(treatDir, "aggregate.json"), treat.Aggregate); err != nil {
+			if variant.Aggregate != nil {
+				if err := writeAtomicJSON(filepath.Join(variantDir, "aggregate.json"), variant.Aggregate); err != nil {
 					return fmt.Errorf("writing aggregate.json: %w", err)
 				}
 			}
@@ -97,7 +97,7 @@ type runJSON struct {
 	Retried       bool    `json:"retried,omitempty"`
 }
 
-func writeRunJSON(treatDir string, run result.RunResult) error {
+func writeRunJSON(variantDir string, run result.RunResult) error {
 	r := runJSON{
 		Sample:        run.Sample,
 		Text:          run.Text,
@@ -116,19 +116,19 @@ func writeRunJSON(treatDir string, run result.RunResult) error {
 	}
 
 	filename := fmt.Sprintf("run-%d.json", run.Sample)
-	if err := writeAtomicJSON(filepath.Join(treatDir, filename), r); err != nil {
+	if err := writeAtomicJSON(filepath.Join(variantDir, filename), r); err != nil {
 		return err
 	}
 
 	if len(run.Conversation) > 0 {
-		convPath := filepath.Join(treatDir, fmt.Sprintf("run-%d.conversation.jsonl", run.Sample))
+		convPath := filepath.Join(variantDir, fmt.Sprintf("run-%d.conversation.jsonl", run.Sample))
 		if err := writeConversationJSONL(convPath, run.Conversation); err != nil {
 			return err
 		}
 	}
 
 	if len(run.JudgeConversation) > 0 {
-		judgePath := filepath.Join(treatDir, fmt.Sprintf("run-%d.judge.jsonl", run.Sample))
+		judgePath := filepath.Join(variantDir, fmt.Sprintf("run-%d.judge.jsonl", run.Sample))
 		if err := writeConversationJSONL(judgePath, run.JudgeConversation); err != nil {
 			return err
 		}
@@ -170,7 +170,7 @@ type summaryJSON struct {
 	Description string               `json:"description"`
 	StartedAt   string               `json:"started_at"`
 	FinishedAt  string               `json:"finished_at"`
-	Rankings    []report.TreatmentRank `json:"rankings,omitempty"`
+	Rankings    []report.VariantRank `json:"rankings,omitempty"`
 }
 
 func buildSummaryJSON(sr *result.SuiteResult, weights report.Weights) summaryJSON {
@@ -178,7 +178,7 @@ func buildSummaryJSON(sr *result.SuiteResult, weights report.Weights) summaryJSO
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format(time.RFC3339),
 		FinishedAt:  sr.FinishedAt.Format(time.RFC3339),
-		Rankings:    report.RankTreatments(sr, weights),
+		Rankings:    report.RankVariants(sr, weights),
 	}
 }
 

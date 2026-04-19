@@ -119,25 +119,25 @@ func resolvePaths(s *Suite, suiteDir string) {
 		}
 
 		for j := range e.Variants {
-			resolveTreatmentPaths(&e.Variants[j], suiteDir)
+			resolveVariantPaths(&e.Variants[j], suiteDir)
 		}
 	}
 }
 
-func resolveTreatmentPaths(t *Treatment, suiteDir string) {
-	if t.Skill != "" && !filepath.IsAbs(t.Skill) {
-		t.Skill = filepath.Join(suiteDir, t.Skill)
+func resolveVariantPaths(v *Variant, suiteDir string) {
+	if v.Skill != "" && !filepath.IsAbs(v.Skill) {
+		v.Skill = filepath.Join(suiteDir, v.Skill)
 	}
-	for i, s := range t.Skills {
+	for i, s := range v.Skills {
 		if s != "" && !filepath.IsAbs(s) {
-			t.Skills[i] = filepath.Join(suiteDir, s)
+			v.Skills[i] = filepath.Join(suiteDir, s)
 		}
 	}
-	if t.Dir != "" && !filepath.IsAbs(t.Dir) {
-		t.Dir = filepath.Join(suiteDir, t.Dir)
+	if v.Dir != "" && !filepath.IsAbs(v.Dir) {
+		v.Dir = filepath.Join(suiteDir, v.Dir)
 	}
-	if t.ConfigDir != "" && !filepath.IsAbs(t.ConfigDir) {
-		t.ConfigDir = filepath.Join(suiteDir, t.ConfigDir)
+	if v.ConfigDir != "" && !filepath.IsAbs(v.ConfigDir) {
+		v.ConfigDir = filepath.Join(suiteDir, v.ConfigDir)
 	}
 }
 
@@ -255,28 +255,28 @@ func hasCorrectnessConfig(c Correctness) bool {
 		c.JudgeModel != ""
 }
 
-// migrateAllowedTools moves the deprecated AllowedTools field on treatments
+// migrateAllowedTools moves the deprecated AllowedTools field on variants
 // into RunnerConfig["allowed_tools"] and logs a deprecation warning.
 func migrateAllowedTools(s *Suite) {
 	for i := range s.Evals {
 		for j := range s.Evals[i].Variants {
-			migrateTreatmentAllowedTools(&s.Evals[i].Variants[j])
+			migrateVariantAllowedTools(&s.Evals[i].Variants[j])
 		}
 	}
 }
 
-func migrateTreatmentAllowedTools(t *Treatment) {
-	if len(t.AllowedTools) == 0 {
+func migrateVariantAllowedTools(v *Variant) {
+	if len(v.AllowedTools) == 0 {
 		return
 	}
-	log.Printf("WARNING: treatment %q uses deprecated allowed_tools field; use runner_config.allowed_tools instead", t.Name)
-	if t.RunnerConfig == nil {
-		t.RunnerConfig = make(map[string]any)
+	log.Printf("WARNING: variant %q uses deprecated allowed_tools field; use runner_config.allowed_tools instead", v.Name)
+	if v.RunnerConfig == nil {
+		v.RunnerConfig = make(map[string]any)
 	}
-	if _, ok := t.RunnerConfig["allowed_tools"]; !ok {
-		t.RunnerConfig["allowed_tools"] = t.AllowedTools
+	if _, ok := v.RunnerConfig["allowed_tools"]; !ok {
+		v.RunnerConfig["allowed_tools"] = v.AllowedTools
 	}
-	t.AllowedTools = nil
+	v.AllowedTools = nil
 }
 
 // mergeDefaults applies suite-level defaults to each eval where the eval
@@ -320,27 +320,26 @@ func mergeDefaults(s *Suite) {
 }
 
 // resolveRunnerConfig propagates Runner and deep-merges RunnerConfig from each
-// eval into its control and variation treatments. Treatment values take
-// precedence over eval values.
+// eval into its variants. Variant values take precedence over eval values.
 func resolveRunnerConfig(s *Suite) {
 	for i := range s.Evals {
 		e := &s.Evals[i]
 		for j := range e.Variants {
-			mergeRunnerIntoTreatment(e, &e.Variants[j])
+			mergeRunnerIntoVariant(e, &e.Variants[j])
 		}
 	}
 }
 
-func mergeRunnerIntoTreatment(e *Eval, t *Treatment) {
-	if t.Runner == "" && e.Runner != "" {
-		t.Runner = e.Runner
+func mergeRunnerIntoVariant(e *Eval, v *Variant) {
+	if v.Runner == "" && e.Runner != "" {
+		v.Runner = e.Runner
 	}
-	if t.Model == "" && e.Model != "" {
-		t.Model = e.Model
+	if v.Model == "" && e.Model != "" {
+		v.Model = e.Model
 	}
-	t.RunnerConfig = mergeMaps(e.RunnerConfig, t.RunnerConfig)
-	if t.Retry == nil && e.Retry != nil {
-		t.Retry = e.Retry
+	v.RunnerConfig = mergeMaps(e.RunnerConfig, v.RunnerConfig)
+	if v.Retry == nil && e.Retry != nil {
+		v.Retry = e.Retry
 	}
 }
 

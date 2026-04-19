@@ -26,11 +26,11 @@ type jsonEval struct {
 	ID         string          `json:"id"`
 	Name       string          `json:"name"`
 	Error      string          `json:"error,omitempty"`
-	Treatments []jsonTreatment `json:"treatments"`
+	Variants []jsonVariant `json:"variants"`
 	Skipped    []jsonSkipped   `json:"skipped,omitempty"`
 }
 
-type jsonTreatment struct {
+type jsonVariant struct {
 	Name      string         `json:"name"`
 	Runner    string         `json:"runner,omitempty"`
 	Model     string         `json:"model,omitempty"`
@@ -98,14 +98,14 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 		for _, s := range eval.Skipped {
 			je.Skipped = append(je.Skipped, jsonSkipped{Name: s.Name, Reason: s.Reason})
 		}
-		for _, treat := range eval.Treatments {
-			jt := jsonTreatment{
-				Name:      treat.Name,
-				Runner:    treat.Runner,
-				Model:     treat.Model,
-				IsControl: treat.IsControl,
+		for _, v := range eval.Variants {
+			jt := jsonVariant{
+				Name:      v.Name,
+				Runner:    v.Runner,
+				Model:     v.Model,
+				IsControl: v.IsControl,
 			}
-			for _, run := range treat.Runs {
+			for _, run := range v.Runs {
 				jr := jsonRun{
 					Sample:     run.Sample,
 					Status:     runStatus(run),
@@ -118,7 +118,7 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 				}
 				jt.Runs = append(jt.Runs, jr)
 			}
-			if agg := treat.Aggregate; agg != nil {
+			if agg := v.Aggregate; agg != nil {
 				jt.Aggregate = &jsonAggregate{
 					MedianCostUSD:    agg.MedianCostUSD,
 					MinCostUSD:       agg.MinCostUSD,
@@ -131,12 +131,12 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 					Pass:             agg.Pass,
 				}
 			}
-			je.Treatments = append(je.Treatments, jt)
+			je.Variants = append(je.Variants, jt)
 		}
 		r.Evals = append(r.Evals, je)
 	}
 
-	ranks := RankTreatments(sr, weights)
+	ranks := RankVariants(sr, weights)
 	for _, rank := range ranks {
 		r.Rankings = append(r.Rankings, jsonRanking{
 			Rank:           rank.Rank,

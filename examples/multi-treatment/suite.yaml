@@ -1,7 +1,7 @@
 # Multiple variants with different models, skills, env vars,
 # and runner_config.
 version: 1
-description: "Demonstrates multiple treatment variations"
+description: "Demonstrates multiple variant configurations"
 
 defaults:
   runner: claude-code

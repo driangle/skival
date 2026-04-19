@@ -24,7 +24,7 @@ func makeSuiteResult() *result.SuiteResult {
 		Evals: []result.EvalResult{{
 			EvalID:   "eval1",
 			EvalName: "fizzbuzz",
-			Treatments: []result.TreatmentResult{{
+			Variants: []result.VariantResult{{
 				Name:      "control",
 				IsControl: true,
 				Runs: []result.RunResult{
@@ -79,13 +79,13 @@ func TestSaveAndLoad_RoundTrip(t *testing.T) {
 	if len(loaded.Evals) != 1 {
 		t.Fatalf("expected 1 eval, got %d", len(loaded.Evals))
 	}
-	if len(loaded.Evals[0].Treatments) != 1 {
-		t.Fatalf("expected 1 treatment, got %d", len(loaded.Evals[0].Treatments))
+	if len(loaded.Evals[0].Variants) != 1 {
+		t.Fatalf("expected 1 variant, got %d", len(loaded.Evals[0].Variants))
 	}
 
-	treat := loaded.Evals[0].Treatments[0]
+	treat := loaded.Evals[0].Variants[0]
 	if treat.Name != "control" {
-		t.Errorf("treatment name = %q, want control", treat.Name)
+		t.Errorf("variant name = %q, want control", treat.Name)
 	}
 	if len(treat.Runs) != 2 {
 		t.Fatalf("expected 2 runs, got %d", len(treat.Runs))
@@ -172,11 +172,11 @@ func TestLoad_NonExistentDir(t *testing.T) {
 func TestSave_WithConversations(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
-	sr.Evals[0].Treatments[0].Runs[0].Conversation = []json.RawMessage{
+	sr.Evals[0].Variants[0].Runs[0].Conversation = []json.RawMessage{
 		json.RawMessage(`{"role":"assistant","text":"hello"}`),
 		json.RawMessage(`{"role":"user","text":"hi"}`),
 	}
-	sr.Evals[0].Treatments[0].Runs[0].JudgeConversation = []json.RawMessage{
+	sr.Evals[0].Variants[0].Runs[0].JudgeConversation = []json.RawMessage{
 		json.RawMessage(`{"role":"assistant","text":"PASS: ok"}`),
 	}
 
@@ -219,10 +219,10 @@ func TestSave_WithoutConversations_NoJSONLFiles(t *testing.T) {
 func TestSaveAndLoad_ConversationRoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()
-	sr.Evals[0].Treatments[0].Runs[0].Conversation = []json.RawMessage{
+	sr.Evals[0].Variants[0].Runs[0].Conversation = []json.RawMessage{
 		json.RawMessage(`{"role":"assistant","text":"hello"}`),
 	}
-	sr.Evals[0].Treatments[0].Runs[0].JudgeConversation = []json.RawMessage{
+	sr.Evals[0].Variants[0].Runs[0].JudgeConversation = []json.RawMessage{
 		json.RawMessage(`{"role":"assistant","text":"PASS"}`),
 	}
 
@@ -236,7 +236,7 @@ func TestSaveAndLoad_ConversationRoundTrip(t *testing.T) {
 		t.Fatalf("Load error: %v", err)
 	}
 
-	run := loaded.Evals[0].Treatments[0].Runs[0]
+	run := loaded.Evals[0].Variants[0].Runs[0]
 	if len(run.Conversation) != 1 {
 		t.Fatalf("expected 1 conversation message, got %d", len(run.Conversation))
 	}
@@ -265,7 +265,7 @@ func TestLoad_BackwardsCompat_NoJSONLFiles(t *testing.T) {
 		t.Fatalf("Load error: %v", err)
 	}
 
-	run := loaded.Evals[0].Treatments[0].Runs[0]
+	run := loaded.Evals[0].Variants[0].Runs[0]
 	if run.Conversation != nil {
 		t.Error("expected nil conversation for legacy data")
 	}

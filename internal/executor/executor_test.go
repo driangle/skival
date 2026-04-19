@@ -113,7 +113,7 @@ func newMinimalSuite() *suite.Suite {
 				ID:     "eval-1",
 				Name:   "Test Eval",
 				Prompt: "do something",
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "control", Runner: "claude-code"},
 				},
 			},
@@ -121,7 +121,7 @@ func newMinimalSuite() *suite.Suite {
 	}
 }
 
-func TestSingleEvalTreatmentSample(t *testing.T) {
+func TestSingleEvalVariantSample(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{
 			{Text: "done", CostUSD: 0.05, Duration: 1500 * time.Millisecond, SessionID: "sess-1"},
@@ -139,13 +139,13 @@ func TestSingleEvalTreatmentSample(t *testing.T) {
 	if sr.Evals[0].EvalID != "eval-1" {
 		t.Errorf("expected eval ID 'eval-1', got %q", sr.Evals[0].EvalID)
 	}
-	if len(sr.Evals[0].Treatments) != 1 {
-		t.Fatalf("expected 1 treatment, got %d", len(sr.Evals[0].Treatments))
+	if len(sr.Evals[0].Variants) != 1 {
+		t.Fatalf("expected 1 variant, got %d", len(sr.Evals[0].Variants))
 	}
 
-	tr := sr.Evals[0].Treatments[0]
+	tr := sr.Evals[0].Variants[0]
 	if tr.Name != "control" {
-		t.Errorf("expected treatment name 'control', got %q", tr.Name)
+		t.Errorf("expected variant name 'control', got %q", tr.Name)
 	}
 	if !tr.IsControl {
 		t.Error("expected IsControl to be true")
@@ -181,7 +181,7 @@ func TestControlBeforeVariations(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{Name: "control", Runner: "claude-code"},
 		{Name: "variation-1", Runner: "claude-code"},
 	}
@@ -191,20 +191,20 @@ func TestControlBeforeVariations(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	treatments := sr.Evals[0].Treatments
-	if len(treatments) != 2 {
-		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	variants := sr.Evals[0].Variants
+	if len(variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(variants))
 	}
-	if treatments[0].Name != "control" || !treatments[0].IsControl {
-		t.Errorf("first treatment should be control, got %q (isControl=%v)", treatments[0].Name, treatments[0].IsControl)
+	if variants[0].Name != "control" || !variants[0].IsControl {
+		t.Errorf("first variant should be control, got %q (isControl=%v)", variants[0].Name, variants[0].IsControl)
 	}
-	if treatments[1].Name != "variation-1" || treatments[1].IsControl {
-		t.Errorf("second treatment should be variation-1, got %q (isControl=%v)", treatments[1].Name, treatments[1].IsControl)
+	if variants[1].Name != "variation-1" || variants[1].IsControl {
+		t.Errorf("second variant should be variation-1, got %q (isControl=%v)", variants[1].Name, variants[1].IsControl)
 	}
-	if treatments[0].Runs[0].Text != "control-result" {
+	if variants[0].Runs[0].Text != "control-result" {
 		t.Error("control should run first")
 	}
-	if treatments[1].Runs[0].Text != "variation-result" {
+	if variants[1].Runs[0].Text != "variation-result" {
 		t.Error("variation should run second")
 	}
 }
@@ -226,7 +226,7 @@ func TestMultipleSamples(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 3 {
 		t.Fatalf("expected 3 runs, got %d", len(runs))
 	}
@@ -248,7 +248,7 @@ func TestRunnerErrorCaptured(t *testing.T) {
 		t.Fatalf("suite should not fail on runner error, got: %v", err)
 	}
 
-	run := sr.Evals[0].Treatments[0].Runs[0]
+	run := sr.Evals[0].Variants[0].Runs[0]
 	if run.Err == nil {
 		t.Fatal("expected error in RunResult")
 	}
@@ -265,7 +265,7 @@ func TestOptionsMapping(t *testing.T) {
 	s := newMinimalSuite()
 	s.Evals[0].Dir = "/tmp/eval-dir"
 	s.Evals[0].Timeout = intPtr(30)
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:         "control",
 			Runner:       "claude-code",
@@ -299,13 +299,13 @@ func TestOptionsMapping(t *testing.T) {
 	}
 }
 
-func TestTreatmentModelUsed(t *testing.T) {
+func TestVariantModelUsed(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{}},
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "claude-code",
@@ -316,11 +316,11 @@ func TestTreatmentModelUsed(t *testing.T) {
 	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
 	if runner.calls[0].Opts.Model != "claude-opus-4-6" {
-		t.Errorf("expected treatment model, got %q", runner.calls[0].Opts.Model)
+		t.Errorf("expected variant model, got %q", runner.calls[0].Opts.Model)
 	}
 }
 
-func TestTreatmentResultModelFromVariant(t *testing.T) {
+func TestVariantResultModelFromVariant(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}},
 	}
@@ -333,19 +333,19 @@ func TestTreatmentResultModelFromVariant(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	tr := sr.Evals[0].Treatments[0]
+	tr := sr.Evals[0].Variants[0]
 	if tr.Model != "claude-sonnet-4-6" {
 		t.Errorf("expected model 'claude-sonnet-4-6', got %q", tr.Model)
 	}
 }
 
-func TestTreatmentResultModelPerVariant(t *testing.T) {
+func TestVariantResultModelPerVariant(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}, {Text: "ok"}},
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{Name: "control", Runner: "claude-code", Model: "claude-opus-4-6"},
 		{Name: "variation", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 	}
@@ -355,11 +355,11 @@ func TestTreatmentResultModelPerVariant(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if sr.Evals[0].Treatments[0].Model != "claude-opus-4-6" {
-		t.Errorf("control should use its own model, got %q", sr.Evals[0].Treatments[0].Model)
+	if sr.Evals[0].Variants[0].Model != "claude-opus-4-6" {
+		t.Errorf("control should use its own model, got %q", sr.Evals[0].Variants[0].Model)
 	}
-	if sr.Evals[0].Treatments[1].Model != "claude-sonnet-4-6" {
-		t.Errorf("variation should use its own model, got %q", sr.Evals[0].Treatments[1].Model)
+	if sr.Evals[0].Variants[1].Model != "claude-sonnet-4-6" {
+		t.Errorf("variation should use its own model, got %q", sr.Evals[0].Variants[1].Model)
 	}
 }
 
@@ -372,9 +372,9 @@ func TestFilterEvals(t *testing.T) {
 
 	s := &suite.Suite{
 		Evals: []suite.Eval{
-			{ID: "e1", Name: "Eval 1", Prompt: "p1", Variants: []suite.Treatment{{Name: "ctrl", Runner: "claude-code"}}},
-			{ID: "e2", Name: "Eval 2", Prompt: "p2", Variants: []suite.Treatment{{Name: "ctrl", Runner: "claude-code"}}},
-			{ID: "e3", Name: "Eval 3", Prompt: "p3", Variants: []suite.Treatment{{Name: "ctrl", Runner: "claude-code"}}},
+			{ID: "e1", Name: "Eval 1", Prompt: "p1", Variants: []suite.Variant{{Name: "ctrl", Runner: "claude-code"}}},
+			{ID: "e2", Name: "Eval 2", Prompt: "p2", Variants: []suite.Variant{{Name: "ctrl", Runner: "claude-code"}}},
+			{ID: "e3", Name: "Eval 3", Prompt: "p3", Variants: []suite.Variant{{Name: "ctrl", Runner: "claude-code"}}},
 		},
 	}
 
@@ -390,7 +390,7 @@ func TestFilterEvals(t *testing.T) {
 	}
 }
 
-func TestFilterTreatments(t *testing.T) {
+func TestFilterVariants(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{
 			{Text: "var-result"},
@@ -401,7 +401,7 @@ func TestFilterTreatments(t *testing.T) {
 		Evals: []suite.Eval{
 			{
 				ID: "e1", Name: "Eval 1", Prompt: "p1",
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "control", Runner: "claude-code"},
 					{Name: "with-skill", Runner: "claude-code"},
 				},
@@ -409,17 +409,17 @@ func TestFilterTreatments(t *testing.T) {
 		},
 	}
 
-	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{Treatments: []string{"with-skill"}})
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{Variants: []string{"with-skill"}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	treatments := sr.Evals[0].Treatments
-	if len(treatments) != 1 {
-		t.Fatalf("expected 1 treatment, got %d", len(treatments))
+	variants := sr.Evals[0].Variants
+	if len(variants) != 1 {
+		t.Fatalf("expected 1 variant, got %d", len(variants))
 	}
-	if treatments[0].Name != "with-skill" {
-		t.Errorf("expected 'with-skill', got %q", treatments[0].Name)
+	if variants[0].Name != "with-skill" {
+		t.Errorf("expected 'with-skill', got %q", variants[0].Name)
 	}
 }
 
@@ -435,7 +435,7 @@ func TestSkillFilePassedAsSystemPrompt(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "claude-code",
@@ -469,7 +469,7 @@ func TestSkillsArrayConcatenated(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "claude-code",
@@ -500,7 +500,7 @@ func TestSkillsArraySingleFile(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "claude-code",
@@ -527,7 +527,7 @@ func TestSkillsArrayMissingFile(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "claude-code",
@@ -540,7 +540,7 @@ func TestSkillsArrayMissingFile(t *testing.T) {
 		t.Fatalf("suite should not abort, got: %v", err)
 	}
 
-	run := sr.Evals[0].Treatments[0].Runs[0]
+	run := sr.Evals[0].Variants[0].Runs[0]
 	if run.Err == nil {
 		t.Fatal("expected error for missing skill file in skills array")
 	}
@@ -552,7 +552,7 @@ func TestSkillFileMissing(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "claude-code",
@@ -565,7 +565,7 @@ func TestSkillFileMissing(t *testing.T) {
 		t.Fatalf("suite should not abort, got: %v", err)
 	}
 
-	run := sr.Evals[0].Treatments[0].Runs[0]
+	run := sr.Evals[0].Variants[0].Runs[0]
 	if run.Err == nil {
 		t.Fatal("expected error for missing skill file")
 	}
@@ -586,7 +586,7 @@ func TestSamplesOverride(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 5 {
 		t.Fatalf("expected 5 runs (CLI override), got %d", len(runs))
 	}
@@ -607,8 +607,8 @@ func TestNoOverrideUsesYAML(t *testing.T) {
 	}
 
 	// Samples from YAML should apply.
-	if len(sr.Evals[0].Treatments[0].Runs) != 2 {
-		t.Fatalf("expected 2 runs (YAML), got %d", len(sr.Evals[0].Treatments[0].Runs))
+	if len(sr.Evals[0].Variants[0].Runs) != 2 {
+		t.Fatalf("expected 2 runs (YAML), got %d", len(sr.Evals[0].Variants[0].Runs))
 	}
 	// Model from YAML should apply.
 	if runner.calls[0].Opts.Model != "claude-sonnet-4-6" {
@@ -628,7 +628,7 @@ func TestConversationPopulated(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	run := sr.Evals[0].Treatments[0].Runs[0]
+	run := sr.Evals[0].Variants[0].Runs[0]
 	if len(run.Conversation) != 1 {
 		t.Fatalf("expected 1 conversation message, got %d", len(run.Conversation))
 	}
@@ -647,7 +647,7 @@ func TestConversationNilOnError(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	run := sr.Evals[0].Treatments[0].Runs[0]
+	run := sr.Evals[0].Variants[0].Runs[0]
 	if run.Conversation != nil {
 		t.Error("expected nil conversation on error")
 	}
@@ -660,7 +660,7 @@ func TestUnknownRunnerCapturedAsError(t *testing.T) {
 	})
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:   "control",
 			Runner: "nonexistent",
@@ -672,7 +672,7 @@ func TestUnknownRunnerCapturedAsError(t *testing.T) {
 		t.Fatalf("suite should not abort: %v", err)
 	}
 
-	run := sr.Evals[0].Treatments[0].Runs[0]
+	run := sr.Evals[0].Variants[0].Runs[0]
 	if run.Err == nil {
 		t.Fatal("expected error for unknown runner")
 	}
@@ -681,7 +681,7 @@ func TestUnknownRunnerCapturedAsError(t *testing.T) {
 	}
 }
 
-func TestTreatmentSpecificRunner(t *testing.T) {
+func TestVariantSpecificRunner(t *testing.T) {
 	claudeRunner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "claude-result"}},
 	}
@@ -698,7 +698,7 @@ func TestTreatmentSpecificRunner(t *testing.T) {
 	})
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{Name: "control", Runner: "claude-code"},
 		{Name: "ollama-variant", Runner: "ollama"},
 	}
@@ -708,19 +708,19 @@ func TestTreatmentSpecificRunner(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	treatments := sr.Evals[0].Treatments
-	if len(treatments) != 2 {
-		t.Fatalf("expected 2 treatments, got %d", len(treatments))
+	variants := sr.Evals[0].Variants
+	if len(variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(variants))
 	}
-	if treatments[0].Runs[0].Text != "claude-result" {
-		t.Errorf("control should use claude-code runner, got %q", treatments[0].Runs[0].Text)
+	if variants[0].Runs[0].Text != "claude-result" {
+		t.Errorf("control should use claude-code runner, got %q", variants[0].Runs[0].Text)
 	}
-	if treatments[1].Runs[0].Text != "ollama-result" {
-		t.Errorf("variation should use ollama runner, got %q", treatments[1].Runs[0].Text)
+	if variants[1].Runs[0].Text != "ollama-result" {
+		t.Errorf("variation should use ollama runner, got %q", variants[1].Runs[0].Text)
 	}
 }
 
-func TestRunnerCachedAcrossTreatments(t *testing.T) {
+func TestRunnerCachedAcrossVariants(t *testing.T) {
 	var createCount int
 	reg := registry.New()
 	reg.Register("claude-code", func(config map[string]any) (agentrunner.Runner, error) {
@@ -731,7 +731,7 @@ func TestRunnerCachedAcrossTreatments(t *testing.T) {
 	})
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{Name: "control", Runner: "claude-code"},
 		{Name: "variation", Runner: "claude-code"},
 	}
@@ -916,7 +916,7 @@ func TestIsolateGivesUniqueDirsPerSample(t *testing.T) {
 				Dir:     srcDir,
 				Isolate: boolPtr(true),
 				Samples: intPtr(3),
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "control", Runner: "claude-code"},
 				},
 			},
@@ -946,7 +946,7 @@ func TestIsolateGivesUniqueDirsPerSample(t *testing.T) {
 	}
 
 	// Verify all runs succeeded.
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 3 {
 		t.Fatalf("expected 3 runs, got %d", len(runs))
 	}
@@ -982,7 +982,7 @@ func TestIsolateCopiesFiles(t *testing.T) {
 				Prompt:  "do something",
 				Dir:     srcDir,
 				Isolate: boolPtr(true),
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "control", Runner: "claude-code"},
 				},
 			},
@@ -1003,7 +1003,7 @@ func TestIsolateCopiesFiles(t *testing.T) {
 	}
 }
 
-func TestIsolateTempDirsCleanedUp(t *testing.T) {
+func TestIsolateTempDirsPreserved(t *testing.T) {
 	srcDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(srcDir, "f.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
@@ -1024,23 +1024,32 @@ func TestIsolateTempDirsCleanedUp(t *testing.T) {
 				Dir:     srcDir,
 				Isolate: boolPtr(true),
 				Samples: intPtr(2),
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "control", Runner: "claude-code"},
 				},
 			},
 		},
 	}
 
-	_, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// All isolated temp dirs should be cleaned up.
+	// Isolated temp dirs should be preserved for inspection.
 	for _, call := range runner.calls {
 		dir := call.Opts.WorkingDir
-		if _, err := os.Stat(dir); !os.IsNotExist(err) {
-			t.Errorf("temp dir %q should have been cleaned up", dir)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			t.Errorf("temp dir %q should have been preserved", dir)
+		}
+		// Clean up after test.
+		defer os.RemoveAll(dir)
+	}
+
+	// WorkDir should be recorded in results.
+	for _, run := range sr.Evals[0].Variants[0].Runs {
+		if run.WorkDir == "" {
+			t.Error("expected WorkDir to be set on run result")
 		}
 	}
 }
@@ -1061,10 +1070,10 @@ func TestNoIsolateBehaviorUnchanged(t *testing.T) {
 	}
 }
 
-func TestIsolateWithTreatmentDir(t *testing.T) {
-	// Treatment dir should be used as the source for isolation.
-	treatmentDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(treatmentDir, "treat.txt"), []byte("treatment"), 0o644); err != nil {
+func TestIsolateWithVariantDir(t *testing.T) {
+	// Variant dir should be used as the source for isolation.
+	variantDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(variantDir, "variant.txt"), []byte("variant"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	evalDir := t.TempDir()
@@ -1086,8 +1095,8 @@ func TestIsolateWithTreatmentDir(t *testing.T) {
 				Prompt:  "do something",
 				Dir:     evalDir,
 				Isolate: boolPtr(true),
-				Variants: []suite.Treatment{
-					{Name: "control", Runner: "claude-code", Dir: treatmentDir},
+				Variants: []suite.Variant{
+					{Name: "control", Runner: "claude-code", Dir: variantDir},
 				},
 			},
 		},
@@ -1098,17 +1107,17 @@ func TestIsolateWithTreatmentDir(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// The isolated dir should not be the treatment dir itself.
+	// The isolated dir should not be the variant dir itself.
 	capturedDir := runner.calls[0].Opts.WorkingDir
-	if capturedDir == treatmentDir {
-		t.Error("isolated dir should differ from treatment dir")
+	if capturedDir == variantDir {
+		t.Error("isolated dir should differ from variant dir")
 	}
 	if capturedDir == evalDir {
 		t.Error("isolated dir should differ from eval dir")
 	}
 }
 
-func TestTreatmentPromptOverridesEval(t *testing.T) {
+func TestVariantPromptOverridesEval(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}, {Text: "ok"}},
 	}
@@ -1119,8 +1128,8 @@ func TestTreatmentPromptOverridesEval(t *testing.T) {
 				ID:     "e1",
 				Name:   "Eval",
 				Prompt: "eval prompt",
-				Variants: []suite.Treatment{
-					{Name: "control", Runner: "claude-code", Prompt: "treatment prompt"},
+				Variants: []suite.Variant{
+					{Name: "control", Runner: "claude-code", Prompt: "variant prompt"},
 					{Name: "uses-eval-prompt", Runner: "claude-code"},
 				},
 			},
@@ -1135,8 +1144,8 @@ func TestTreatmentPromptOverridesEval(t *testing.T) {
 	if len(runner.calls) != 2 {
 		t.Fatalf("expected 2 calls, got %d", len(runner.calls))
 	}
-	if runner.calls[0].Prompt != "treatment prompt" {
-		t.Errorf("control should use treatment prompt, got %q", runner.calls[0].Prompt)
+	if runner.calls[0].Prompt != "variant prompt" {
+		t.Errorf("control should use variant prompt, got %q", runner.calls[0].Prompt)
 	}
 	if runner.calls[1].Prompt != "eval prompt" {
 		t.Errorf("variation should fall back to eval prompt, got %q", runner.calls[1].Prompt)
@@ -1149,7 +1158,7 @@ func TestConfigDirSetsEnvVar(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:      "control",
 			Runner:    "claude-code",
@@ -1173,7 +1182,7 @@ func TestConfigDirMergesWithExistingEnv(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:      "control",
 			Runner:    "claude-code",
@@ -1200,7 +1209,7 @@ func TestConfigDirDoesNotMutateOriginalEnv(t *testing.T) {
 
 	originalEnv := map[string]string{"FOO": "bar"}
 	s := newMinimalSuite()
-	s.Evals[0].Variants = []suite.Treatment{
+	s.Evals[0].Variants = []suite.Variant{
 		{
 			Name:      "control",
 			Runner:    "claude-code",
@@ -1284,7 +1293,7 @@ func TestParallelSamplesRunConcurrently(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 4 {
 		t.Fatalf("expected 4 runs, got %d", len(runs))
 	}
@@ -1315,7 +1324,7 @@ func TestParallelResultsOrderPreserved(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 8 {
 		t.Fatalf("expected 8 runs, got %d", len(runs))
 	}
@@ -1341,7 +1350,7 @@ func TestParallelDefaultSequential(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 3 {
 		t.Fatalf("expected 3 runs, got %d", len(runs))
 	}
@@ -1375,7 +1384,7 @@ func TestParallelIsolationDirsIndependent(t *testing.T) {
 				Isolate:  boolPtr(true),
 				Samples:  intPtr(4),
 				Parallel: intPtr(4),
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "control", Runner: "claude-code"},
 				},
 			},
@@ -1387,7 +1396,7 @@ func TestParallelIsolationDirsIndependent(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 4 {
 		t.Fatalf("expected 4 runs, got %d", len(runs))
 	}
@@ -1429,7 +1438,7 @@ func TestParallelProgressNoRace(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 8 {
 		t.Fatalf("expected 8 runs, got %d", len(runs))
 	}
@@ -1526,7 +1535,7 @@ func TestParallelOptionOverridesSuiteDefault(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	runs := sr.Evals[0].Treatments[0].Runs
+	runs := sr.Evals[0].Variants[0].Runs
 	if len(runs) != 4 {
 		t.Fatalf("expected 4 runs, got %d", len(runs))
 	}
@@ -1550,7 +1559,7 @@ func TestParallelVariantsRunConcurrently(t *testing.T) {
 				ID:     "eval-1",
 				Name:   "Test Eval",
 				Prompt: "do something",
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "v1", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v2", Runner: "claude-code", Model: "claude-opus-4-6"},
 					{Name: "v3", Runner: "claude-code", Model: "claude-sonnet-4-6"},
@@ -1567,8 +1576,8 @@ func TestParallelVariantsRunConcurrently(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(sr.Evals[0].Treatments) != 4 {
-		t.Fatalf("expected 4 treatments, got %d", len(sr.Evals[0].Treatments))
+	if len(sr.Evals[0].Variants) != 4 {
+		t.Fatalf("expected 4 variants, got %d", len(sr.Evals[0].Variants))
 	}
 
 	// With 4 parallel variants and 50ms delay each, should finish much faster than 4*50ms=200ms.
@@ -1595,7 +1604,7 @@ func TestParallelVariantsOrderPreserved(t *testing.T) {
 				ID:     "eval-1",
 				Name:   "Test Eval",
 				Prompt: "do something",
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "v1", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v2", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v3", Runner: "claude-code", Model: "claude-sonnet-4-6"},
@@ -1609,14 +1618,14 @@ func TestParallelVariantsOrderPreserved(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	treatments := sr.Evals[0].Treatments
-	if len(treatments) != 3 {
-		t.Fatalf("expected 3 treatments, got %d", len(treatments))
+	variants := sr.Evals[0].Variants
+	if len(variants) != 3 {
+		t.Fatalf("expected 3 variants, got %d", len(variants))
 	}
-	for i, tr := range treatments {
+	for i, tr := range variants {
 		expected := fmt.Sprintf("v%d", i+1)
 		if tr.Name != expected {
-			t.Errorf("treatment[%d] name = %q, want %q", i, tr.Name, expected)
+			t.Errorf("variant[%d] name = %q, want %q", i, tr.Name, expected)
 		}
 	}
 }
@@ -1634,7 +1643,7 @@ func TestParallelVariantsDefaultSequential(t *testing.T) {
 				ID:     "eval-1",
 				Name:   "Test Eval",
 				Prompt: "do something",
-				Variants: []suite.Treatment{
+				Variants: []suite.Variant{
 					{Name: "v1", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v2", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},

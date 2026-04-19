@@ -19,7 +19,7 @@ import (
 var runCmd = &cobra.Command{
 	Use:   "run <suite.yaml>",
 	Short: "Run an eval suite",
-	Long:  "Execute an eval suite definition against configured treatments and collect results.",
+	Long:  "Execute an eval suite definition against configured variants and collect results.",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slog.Debug("Loading suite", "path", args[0])
@@ -32,12 +32,12 @@ var runCmd = &cobra.Command{
 		reg := defaultRegistry()
 
 		evalIDs, _ := cmd.Flags().GetStringSlice("evals")
-		treatments, _ := cmd.Flags().GetStringSlice("treatments")
+		variants, _ := cmd.Flags().GetStringSlice("variants")
 		samples, _ := cmd.Flags().GetInt("samples")
 		parallel, _ := cmd.Flags().GetInt("parallel")
 		parallelVariants, _ := cmd.Flags().GetInt("parallel-variants")
 		timeout, _ := cmd.Flags().GetInt("timeout")
-		slog.Debug("Filters", "evals", evalIDs, "treatments", treatments, "samples", samples, "parallel", parallel, "parallel-variants", parallelVariants, "timeout", timeout)
+		slog.Debug("Filters", "evals", evalIDs, "variants", variants, "samples", samples, "parallel", parallel, "parallel-variants", parallelVariants, "timeout", timeout)
 
 		if timeout < 0 {
 			return fmt.Errorf("--timeout must be a positive number of seconds")
@@ -48,7 +48,7 @@ var runCmd = &cobra.Command{
 
 		execOpts := &executor.Options{
 			EvalIDs:          evalIDs,
-			Treatments:       treatments,
+			Variants:         variants,
 			Progress:         os.Stderr,
 			Samples:          samples,
 			Parallel:         parallel,
@@ -100,11 +100,11 @@ func defaultRegistry() *registry.Registry {
 }
 
 func init() {
-	runCmd.Flags().Int("samples", 1, "Number of runs per treatment")
+	runCmd.Flags().Int("samples", 1, "Number of runs per variant")
 	runCmd.Flags().IntP("parallel", "p", 0, "Max concurrent samples (default: sequential)")
 	runCmd.Flags().Int("parallel-variants", 0, "Max concurrent variants per eval (default: sequential, skips reset hook)")
 	runCmd.Flags().String("results-dir", "", "Directory for results output")
-	runCmd.Flags().StringSlice("treatments", nil, "Filter to specific treatments")
+	runCmd.Flags().StringSlice("variants", nil, "Filter to specific variants")
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
 	runCmd.Flags().String("format", "markdown", "Output format: markdown, json, html")
 	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")

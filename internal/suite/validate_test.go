@@ -12,7 +12,7 @@ func TestValidate_ValidSuite(t *testing.T) {
 			{
 				ID:     "eval-1",
 				Prompt: "do something",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "baseline", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
 			},
@@ -28,7 +28,7 @@ func TestValidate_VersionRequired(t *testing.T) {
 	s := &Suite{
 		Version: 0,
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Variants: []Treatment{{Name: "c"}}},
+			{ID: "e1", Prompt: "p", Variants: []Variant{{Name: "c"}}},
 		},
 	}
 
@@ -46,7 +46,7 @@ func TestValidate_AtLeastOneEval(t *testing.T) {
 func TestValidate_EvalIDRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
-		Evals:   []Eval{{Prompt: "p", Variants: []Treatment{{Name: "c"}}}},
+		Evals:   []Eval{{Prompt: "p", Variants: []Variant{{Name: "c"}}}},
 	}
 
 	err := validate(s)
@@ -56,20 +56,20 @@ func TestValidate_EvalIDRequired(t *testing.T) {
 func TestValidate_EvalPromptRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
-		Evals:   []Eval{{ID: "e1", Variants: []Treatment{{Name: "c"}}}},
+		Evals:   []Eval{{ID: "e1", Variants: []Variant{{Name: "c"}}}},
 	}
 
 	err := validate(s)
 	assertValidationContains(t, err, "has no prompt")
 }
 
-func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
+func TestValidate_VariantPromptOverridesEvalPrompt(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Prompt: "do A", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v1", Prompt: "do B", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
@@ -78,7 +78,7 @@ func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
 	}
 
 	if err := validate(s); err != nil {
-		t.Fatalf("treatment-level prompts should satisfy prompt requirement, got: %v", err)
+		t.Fatalf("variant-level prompts should satisfy prompt requirement, got: %v", err)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestValidate_VariantMissingPromptWhenNoEvalPrompt(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Prompt: "do A", Model: "claude-sonnet-4-6"},
 					{Name: "v1", Model: "claude-sonnet-4-6"},
 				},
@@ -106,7 +106,7 @@ func TestValidate_ConfigDirMustExist(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", ConfigDir: "/nonexistent/config/dir", Model: "claude-sonnet-4-6"},
 				},
 			},
@@ -124,7 +124,7 @@ func TestValidate_ConfigDirValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", ConfigDir: dir, Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
 			},
@@ -140,8 +140,8 @@ func TestValidate_DuplicateEvalIDs(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
-			{ID: "dup", Prompt: "p1", Variants: []Treatment{{Name: "c"}}},
-			{ID: "dup", Prompt: "p2", Variants: []Treatment{{Name: "c"}}},
+			{ID: "dup", Prompt: "p1", Variants: []Variant{{Name: "c"}}},
+			{ID: "dup", Prompt: "p2", Variants: []Variant{{Name: "c"}}},
 		},
 	}
 
@@ -163,7 +163,7 @@ func TestValidate_VariantNameRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Variants: []Treatment{{}}},
+			{ID: "e1", Prompt: "p", Variants: []Variant{{}}},
 		},
 	}
 
@@ -193,7 +193,7 @@ func TestValidate_ModelRequiredOnVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Variants: []Treatment{{Name: "ctrl"}}},
+			{ID: "e1", Prompt: "p", Variants: []Variant{{Name: "ctrl"}}},
 		},
 	}
 
@@ -207,7 +207,7 @@ func TestValidate_ModelRequiredOnSecondVariant(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Model: "claude-sonnet-4-6"},
 					{Name: "v1"},
 				},
@@ -225,7 +225,7 @@ func TestValidate_ModelRequiredOnEveryVariant(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Runner: "claude-code"},
 					{Name: "v1", Runner: "claude-code"},
 				},
@@ -244,7 +244,7 @@ func TestValidate_VariantLevelModelsWithoutEvalModel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Model: "claude-sonnet-4-6", Runner: "claude-code"},
 					{Name: "v1", Model: "claude-opus-4-6", Runner: "claude-code"},
 				},
@@ -265,7 +265,7 @@ func TestValidate_ValidRunners(t *testing.T) {
 				{
 					ID: "e1", Prompt: "p",
 					Runner:   runner,
-					Variants: []Treatment{{Name: "ctrl", Runner: runner, Model: "claude-sonnet-4-6"}},
+					Variants: []Variant{{Name: "ctrl", Runner: runner, Model: "claude-sonnet-4-6"}},
 				},
 			},
 		}
@@ -281,7 +281,7 @@ func TestValidate_MissingRunnerOnVariant(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{{Name: "ctrl", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "ctrl", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -296,7 +296,7 @@ func TestValidate_MissingRunnerOnSecondVariant(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 					{Name: "v1", Model: "claude-sonnet-4-6"},
 				},
@@ -313,7 +313,7 @@ func TestValidate_UnknownRunnerOnDefaults(t *testing.T) {
 		Version:  1,
 		Defaults: Defaults{Runner: "unknown"},
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}}},
+			{ID: "e1", Prompt: "p", Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}}},
 		},
 	}
 
@@ -328,7 +328,7 @@ func TestValidate_UnknownRunnerOnEval(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Runner:   "bad-runner",
-				Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -343,7 +343,7 @@ func TestValidate_UnknownRunnerOnVariant(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{{Name: "ctrl", Runner: "nope", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "ctrl", Runner: "nope", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -358,7 +358,7 @@ func TestValidate_SkillAndSkillsMutuallyExclusiveOnVariant(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Skill: "a.md", Skills: []string{"b.md"}, Model: "claude-sonnet-4-6"},
 				},
 			},
@@ -375,7 +375,7 @@ func TestValidate_SkillsAloneIsValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "ctrl", Skills: []string{"a.md", "b.md"}, Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
 			},
@@ -421,7 +421,7 @@ func TestWarnModelRunnerCompat_NoWarningForMatchingModel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{{Name: "ctrl", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "ctrl", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -435,7 +435,7 @@ func TestWarnModelRunnerCompat_WarnsForMismatch(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{{Name: "ctrl", Runner: "claude-code", Model: "gpt-4o"}},
+				Variants: []Variant{{Name: "ctrl", Runner: "claude-code", Model: "gpt-4o"}},
 			},
 		},
 	}
@@ -451,7 +451,7 @@ func TestValidate_RetryConfigValid(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Retry:    &Retry{MaxAttempts: &attempts, Backoff: "exponential", Delay: "500ms", On: "all"},
-				Variants: []Treatment{{Name: "ctrl", Runner: "claude-code", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "ctrl", Runner: "claude-code", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -468,7 +468,7 @@ func TestValidate_RetryMaxAttemptsInvalid(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Retry:    &Retry{MaxAttempts: &attempts},
-				Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -483,7 +483,7 @@ func TestValidate_RetryInvalidBackoff(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Retry:    &Retry{Backoff: "linear"},
-				Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -498,7 +498,7 @@ func TestValidate_RetryInvalidDelay(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Retry:    &Retry{Delay: "not-a-duration"},
-				Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -513,7 +513,7 @@ func TestValidate_RetryInvalidOn(t *testing.T) {
 			{
 				ID: "e1", Prompt: "p",
 				Retry:    &Retry{On: "never"},
-				Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -529,7 +529,7 @@ func TestValidate_RetryOnDefaultsLevel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{{Name: "c", Model: "claude-sonnet-4-6"}},
+				Variants: []Variant{{Name: "c", Model: "claude-sonnet-4-6"}},
 			},
 		},
 	}
@@ -543,7 +543,7 @@ func TestValidate_RetryOnVariantLevel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "c", Retry: &Retry{Backoff: "bad"}, Model: "claude-sonnet-4-6"},
 				},
 			},
@@ -668,7 +668,7 @@ func validSuiteWith(modify func(*Eval)) *Suite {
 			{
 				ID:     "eval-1",
 				Prompt: "do something",
-				Variants: []Treatment{
+				Variants: []Variant{
 					{Name: "baseline", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 				},
 			},

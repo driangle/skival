@@ -1,4 +1,4 @@
-# Simplest valid suite: one eval, one control treatment, inline prompt.
+# Simplest valid suite: one eval, one control variant, inline prompt.
 version: 1
 
 defaults:

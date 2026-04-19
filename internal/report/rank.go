@@ -28,8 +28,8 @@ func DefaultWeights() Weights {
 	}
 }
 
-// TreatmentRank holds the ranking data for a single treatment.
-type TreatmentRank struct {
+// VariantRank holds the ranking data for a single variant.
+type VariantRank struct {
 	Name           string
 	Runner         string
 	Model          string
@@ -40,17 +40,17 @@ type TreatmentRank struct {
 	Rank           int
 }
 
-// RankTreatments computes a weighted composite score for each treatment
+// RankVariants computes a weighted composite score for each variant
 // across all evals in a suite result and returns them sorted best-first.
-func RankTreatments(sr *result.SuiteResult, w Weights) []TreatmentRank {
+func RankVariants(sr *result.SuiteResult, w Weights) []VariantRank {
 	stats := collectStats(sr)
 	if len(stats) == 0 {
 		return nil
 	}
 
-	ranks := make([]TreatmentRank, 0, len(stats))
+	ranks := make([]VariantRank, 0, len(stats))
 	for name, s := range stats {
-		ranks = append(ranks, TreatmentRank{
+		ranks = append(ranks, VariantRank{
 			Name:           name,
 			Runner:         s.runner,
 			Model:          s.model,
@@ -76,8 +76,8 @@ func RankTreatments(sr *result.SuiteResult, w Weights) []TreatmentRank {
 	return ranks
 }
 
-// treatmentStats accumulates raw data for a treatment across evals.
-type treatmentStats struct {
+// variantStats accumulates raw data for a variant across evals.
+type variantStats struct {
 	runner    string
 	model     string
 	passed    int
@@ -86,14 +86,14 @@ type treatmentStats struct {
 	durations []int64
 }
 
-func (s *treatmentStats) passRate() float64 {
+func (s *variantStats) passRate() float64 {
 	if s.verified == 0 {
 		return 0
 	}
 	return float64(s.passed) / float64(s.verified)
 }
 
-func (s *treatmentStats) medianCost() float64 {
+func (s *variantStats) medianCost() float64 {
 	if len(s.costs) == 0 {
 		return 0
 	}
@@ -107,7 +107,7 @@ func (s *treatmentStats) medianCost() float64 {
 	return (sorted[n/2-1] + sorted[n/2]) / 2
 }
 
-func (s *treatmentStats) medianDuration() int64 {
+func (s *variantStats) medianDuration() int64 {
 	if len(s.durations) == 0 {
 		return 0
 	}
@@ -121,18 +121,18 @@ func (s *treatmentStats) medianDuration() int64 {
 	return (sorted[n/2-1] + sorted[n/2]) / 2
 }
 
-func collectStats(sr *result.SuiteResult) map[string]*treatmentStats {
-	stats := make(map[string]*treatmentStats)
+func collectStats(sr *result.SuiteResult) map[string]*variantStats {
+	stats := make(map[string]*variantStats)
 
 	for _, eval := range sr.Evals {
-		for _, treat := range eval.Treatments {
-			s, ok := stats[treat.Name]
+		for _, v := range eval.Variants {
+			s, ok := stats[v.Name]
 			if !ok {
-				s = &treatmentStats{runner: treat.Runner, model: treat.Model}
-				stats[treat.Name] = s
+				s = &variantStats{runner: v.Runner, model: v.Model}
+				stats[v.Name] = s
 			}
 
-			for _, run := range treat.Runs {
+			for _, run := range v.Runs {
 				s.costs = append(s.costs, run.CostUSD)
 				s.durations = append(s.durations, run.DurationMs)
 
@@ -151,7 +151,7 @@ func collectStats(sr *result.SuiteResult) map[string]*treatmentStats {
 
 // normalize computes composite scores. For pass rate, higher is better (1.0 = best).
 // For cost and duration, lower is better, so normalization is inverted.
-func normalize(ranks []TreatmentRank, w Weights) {
+func normalize(ranks []VariantRank, w Weights) {
 	if len(ranks) == 0 {
 		return
 	}

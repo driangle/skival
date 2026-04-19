@@ -40,12 +40,12 @@ func makeSuiteResult(desc string, evals []result.EvalResult) *result.SuiteResult
 	}
 }
 
-func TestCompare_MatchingTreatments(t *testing.T) {
+func TestCompare_MatchingVariants(t *testing.T) {
 	baseline := makeSuiteResult("baseline", []result.EvalResult{
 		{
 			EvalID:   "eval-1",
 			EvalName: "Fizzbuzz",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "control", Runs: makeRuns([]bool{true, true}, 0.05, 5000)},
 				{Name: "variant", Runs: makeRuns([]bool{true, false}, 0.10, 8000)},
 			},
@@ -56,7 +56,7 @@ func TestCompare_MatchingTreatments(t *testing.T) {
 		{
 			EvalID:   "eval-1",
 			EvalName: "Fizzbuzz",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "control", Runs: makeRuns([]bool{true, true}, 0.04, 4000)},
 				{Name: "variant", Runs: makeRuns([]bool{true, true}, 0.08, 6000)},
 			},
@@ -73,12 +73,12 @@ func TestCompare_MatchingTreatments(t *testing.T) {
 	if eval.EvalID != "eval-1" {
 		t.Errorf("expected eval ID %q, got %q", "eval-1", eval.EvalID)
 	}
-	if len(eval.Treatments) != 2 {
-		t.Fatalf("expected 2 treatments, got %d", len(eval.Treatments))
+	if len(eval.Variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(eval.Variants))
 	}
 
 	// Control: pass rate unchanged (100% -> 100%), cost decreased, duration decreased.
-	ctrl := eval.Treatments[0]
+	ctrl := eval.Variants[0]
 	if ctrl.Status != StatusMatched {
 		t.Errorf("expected matched, got %s", ctrl.Status)
 	}
@@ -96,7 +96,7 @@ func TestCompare_MatchingTreatments(t *testing.T) {
 	}
 
 	// Variant: pass rate improved (50% -> 100%).
-	variant := eval.Treatments[1]
+	variant := eval.Variants[1]
 	if variant.PassRateDelta == nil {
 		t.Fatal("expected pass rate delta for variant")
 	}
@@ -105,11 +105,11 @@ func TestCompare_MatchingTreatments(t *testing.T) {
 	}
 }
 
-func TestCompare_MismatchedTreatments(t *testing.T) {
+func TestCompare_MismatchedVariants(t *testing.T) {
 	baseline := makeSuiteResult("baseline", []result.EvalResult{
 		{
 			EvalID: "eval-1",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)},
 				{Name: "old-variant", Runs: makeRuns([]bool{false}, 0.10, 8000)},
 			},
@@ -119,7 +119,7 @@ func TestCompare_MismatchedTreatments(t *testing.T) {
 	candidate := makeSuiteResult("candidate", []result.EvalResult{
 		{
 			EvalID: "eval-1",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)},
 				{Name: "new-variant", Runs: makeRuns([]bool{true}, 0.03, 3000)},
 			},
@@ -129,12 +129,12 @@ func TestCompare_MismatchedTreatments(t *testing.T) {
 	c := Compare(baseline, candidate)
 	eval := c.Evals[0]
 
-	if len(eval.Treatments) != 3 {
-		t.Fatalf("expected 3 treatments (matched + removed + added), got %d", len(eval.Treatments))
+	if len(eval.Variants) != 3 {
+		t.Fatalf("expected 3 variants (matched + removed + added), got %d", len(eval.Variants))
 	}
 
 	statusMap := map[string]ComparisonStatus{}
-	for _, tc := range eval.Treatments {
+	for _, tc := range eval.Variants {
 		statusMap[tc.Name] = tc.Status
 	}
 
@@ -151,13 +151,13 @@ func TestCompare_MismatchedTreatments(t *testing.T) {
 
 func TestCompare_MismatchedEvals(t *testing.T) {
 	baseline := makeSuiteResult("baseline", []result.EvalResult{
-		{EvalID: "eval-1", Treatments: []result.TreatmentResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)}}},
-		{EvalID: "eval-old", Treatments: []result.TreatmentResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)}}},
+		{EvalID: "eval-1", Variants: []result.VariantResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)}}},
+		{EvalID: "eval-old", Variants: []result.VariantResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)}}},
 	})
 
 	candidate := makeSuiteResult("candidate", []result.EvalResult{
-		{EvalID: "eval-1", Treatments: []result.TreatmentResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)}}},
-		{EvalID: "eval-new", Treatments: []result.TreatmentResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.03, 3000)}}},
+		{EvalID: "eval-1", Variants: []result.VariantResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.05, 5000)}}},
+		{EvalID: "eval-new", Variants: []result.VariantResult{{Name: "control", Runs: makeRuns([]bool{true}, 0.03, 3000)}}},
 	})
 
 	c := Compare(baseline, candidate)
@@ -171,19 +171,19 @@ func TestCompare_MismatchedEvals(t *testing.T) {
 		evalMap[e.EvalID] = e
 	}
 
-	// eval-1 should be matched with matched treatments.
-	if evalMap["eval-1"].Treatments[0].Status != StatusMatched {
-		t.Error("expected eval-1 treatment to be matched")
+	// eval-1 should be matched with matched variants.
+	if evalMap["eval-1"].Variants[0].Status != StatusMatched {
+		t.Error("expected eval-1 variant to be matched")
 	}
 
-	// eval-old should have removed treatments.
-	if evalMap["eval-old"].Treatments[0].Status != StatusRemoved {
-		t.Error("expected eval-old treatment to be removed")
+	// eval-old should have removed variants.
+	if evalMap["eval-old"].Variants[0].Status != StatusRemoved {
+		t.Error("expected eval-old variant to be removed")
 	}
 
-	// eval-new should have added treatments.
-	if evalMap["eval-new"].Treatments[0].Status != StatusAdded {
-		t.Error("expected eval-new treatment to be added")
+	// eval-new should have added variants.
+	if evalMap["eval-new"].Variants[0].Status != StatusAdded {
+		t.Error("expected eval-new variant to be added")
 	}
 }
 
@@ -191,7 +191,7 @@ func TestCompare_IdenticalResults(t *testing.T) {
 	sr := makeSuiteResult("run", []result.EvalResult{
 		{
 			EvalID: "eval-1",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "control", Runs: makeRuns([]bool{true, false, true}, 0.05, 5000)},
 			},
 		},
@@ -199,7 +199,7 @@ func TestCompare_IdenticalResults(t *testing.T) {
 
 	c := Compare(sr, sr)
 
-	tc := c.Evals[0].Treatments[0]
+	tc := c.Evals[0].Variants[0]
 	if tc.Status != StatusMatched {
 		t.Errorf("expected matched, got %s", tc.Status)
 	}
@@ -219,14 +219,14 @@ func TestCompare_NoPassData(t *testing.T) {
 		{Sample: 1, CostUSD: 0.05, DurationMs: 5000},
 	}
 	baseline := makeSuiteResult("baseline", []result.EvalResult{
-		{EvalID: "eval-1", Treatments: []result.TreatmentResult{{Name: "t1", Runs: runs}}},
+		{EvalID: "eval-1", Variants: []result.VariantResult{{Name: "t1", Runs: runs}}},
 	})
 	candidate := makeSuiteResult("candidate", []result.EvalResult{
-		{EvalID: "eval-1", Treatments: []result.TreatmentResult{{Name: "t1", Runs: runs}}},
+		{EvalID: "eval-1", Variants: []result.VariantResult{{Name: "t1", Runs: runs}}},
 	})
 
 	c := Compare(baseline, candidate)
-	tc := c.Evals[0].Treatments[0]
+	tc := c.Evals[0].Variants[0]
 
 	if tc.PassRateDelta != nil {
 		t.Errorf("expected nil pass rate delta when no pass data, got %v", tc.PassRateDelta)
@@ -257,7 +257,7 @@ func TestCompare_PercentageDeltas(t *testing.T) {
 	baseline := makeSuiteResult("baseline", []result.EvalResult{
 		{
 			EvalID: "eval-1",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "t1", Runs: makeRuns([]bool{true}, 0.10, 10000)},
 			},
 		},
@@ -265,14 +265,14 @@ func TestCompare_PercentageDeltas(t *testing.T) {
 	candidate := makeSuiteResult("candidate", []result.EvalResult{
 		{
 			EvalID: "eval-1",
-			Treatments: []result.TreatmentResult{
+			Variants: []result.VariantResult{
 				{Name: "t1", Runs: makeRuns([]bool{true}, 0.15, 12000)},
 			},
 		},
 	})
 
 	c := Compare(baseline, candidate)
-	tc := c.Evals[0].Treatments[0]
+	tc := c.Evals[0].Variants[0]
 
 	if tc.CostDeltaPct == nil {
 		t.Fatal("expected cost delta percentage")
@@ -297,7 +297,7 @@ func TestWriteMarkdown(t *testing.T) {
 			{
 				EvalID:   "eval-1",
 				EvalName: "Fizzbuzz",
-				Treatments: []TreatmentComparison{
+				Variants: []VariantComparison{
 					{Name: "control", Status: StatusMatched, PassRateDelta: float64Ptr(0.5)},
 					{Name: "old", Status: StatusRemoved},
 					{Name: "new", Status: StatusAdded},
@@ -336,7 +336,7 @@ func TestWriteJSON(t *testing.T) {
 			{
 				EvalID:   "eval-1",
 				EvalName: "Test",
-				Treatments: []TreatmentComparison{
+				Variants: []VariantComparison{
 					{Name: "t1", Status: StatusMatched, CostDelta: float64Ptr(-0.01)},
 				},
 			},
@@ -356,10 +356,10 @@ func TestWriteJSON(t *testing.T) {
 	if parsed.Baseline.Description != "baseline" {
 		t.Errorf("expected baseline description, got %q", parsed.Baseline.Description)
 	}
-	if len(parsed.Evals) != 1 || len(parsed.Evals[0].Treatments) != 1 {
+	if len(parsed.Evals) != 1 || len(parsed.Evals[0].Variants) != 1 {
 		t.Fatal("unexpected JSON structure")
 	}
-	if parsed.Evals[0].Treatments[0].CostDelta == nil || *parsed.Evals[0].Treatments[0].CostDelta != -0.01 {
+	if parsed.Evals[0].Variants[0].CostDelta == nil || *parsed.Evals[0].Variants[0].CostDelta != -0.01 {
 		t.Error("cost delta not preserved in JSON roundtrip")
 	}
 }

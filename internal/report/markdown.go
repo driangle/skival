@@ -21,6 +21,7 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	multi := hasMultipleRunners(sr)
 	multiModel := hasMultipleModels(sr)
 	writeResultsTable(w, sr, multi, multiModel)
+	writeWorkdirsSection(w, sr)
 	writeErrorsSection(w, sr)
 	writeSkippedSection(w, sr)
 	writeRankingTable(w, sr, multi, multiModel, weights)
@@ -30,10 +31,10 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 func hasMultipleRunners(sr *result.SuiteResult) bool {
 	seen := ""
 	for _, eval := range sr.Evals {
-		for _, treat := range eval.Treatments {
+		for _, v := range eval.Variants {
 			if seen == "" {
-				seen = treat.Runner
-			} else if treat.Runner != seen {
+				seen = v.Runner
+			} else if v.Runner != seen {
 				return true
 			}
 		}
@@ -45,10 +46,10 @@ func hasMultipleRunners(sr *result.SuiteResult) bool {
 func hasMultipleModels(sr *result.SuiteResult) bool {
 	seen := ""
 	for _, eval := range sr.Evals {
-		for _, treat := range eval.Treatments {
+		for _, v := range eval.Variants {
 			if seen == "" {
-				seen = treat.Model
-			} else if treat.Model != seen {
+				seen = v.Model
+			} else if v.Model != seen {
 				return true
 			}
 		}
@@ -60,7 +61,7 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	fmt.Fprintf(w, "## Results\n\n")
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(tw, "EVAL\tTREATMENT\tSAMPLE\tSTATUS\tCOST\tDURATION\n")
+	fmt.Fprintf(tw, "EVAL\tVARIANT\tSAMPLE\tSTATUS\tCOST\tDURATION\n")
 	fmt.Fprintf(tw, "----\t---------\t------\t------\t----\t--------\n")
 
 	for _, eval := range sr.Evals {
@@ -68,19 +69,19 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 			fmt.Fprintf(tw, "%s\t—\t—\tERROR\t—\t—\n", eval.EvalName)
 			continue
 		}
-		for _, treat := range eval.Treatments {
-			treatLabel := treatmentLabel(treat, multiRunner, multiModel)
-			for _, run := range treat.Runs {
+		for _, v := range eval.Variants {
+			label := variantLabel(v, multiRunner, multiModel)
+			for _, run := range v.Runs {
 				status := runStatus(run)
 				cost := fmt.Sprintf("$%.4f", run.CostUSD)
 				duration := formatDuration(run.DurationMs)
 
 				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\n",
-					eval.EvalName, treatLabel, run.Sample, status, cost, duration)
+					eval.EvalName, label, run.Sample, status, cost, duration)
 			}
 
-			if agg := treat.Aggregate; agg != nil && len(treat.Runs) >= 2 {
-				writeAggregateRow(tw, eval.EvalName, treatLabel, agg)
+			if agg := v.Aggregate; agg != nil && len(v.Runs) >= 2 {
+				writeAggregateRow(tw, eval.EvalName, label, agg)
 			}
 		}
 	}
@@ -89,7 +90,7 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	fmt.Fprintln(w)
 }
 
-func treatmentLabel(t result.TreatmentResult, multiRunner, multiModel bool) string {
+func variantLabel(t result.VariantResult, multiRunner, multiModel bool) string {
 	var annotations []string
 	if multiRunner && t.Runner != "" {
 		annotations = append(annotations, t.Runner)
@@ -103,7 +104,7 @@ func treatmentLabel(t result.TreatmentResult, multiRunner, multiModel bool) stri
 	return t.Name
 }
 
-func writeAggregateRow(tw *tabwriter.Writer, evalName, treatName string, agg *result.Aggregate) {
+func writeAggregateRow(tw *tabwriter.Writer, evalName, variantName string, agg *result.Aggregate) {
 	costRange := fmt.Sprintf("$%.4f [$%.4f\u2013$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
 	durationRange := fmt.Sprintf("%s [%s\u2013%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs))
 
@@ -129,7 +130,37 @@ func writeAggregateRow(tw *tabwriter.Writer, evalName, treatName string, agg *re
 	}
 
 	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\n",
-		evalName, treatName, passStr, costRange, durationRange, cvInfo)
+		evalName, variantName, passStr, costRange, durationRange, cvInfo)
+}
+
+func writeWorkdirsSection(w io.Writer, sr *result.SuiteResult) {
+	var hasWorkdir bool
+	for _, eval := range sr.Evals {
+		for _, v := range eval.Variants {
+			for _, run := range v.Runs {
+				if run.WorkDir != "" {
+					hasWorkdir = true
+					break
+				}
+			}
+		}
+	}
+	if !hasWorkdir {
+		return
+	}
+
+	fmt.Fprintf(w, "## Workdirs\n\n")
+	for _, eval := range sr.Evals {
+		for _, v := range eval.Variants {
+			for _, run := range v.Runs {
+				if run.WorkDir != "" {
+					fmt.Fprintf(w, "- **%s** > %s > sample %d: `%s`\n",
+						eval.EvalName, v.Name, run.Sample, run.WorkDir)
+				}
+			}
+		}
+	}
+	fmt.Fprintln(w)
 }
 
 func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
@@ -162,7 +193,7 @@ func writeSkippedSection(w io.Writer, sr *result.SuiteResult) {
 		return
 	}
 
-	fmt.Fprintf(w, "## Skipped Treatments\n\n")
+	fmt.Fprintf(w, "## Skipped Variants\n\n")
 	for _, eval := range sr.Evals {
 		if len(eval.Skipped) == 0 {
 			continue
@@ -176,7 +207,7 @@ func writeSkippedSection(w io.Writer, sr *result.SuiteResult) {
 }
 
 func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiModel bool, weights Weights) {
-	ranks := RankTreatments(sr, weights)
+	ranks := RankVariants(sr, weights)
 	if len(ranks) < 2 {
 		return
 	}
@@ -186,7 +217,7 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 
 	// Build header dynamically based on which extra columns are needed.
-	header := "RANK\tTREATMENT"
+	header := "RANK\tVARIANT"
 	sep := "----\t---------"
 	if multiRunner {
 		header += "\tRUNNER"

@@ -2,7 +2,7 @@ package suite
 
 import "strings"
 
-// expandMatrices replaces each eval's Matrix (if set) with generated Treatments
+// expandMatrices replaces each eval's Matrix (if set) with generated Variants
 // from the cartesian product of all matrix dimensions.
 func expandMatrices(s *Suite) {
 	for i := range s.Evals {
@@ -11,24 +11,24 @@ func expandMatrices(s *Suite) {
 			continue
 		}
 
-		treatments := expandMatrix(e.Matrix)
-		if len(treatments) == 0 {
+		variants := expandMatrix(e.Matrix)
+		if len(variants) == 0 {
 			continue
 		}
 
-		e.Variants = treatments
+		e.Variants = variants
 		e.Matrix = nil
 	}
 }
 
 // expandMatrix computes the cartesian product of all dimensions and returns
-// a flat list of treatments. The first treatment becomes the control.
-func expandMatrix(m *Matrix) []Treatment {
+// a flat list of variants. The first variant becomes the control.
+func expandMatrix(m *Matrix) []Variant {
 	combos := cartesianProduct(m.Dimensions)
-	treatments := make([]Treatment, 0, len(combos))
+	variants := make([]Variant, 0, len(combos))
 
 	for _, combo := range combos {
-		t := Treatment{
+		t := Variant{
 			DimensionValues: make(map[string]string, len(combo)),
 		}
 
@@ -69,10 +69,10 @@ func expandMatrix(m *Matrix) []Treatment {
 		}
 
 		t.Name = strings.Join(nameParts, "_")
-		treatments = append(treatments, t)
+		variants = append(variants, t)
 	}
 
-	return treatments
+	return variants
 }
 
 // dimensionEntry pairs a dimension name with one of its values.

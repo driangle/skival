@@ -61,31 +61,31 @@ func loadEval(evalDir, evalID string) (result.EvalResult, error) {
 		EvalName: evalID,
 	}
 
-	treatEntries, err := os.ReadDir(evalDir)
+	varEntries, err := os.ReadDir(evalDir)
 	if err != nil {
 		return er, fmt.Errorf("reading eval dir: %w", err)
 	}
 
-	for _, treatEntry := range treatEntries {
-		if !treatEntry.IsDir() {
+	for _, varEntry := range varEntries {
+		if !varEntry.IsDir() {
 			continue
 		}
-		tr, err := loadTreatment(filepath.Join(evalDir, treatEntry.Name()), treatEntry.Name())
+		tr, err := loadVariant(filepath.Join(evalDir, varEntry.Name()), varEntry.Name())
 		if err != nil {
-			return er, fmt.Errorf("loading treatment %s: %w", treatEntry.Name(), err)
+			return er, fmt.Errorf("loading variant %s: %w", varEntry.Name(), err)
 		}
-		er.Treatments = append(er.Treatments, tr)
+		er.Variants = append(er.Variants, tr)
 	}
 
 	return er, nil
 }
 
-func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
-	tr := result.TreatmentResult{Name: name}
+func loadVariant(varDir, name string) (result.VariantResult, error) {
+	tr := result.VariantResult{Name: name}
 
-	entries, err := os.ReadDir(treatDir)
+	entries, err := os.ReadDir(varDir)
 	if err != nil {
-		return tr, fmt.Errorf("reading treatment dir: %w", err)
+		return tr, fmt.Errorf("reading variant dir: %w", err)
 	}
 
 	for _, entry := range entries {
@@ -93,7 +93,7 @@ func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(treatDir, entry.Name()))
+		data, err := os.ReadFile(filepath.Join(varDir, entry.Name()))
 		if err != nil {
 			return tr, fmt.Errorf("reading %s: %w", entry.Name(), err)
 		}
@@ -122,11 +122,11 @@ func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
 
 		// Load conversation JSONL files if they exist.
 		baseName := strings.TrimSuffix(entry.Name(), ".json")
-		run.Conversation, err = loadConversationJSONL(filepath.Join(treatDir, baseName+".conversation.jsonl"))
+		run.Conversation, err = loadConversationJSONL(filepath.Join(varDir, baseName+".conversation.jsonl"))
 		if err != nil {
 			return tr, fmt.Errorf("loading conversation for %s: %w", entry.Name(), err)
 		}
-		run.JudgeConversation, err = loadConversationJSONL(filepath.Join(treatDir, baseName+".judge.jsonl"))
+		run.JudgeConversation, err = loadConversationJSONL(filepath.Join(varDir, baseName+".judge.jsonl"))
 		if err != nil {
 			return tr, fmt.Errorf("loading judge conversation for %s: %w", entry.Name(), err)
 		}
@@ -135,7 +135,7 @@ func loadTreatment(treatDir, name string) (result.TreatmentResult, error) {
 	}
 
 	// Load aggregate if present.
-	aggPath := filepath.Join(treatDir, "aggregate.json")
+	aggPath := filepath.Join(varDir, "aggregate.json")
 	if data, err := os.ReadFile(aggPath); err == nil {
 		var agg result.Aggregate
 		if err := json.Unmarshal(data, &agg); err == nil {

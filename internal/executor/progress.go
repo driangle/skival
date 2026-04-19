@@ -53,6 +53,16 @@ func (p *progress) sampleStart(evalName, treatName string, sample, totalSamples 
 		p.elapsed(), evalName, treatName, sample, totalSamples, p.totalCost)
 }
 
+func (p *progress) workdir(evalName, treatName, dir string) {
+	if p == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s > %s > workdir: %s\n",
+		p.elapsed(), evalName, treatName, dir)
+}
+
 func (p *progress) sampleDone(costUSD float64, pass *bool) {
 	if p == nil {
 		return
@@ -72,7 +82,7 @@ func (p *progress) sampleDone(costUSD float64, pass *bool) {
 		p.elapsed(), status, costUSD)
 }
 
-func (p *progress) skippedTreatments(evalName string, skipped []result.SkippedTreatment) {
+func (p *progress) skippedVariants(evalName string, skipped []result.SkippedVariant) {
 	if p == nil || len(skipped) == 0 {
 		return
 	}
@@ -82,7 +92,7 @@ func (p *progress) skippedTreatments(evalName string, skipped []result.SkippedTr
 	for i, s := range skipped {
 		names[i] = s.Name
 	}
-	fmt.Fprintf(p.w, "\r\033[K[%s] Skipping %d remaining treatments for eval %q: %s\n",
+	fmt.Fprintf(p.w, "\r\033[K[%s] Skipping %d remaining variants for eval %q: %s\n",
 		p.elapsed(), len(skipped), evalName, fmt.Sprintf("%v", names))
 }
 

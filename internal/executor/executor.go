@@ -56,114 +56,114 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 	// Always run after hook, even on error.
 	defer runAfterHook(ctx, eval.Setup, eval.Dir)
 
-	treatments := collectTreatments(eval, opts.Treatments)
+	variants := collectVariants(eval, opts.Variants)
 
-	// Run before hook once before any treatment.
+	// Run before hook once before any variant.
 	if err := runBeforeHook(ctx, eval.Setup, eval.Dir); err != nil {
 		er.Err = err
-		for _, t := range treatments {
-			er.Skipped = append(er.Skipped, result.SkippedTreatment{
-				Name:   t.treatment.Name,
+		for _, v := range variants {
+			er.Skipped = append(er.Skipped, result.SkippedVariant{
+				Name:   v.variant.Name,
 				Reason: "before hook failed",
 			})
 		}
 		prog.evalError(eval.Name, err)
-		prog.skippedTreatments(eval.Name, er.Skipped)
+		prog.skippedVariants(eval.Name, er.Skipped)
 		return er
 	}
 
 	pv := opts.ParallelVariants
-	if pv > len(treatments) {
-		pv = len(treatments)
+	if pv > len(variants) {
+		pv = len(variants)
 	}
 
 	if pv > 1 {
 		// Parallel variant execution with bounded concurrency.
-		results := make([]result.TreatmentResult, len(treatments))
+		results := make([]result.VariantResult, len(variants))
 		sem := make(chan struct{}, pv)
 		var wg sync.WaitGroup
 
-		for i := range treatments {
+		for i := range variants {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
 				cache := make(map[string]agentrunner.Runner)
-				t := treatments[idx]
-				results[idx] = executeTreatment(ctx, eval, t.treatment, t.isControl, reg, cache, opts, prog)
+				v := variants[idx]
+				results[idx] = executeVariant(ctx, eval, v.variant, v.isControl, reg, cache, opts, prog)
 			}(i)
 		}
 		wg.Wait()
-		er.Treatments = append(er.Treatments, results...)
+		er.Variants = append(er.Variants, results...)
 	} else {
 		// Sequential execution (default).
 		runnerCache := make(map[string]agentrunner.Runner)
 
-		for i := range treatments {
-			// Run reset between treatments (not before the first one).
+		for i := range variants {
+			// Run reset between variants (not before the first one).
 			if i > 0 {
 				if err := runResetHook(ctx, eval.Setup, eval.Dir); err != nil {
-					er.Err = fmt.Errorf("reset hook failed between treatment %q and %q: %w",
-						treatments[i-1].treatment.Name, treatments[i].treatment.Name, err)
-					for _, t := range treatments[i:] {
-						er.Skipped = append(er.Skipped, result.SkippedTreatment{
-							Name:   t.treatment.Name,
-							Reason: fmt.Sprintf("reset hook failed after treatment %q", treatments[i-1].treatment.Name),
+					er.Err = fmt.Errorf("reset hook failed between variant %q and %q: %w",
+						variants[i-1].variant.Name, variants[i].variant.Name, err)
+					for _, v := range variants[i:] {
+						er.Skipped = append(er.Skipped, result.SkippedVariant{
+							Name:   v.variant.Name,
+							Reason: fmt.Sprintf("reset hook failed after variant %q", variants[i-1].variant.Name),
 						})
 					}
 					prog.evalError(eval.Name, er.Err)
-					prog.skippedTreatments(eval.Name, er.Skipped)
+					prog.skippedVariants(eval.Name, er.Skipped)
 					return er
 				}
 			}
 
-			t := treatments[i]
-			tr := executeTreatment(ctx, eval, t.treatment, t.isControl, reg, runnerCache, opts, prog)
-			er.Treatments = append(er.Treatments, tr)
+			v := variants[i]
+			vr := executeVariant(ctx, eval, v.variant, v.isControl, reg, runnerCache, opts, prog)
+			er.Variants = append(er.Variants, vr)
 		}
 	}
 
 	return er
 }
 
-type treatmentEntry struct {
-	treatment *suite.Treatment
+type variantEntry struct {
+	variant   *suite.Variant
 	isControl bool
 }
 
-func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
+func collectVariants(eval *suite.Eval, filter []string) []variantEntry {
 	filterSet := toSet(filter)
 
-	var entries []treatmentEntry
+	var entries []variantEntry
 
 	for i := range eval.Variants {
 		if shouldInclude(eval.Variants[i].Name, filterSet) {
-			entries = append(entries, treatmentEntry{&eval.Variants[i], i == 0})
+			entries = append(entries, variantEntry{&eval.Variants[i], i == 0})
 		}
 	}
 
 	return entries
 }
 
-func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
-	runnerName := t.Runner
+func executeVariant(ctx context.Context, eval *suite.Eval, v *suite.Variant, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.VariantResult {
+	runnerName := v.Runner
 
-	tr := result.TreatmentResult{
-		Name:      t.Name,
+	vr := result.VariantResult{
+		Name:      v.Name,
 		Runner:    runnerName,
-		Model:     t.Model,
+		Model:     v.Model,
 		IsControl: isControl,
 	}
 
 	runner, ok := runnerCache[runnerName]
 	if !ok {
 		var err error
-		runner, err = reg.Create(runnerName, t.RunnerConfig)
+		runner, err = reg.Create(runnerName, v.RunnerConfig)
 		if err != nil {
-			slog.Error("Failed to create runner", "runner", runnerName, "treatment", t.Name, "err", err)
-			tr.Runs = append(tr.Runs, result.RunResult{Sample: 1, Err: fmt.Errorf("creating runner %q: %w", runnerName, err)})
-			return tr
+			slog.Error("Failed to create runner", "runner", runnerName, "variant", v.Name, "err", err)
+			vr.Runs = append(vr.Runs, result.RunResult{Sample: 1, Err: fmt.Errorf("creating runner %q: %w", runnerName, err)})
+			return vr
 		}
 		runnerCache[runnerName] = runner
 	}
@@ -192,8 +192,8 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	if parallel <= 1 {
 		// Sequential execution (default).
 		for i := 0; i < samples; i++ {
-			run := runSample(ctx, eval, t, i, samples, runner, prog, timeoutOverride)
-			tr.Runs = append(tr.Runs, run)
+			run := runSample(ctx, eval, v, i, samples, runner, prog, timeoutOverride)
+			vr.Runs = append(vr.Runs, run)
 		}
 	} else {
 		// Parallel execution with bounded concurrency.
@@ -207,37 +207,49 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
-				runs[idx] = runSample(ctx, eval, t, idx, samples, runner, prog, timeoutOverride)
+				runs[idx] = runSample(ctx, eval, v, idx, samples, runner, prog, timeoutOverride)
 			}(i)
 		}
 		wg.Wait()
-		tr.Runs = runs
+		vr.Runs = runs
 	}
 
-	tr.Aggregate = result.ComputeAggregate(tr.Runs)
+	vr.Aggregate = result.ComputeAggregate(vr.Runs)
 
-	return tr
+	return vr
 }
 
 // runSample executes a single sample, including isolation, running, verification,
-// and retry logic based on the treatment's retry config.
-func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, samples int, runner agentrunner.Runner, prog *progress, timeoutOverride int) result.RunResult {
+// and retry logic based on the variant's retry config.
+func runSample(ctx context.Context, eval *suite.Eval, v *suite.Variant, idx, samples int, runner agentrunner.Runner, prog *progress, timeoutOverride int) result.RunResult {
 	sample := idx + 1
-	prog.sampleStart(eval.Name, t.Name, sample, samples)
-	slog.Debug("Running sample", "eval", eval.Name, "treatment", t.Name, "sample", sample, "total", samples)
+	prog.sampleStart(eval.Name, v.Name, sample, samples)
+	slog.Debug("Running sample", "eval", eval.Name, "variant", v.Name, "sample", sample, "total", samples)
 
 	sampleDir := ""
 	if eval.Isolate != nil && *eval.Isolate {
 		var err error
-		sampleDir, err = createIsolatedDir(eval, t)
+		sampleDir, err = createIsolatedDir(eval, v)
 		if err != nil {
 			prog.sampleDone(0, nil)
 			return result.RunResult{Sample: sample, Err: fmt.Errorf("creating isolated dir: %w", err)}
 		}
-		defer os.RemoveAll(sampleDir)
 	}
 
-	retryCfg := resolveRetryConfig(t.Retry)
+	// Resolve the working directory for display.
+	workdir := sampleDir
+	if workdir == "" {
+		if v.Dir != "" {
+			workdir = v.Dir
+		} else {
+			workdir = eval.Dir
+		}
+	}
+	if workdir != "" {
+		prog.workdir(eval.Name, v.Name, workdir)
+	}
+
+	retryCfg := resolveRetryConfig(v.Retry)
 
 	// Build verification pipeline once (reused across attempts).
 	verifyDir := eval.Dir
@@ -245,8 +257,8 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 		verifyDir = sampleDir
 	}
 	judgePrompt := eval.Prompt
-	if t.Prompt != "" {
-		judgePrompt = t.Prompt
+	if v.Prompt != "" {
+		judgePrompt = v.Prompt
 	}
 	var pipelineOpts []verifier.PipelineOption
 	if hasJudgeStep(eval.Verify) {
@@ -258,21 +270,21 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 	for attempt := 1; attempt <= retryCfg.maxAttempts; attempt++ {
 		if attempt > 1 {
 			delay := backoffDelay(attempt-1, retryCfg)
-			slog.Debug("Retrying sample", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt, "delay", delay)
+			slog.Debug("Retrying sample", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt, "delay", delay)
 			time.Sleep(delay)
 		}
 
-		run := executeSingleRun(ctx, eval, t, sample, runner, sampleDir, timeoutOverride)
+		run := executeSingleRun(ctx, eval, v, sample, runner, sampleDir, timeoutOverride)
 		if run.Err != nil {
-			slog.Debug("Sample error", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt, "err", run.Err)
+			slog.Debug("Sample error", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt, "err", run.Err)
 		} else {
-			slog.Debug("Sample complete", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt,
+			slog.Debug("Sample complete", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt,
 				"cost", run.CostUSD, "duration_ms", run.DurationMs, "exit_code", run.ExitCode)
 		}
 
 		// Run verification if execution succeeded.
 		if pipeline != nil && run.Err == nil {
-			slog.Debug("Running verification pipeline", "eval", eval.Name, "treatment", t.Name, "sample", sample, "attempt", attempt)
+			slog.Debug("Running verification pipeline", "eval", eval.Name, "variant", v.Name, "sample", sample, "attempt", attempt)
 			input := verifier.VerifyInput{
 				RunOutput: run.Text,
 				ExitCode:  run.ExitCode,
@@ -308,15 +320,16 @@ func runSample(ctx context.Context, eval *suite.Eval, t *suite.Treatment, idx, s
 		bestRun.TotalAttempts = attempt
 	}
 
+	bestRun.WorkDir = workdir
 	prog.sampleDone(bestRun.CostUSD, bestRun.Pass)
 	return bestRun
 }
 
-// createIsolatedDir creates a temporary directory and copies the eval/treatment working directory into it.
-func createIsolatedDir(eval *suite.Eval, t *suite.Treatment) (string, error) {
+// createIsolatedDir creates a temporary directory and copies the eval/variant working directory into it.
+func createIsolatedDir(eval *suite.Eval, v *suite.Variant) (string, error) {
 	srcDir := eval.Dir
-	if t.Dir != "" {
-		srcDir = t.Dir
+	if v.Dir != "" {
+		srcDir = v.Dir
 	}
 
 	tmpDir, err := os.MkdirTemp("", "skival-isolate-*")
@@ -332,8 +345,8 @@ func createIsolatedDir(eval *suite.Eval, t *suite.Treatment) (string, error) {
 	return tmpDir, nil
 }
 
-func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment, sample int, runner agentrunner.Runner, isolatedDir string, timeoutOverride int) result.RunResult {
-	opts, err := buildRunOptions(eval, t, isolatedDir, timeoutOverride)
+func executeSingleRun(ctx context.Context, eval *suite.Eval, v *suite.Variant, sample int, runner agentrunner.Runner, isolatedDir string, timeoutOverride int) result.RunResult {
+	opts, err := buildRunOptions(eval, v, isolatedDir, timeoutOverride)
 	if err != nil {
 		return result.RunResult{
 			Sample: sample,
@@ -341,10 +354,10 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 		}
 	}
 
-	// Prompt: treatment > eval.
+	// Prompt: variant > eval.
 	prompt := eval.Prompt
-	if t.Prompt != "" {
-		prompt = t.Prompt
+	if v.Prompt != "" {
+		prompt = v.Prompt
 	}
 
 	session, err := runner.Start(ctx, prompt, opts...)
@@ -383,17 +396,17 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 	}
 }
 
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string, timeoutOverride int) ([]agentrunner.Option, error) {
+func buildRunOptions(eval *suite.Eval, v *suite.Variant, isolatedDir string, timeoutOverride int) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
-	if t.Model != "" {
-		opts = append(opts, agentrunner.WithModel(t.Model))
+	if v.Model != "" {
+		opts = append(opts, agentrunner.WithModel(v.Model))
 	}
 
-	// Working directory: isolated > treatment > eval.
+	// Working directory: isolated > variant > eval.
 	dir := eval.Dir
-	if t.Dir != "" {
-		dir = t.Dir
+	if v.Dir != "" {
+		dir = v.Dir
 	}
 	if isolatedDir != "" {
 		dir = isolatedDir
@@ -409,30 +422,30 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string, t
 		opts = append(opts, agentrunner.WithTimeout(time.Duration(*eval.Timeout)*time.Second))
 	}
 
-	// Environment variables from treatment, plus CLAUDE_CONFIG_DIR if config_dir is set.
-	env := t.Env
-	if t.ConfigDir != "" {
+	// Environment variables from variant, plus CLAUDE_CONFIG_DIR if config_dir is set.
+	env := v.Env
+	if v.ConfigDir != "" {
 		if env == nil {
 			env = make(map[string]string)
 		} else {
-			// Copy to avoid mutating the original treatment.
+			// Copy to avoid mutating the original variant.
 			copied := make(map[string]string, len(env)+1)
-			for k, v := range env {
-				copied[k] = v
+			for k, val := range env {
+				copied[k] = val
 			}
 			env = copied
 		}
-		env["CLAUDE_CONFIG_DIR"] = t.ConfigDir
+		env["CLAUDE_CONFIG_DIR"] = v.ConfigDir
 	}
 	if len(env) > 0 {
 		opts = append(opts, agentrunner.WithEnv(env))
 	}
 
 	// Runner-specific options from runner_config.
-	opts = append(opts, buildRunnerSpecificOpts(t.Runner, t.RunnerConfig)...)
+	opts = append(opts, buildRunnerSpecificOpts(v.Runner, v.RunnerConfig)...)
 
 	// Skill file(s) as appended system prompt.
-	skillPrompt, err := loadSkillContent(t)
+	skillPrompt, err := loadSkillContent(v)
 	if err != nil {
 		return nil, err
 	}
@@ -446,20 +459,20 @@ func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string, t
 	return opts, nil
 }
 
-// loadSkillContent reads skill file(s) from a treatment and returns the concatenated content.
+// loadSkillContent reads skill file(s) from a variant and returns the concatenated content.
 // Returns empty string if no skills are configured.
-func loadSkillContent(t *suite.Treatment) (string, error) {
-	if t.Skill != "" {
-		content, err := os.ReadFile(t.Skill)
+func loadSkillContent(v *suite.Variant) (string, error) {
+	if v.Skill != "" {
+		content, err := os.ReadFile(v.Skill)
 		if err != nil {
-			return "", fmt.Errorf("reading skill file %q: %w", t.Skill, err)
+			return "", fmt.Errorf("reading skill file %q: %w", v.Skill, err)
 		}
 		return string(content), nil
 	}
 
-	if len(t.Skills) > 0 {
+	if len(v.Skills) > 0 {
 		var parts []string
-		for _, path := range t.Skills {
+		for _, path := range v.Skills {
 			content, err := os.ReadFile(path)
 			if err != nil {
 				return "", fmt.Errorf("reading skill file %q: %w", path, err)
