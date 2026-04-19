@@ -26,9 +26,7 @@ evals:
         rm -f input.txt output.txt
     verify:
       - type: agent_exits_ok
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"

@@ -13,12 +13,10 @@ evals:
     complexity: low
     samples: 5
     timeout: 30
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   - id: medium-complexity
     name: "REST API endpoint"
@@ -28,12 +26,10 @@ evals:
     complexity: medium
     samples: 3
     timeout: 120
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   - id: high-complexity
     name: "Full CRUD application"
@@ -43,9 +39,7 @@ evals:
     complexity: high
     samples: 2
     timeout: 300
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"

@@ -15,24 +15,20 @@ evals:
     verify:
       - type: check
         run: "go build ./..."
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify that the agent exits successfully
   - id: agent-exits-ok-check
     prompt: "Write a shell script run.sh that exits with code 0."
     verify:
       - type: agent_exits_ok
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify expected output strings appear
   - id: expected-output-check
@@ -42,12 +38,10 @@ evals:
         values:
           - "PASS"
           - "all tests green"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify via check_output (agent output piped to stdin)
   - id: check-output-verify
@@ -55,12 +49,10 @@ evals:
     verify:
       - type: check_output
         run: "./scripts/verify-output.sh"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify via HTTP checks
   - id: http-check
@@ -75,12 +67,10 @@ evals:
         url: "http://localhost:8080/ready"
         method: GET
         body_contains: "ready"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify via file_contains
   - id: file-contains-check
@@ -90,12 +80,10 @@ evals:
         path: "output.txt"
         exists: true
         contains: "hello world"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify via command
   - id: command-check
@@ -104,12 +92,10 @@ evals:
       - type: command
         run: "go build ./..."
         exits: 0
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify via TCP check
   - id: tcp-check
@@ -118,12 +104,10 @@ evals:
       - type: tcp_check
         host: "localhost"
         port: 9090
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Verify via LLM judge
   - id: judge-check
@@ -133,12 +117,10 @@ evals:
         criteria:
           - "Does the README explain how to initialize a Go module?"
           - "Does it include instructions for running tests?"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"
 
   # Multiple verify steps combined
   - id: combined-check
@@ -152,9 +134,7 @@ evals:
           - "Result:"
       - type: check_output
         run: "./scripts/verify-calc.sh"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"

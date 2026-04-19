@@ -16,10 +16,7 @@ func expandMatrices(s *Suite) {
 			continue
 		}
 
-		e.Treatments = Treatments{
-			Control:    treatments[0],
-			Variations: treatments[1:],
-		}
+		e.Variants = treatments
 		e.Matrix = nil
 	}
 }

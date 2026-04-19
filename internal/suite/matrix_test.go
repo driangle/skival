@@ -190,7 +190,7 @@ func TestExpandMatrix_ThreeDimensions(t *testing.T) {
 	}
 }
 
-func TestExpandMatrices_SetsControlAndVariations(t *testing.T) {
+func TestExpandMatrices_SetsVariants(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{{
@@ -216,14 +216,14 @@ func TestExpandMatrices_SetsControlAndVariations(t *testing.T) {
 	if s.Evals[0].Matrix != nil {
 		t.Error("matrix should be nil after expansion")
 	}
-	if s.Evals[0].Treatments.Control.Name != "claude-code" {
-		t.Errorf("control name = %q, want %q", s.Evals[0].Treatments.Control.Name, "claude-code")
+	if len(s.Evals[0].Variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(s.Evals[0].Variants))
 	}
-	if len(s.Evals[0].Treatments.Variations) != 1 {
-		t.Fatalf("expected 1 variation, got %d", len(s.Evals[0].Treatments.Variations))
+	if s.Evals[0].Variants[0].Name != "claude-code" {
+		t.Errorf("variant[0] name = %q, want %q", s.Evals[0].Variants[0].Name, "claude-code")
 	}
-	if s.Evals[0].Treatments.Variations[0].Name != "ollama" {
-		t.Errorf("variation name = %q, want %q", s.Evals[0].Treatments.Variations[0].Name, "ollama")
+	if s.Evals[0].Variants[1].Name != "ollama" {
+		t.Errorf("variant[1] name = %q, want %q", s.Evals[0].Variants[1].Name, "ollama")
 	}
 }
 
@@ -231,19 +231,17 @@ func TestExpandMatrices_SkipsEvalsWithoutMatrix(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{{
-			ID:     "e1",
-			Prompt: "test",
-			Model:  "claude-sonnet-4-6",
-			Treatments: Treatments{
-				Control: Treatment{Name: "ctrl"},
-			},
+			ID:       "e1",
+			Prompt:   "test",
+			Model:    "claude-sonnet-4-6",
+			Variants: []Treatment{{Name: "ctrl"}},
 		}},
 	}
 
 	expandMatrices(s)
 
-	if s.Evals[0].Treatments.Control.Name != "ctrl" {
-		t.Error("treatments should be unchanged for non-matrix evals")
+	if s.Evals[0].Variants[0].Name != "ctrl" {
+		t.Error("variants should be unchanged for non-matrix evals")
 	}
 }
 

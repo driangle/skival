@@ -8,9 +8,7 @@ evals:
   - id: hello
     prompt: "Write a file called hello.txt containing 'Hello, World!'"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    variants:
+      - name: baseline
+      - name: opus-model
+        model: "claude-opus-4-6"

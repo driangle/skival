@@ -85,8 +85,8 @@ func TestExecuteEval_BeforeHookRuns(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "touch " + marker,
 			},
-			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -117,8 +117,8 @@ func TestExecuteEval_BeforeHookFailure(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "exit 1",
 			},
-			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -151,9 +151,10 @@ func TestExecuteEval_ResetBetweenTreatments(t *testing.T) {
 			Setup: suite.Setup{
 				Reset: "echo x >> " + counter,
 			},
-			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
-				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}, {Name: "v2", Runner: "claude-code"}},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
+				{Name: "v1", Runner: "claude-code"},
+				{Name: "v2", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -197,8 +198,8 @@ func TestExecuteEval_AfterHookRunsOnError(t *testing.T) {
 				Before: "exit 1",
 				After:  "touch " + marker,
 			},
-			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -225,9 +226,9 @@ func TestExecuteEval_ResetHookFailure(t *testing.T) {
 			Setup: suite.Setup{
 				Reset: "exit 1",
 			},
-			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
-				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
+				{Name: "v1", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -255,9 +256,10 @@ func TestExecuteEval_BeforeHookFailure_SkipsAllTreatments(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "echo 'setup broke' >&2; exit 1",
 			},
-			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
-				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}, {Name: "v2", Runner: "claude-code"}},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
+				{Name: "v1", Runner: "claude-code"},
+				{Name: "v2", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -304,9 +306,10 @@ func TestExecuteEval_ResetHookFailure_SkipsRemainingTreatments(t *testing.T) {
 			Setup: suite.Setup{
 				Reset: "echo 'reset broke' >&2; exit 1",
 			},
-			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
-				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}, {Name: "v2", Runner: "claude-code"}},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
+				{Name: "v1", Runner: "claude-code"},
+				{Name: "v2", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -357,8 +360,8 @@ func TestExecuteEval_BeforeHookFailure_ErrorIncludesOutput(t *testing.T) {
 			Setup: suite.Setup{
 				Before: "echo 'debug log'; echo 'fatal error' >&2; exit 1",
 			},
-			Treatments: suite.Treatments{
-				Control: suite.Treatment{Name: "ctrl", Runner: "claude-code"},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -393,9 +396,9 @@ func TestExecuteEval_AfterHookRunsOnResetFailure(t *testing.T) {
 				Reset: "exit 1",
 				After: "touch " + marker,
 			},
-			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
-				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
+				{Name: "v1", Runner: "claude-code"},
 			},
 		}},
 	}
@@ -453,9 +456,9 @@ func TestExecuteEval_BeforeHookFailure_SkippedTreatmentsInProgress(t *testing.T)
 			Setup: suite.Setup{
 				Before: "exit 1",
 			},
-			Treatments: suite.Treatments{
-				Control:    suite.Treatment{Name: "ctrl", Runner: "claude-code"},
-				Variations: []suite.Treatment{{Name: "v1", Runner: "claude-code"}},
+			Variants: []suite.Treatment{
+				{Name: "ctrl", Runner: "claude-code"},
+				{Name: "v1", Runner: "claude-code"},
 			},
 		}},
 	}

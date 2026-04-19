@@ -1,5 +1,5 @@
 # Suite-level defaults inherited by all evals.
-# Evals can override any default at the eval or treatment level.
+# Evals can override any default at the eval or variant level.
 version: 1
 description: "Demonstrates suite-level defaults"
 
@@ -14,22 +14,18 @@ defaults:
 evals:
   - id: uses-defaults
     prompt: "Create a file called greeting.txt with a friendly greeting."
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: fewer-turns
-          runner_config:
-            max_turns: 5
+    variants:
+      - name: baseline
+      - name: fewer-turns
+        runner_config:
+          max_turns: 5
 
   - id: overrides-defaults
     prompt: "Write a script that prints the current date."
     samples: 3
     timeout: 60
     model: "claude-opus-4-6"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: sonnet-model
-          model: "claude-sonnet-4-6"
+    variants:
+      - name: baseline
+      - name: sonnet-model
+        model: "claude-sonnet-4-6"

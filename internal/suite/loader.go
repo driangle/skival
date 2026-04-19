@@ -118,9 +118,8 @@ func resolvePaths(s *Suite, suiteDir string) {
 			}
 		}
 
-		resolveTreatmentPaths(&e.Treatments.Control, suiteDir)
-		for j := range e.Treatments.Variations {
-			resolveTreatmentPaths(&e.Treatments.Variations[j], suiteDir)
+		for j := range e.Variants {
+			resolveTreatmentPaths(&e.Variants[j], suiteDir)
 		}
 	}
 }
@@ -259,9 +258,8 @@ func hasCorrectnessConfig(c Correctness) bool {
 // into RunnerConfig["allowed_tools"] and logs a deprecation warning.
 func migrateAllowedTools(s *Suite) {
 	for i := range s.Evals {
-		migrateTreatmentAllowedTools(&s.Evals[i].Treatments.Control)
-		for j := range s.Evals[i].Treatments.Variations {
-			migrateTreatmentAllowedTools(&s.Evals[i].Treatments.Variations[j])
+		for j := range s.Evals[i].Variants {
+			migrateTreatmentAllowedTools(&s.Evals[i].Variants[j])
 		}
 	}
 }
@@ -318,9 +316,8 @@ func mergeDefaults(s *Suite) {
 func resolveRunnerConfig(s *Suite) {
 	for i := range s.Evals {
 		e := &s.Evals[i]
-		mergeRunnerIntoTreatment(e, &e.Treatments.Control)
-		for j := range e.Treatments.Variations {
-			mergeRunnerIntoTreatment(e, &e.Treatments.Variations[j])
+		for j := range e.Variants {
+			mergeRunnerIntoTreatment(e, &e.Variants[j])
 		}
 	}
 }

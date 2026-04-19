@@ -32,9 +32,6 @@ var validateCmd = &cobra.Command{
 		fmt.Fprintf(out, "  evals:       %d\n", len(s.Evals))
 
 		for _, eval := range s.Evals {
-			variations := len(eval.Treatments.Variations)
-			treatments := 1 + variations // control + variations
-
 			fmt.Fprintf(out, "\n  eval %q\n", eval.ID)
 			if eval.Name != "" {
 				fmt.Fprintf(out, "    name:       %s\n", eval.Name)
@@ -42,9 +39,12 @@ var validateCmd = &cobra.Command{
 			if eval.Complexity != "" {
 				fmt.Fprintf(out, "    complexity: %s\n", eval.Complexity)
 			}
-			fmt.Fprintf(out, "    treatments: %d (control: %q", treatments, eval.Treatments.Control.Name)
-			for _, v := range eval.Treatments.Variations {
-				fmt.Fprintf(out, ", %q", v.Name)
+			fmt.Fprintf(out, "    variants:   %d (", len(eval.Variants))
+			for i, v := range eval.Variants {
+				if i > 0 {
+					fmt.Fprintf(out, ", ")
+				}
+				fmt.Fprintf(out, "%q", v.Name)
 			}
 			fmt.Fprintf(out, ")\n")
 

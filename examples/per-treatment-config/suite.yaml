@@ -1,31 +1,29 @@
-# Demonstrates per-treatment prompt and config_dir overrides.
-# Each treatment can have its own prompt and point to a different
+# Demonstrates per-variant prompt and config_dir overrides.
+# Each variant can have its own prompt and point to a different
 # CLAUDE_CONFIG_DIR, giving full control over settings.json, hooks,
 # skills, and MCP configuration.
 version: 1
-description: "Per-treatment prompt and config_dir"
+description: "Per-variant prompt and config_dir"
 
 defaults:
   runner: claude-code
 
 evals:
-  # Example 1: Different prompts per treatment.
+  # Example 1: Different prompts per variant.
   - id: prompt-comparison
     name: "Prompt Comparison"
     model: "claude-sonnet-4-6"
     dir: "."
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         prompt: |
           Write a Python function that checks if a string is a palindrome.
-      variations:
-        - name: with-tests
-          prompt: |
-            Write a Python function that checks if a string is a palindrome.
-            Also write comprehensive unit tests using pytest.
+      - name: with-tests
+        prompt: |
+          Write a Python function that checks if a string is a palindrome.
+          Also write comprehensive unit tests using pytest.
 
-  # Example 2: Different config directories per treatment.
+  # Example 2: Different config directories per variant.
   # Each config_dir points Claude Code at a different settings.json,
   # enabling different permissions, hooks, or MCP configurations.
   - id: config-comparison
@@ -33,10 +31,8 @@ evals:
     prompt: "List the files in the current directory"
     model: "claude-sonnet-4-6"
     dir: "."
-    treatments:
-      control:
-        name: strict-config
+    variants:
+      - name: strict-config
         config_dir: "./configs/strict"
-      variations:
-        - name: permissive-config
-          config_dir: "./configs/permissive"
+      - name: permissive-config
+        config_dir: "./configs/permissive"

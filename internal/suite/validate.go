@@ -41,9 +41,8 @@ func validateMatrixExclusive(s *Suite) error {
 		if eval.Matrix == nil || len(eval.Matrix.Dimensions) == 0 {
 			continue
 		}
-		hasTreatments := eval.Treatments.Control.Name != "" || len(eval.Treatments.Variations) > 0
-		if hasTreatments {
-			errs = append(errs, fmt.Sprintf("eval[%d]: cannot define both matrix and treatments", i))
+		if len(eval.Variants) > 0 {
+			errs = append(errs, fmt.Sprintf("eval[%d]: cannot define both matrix and variants", i))
 		}
 	}
 	if len(errs) > 0 {
@@ -81,14 +80,11 @@ func validate(s *Suite) error {
 			seenIDs[eval.ID] = true
 		}
 
-		// Prompt is required at eval level unless every treatment provides its own.
+		// Prompt is required at eval level unless every variant provides its own.
 		if eval.Prompt == "" {
-			if eval.Treatments.Control.Prompt == "" {
-				errs = append(errs, fmt.Sprintf("%s: prompt is required (set on eval or on every treatment)", prefix))
-			}
-			for j, v := range eval.Treatments.Variations {
+			for j, v := range eval.Variants {
 				if v.Prompt == "" {
-					errs = append(errs, fmt.Sprintf("%s: variation[%d] %q has no prompt (set prompt on the eval or treatment)", prefix, j, v.Name))
+					errs = append(errs, fmt.Sprintf("%s: variant[%d] %q has no prompt (set prompt on the eval or variant)", prefix, j, v.Name))
 				}
 			}
 		}
@@ -103,57 +99,39 @@ func validate(s *Suite) error {
 			errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))
 		}
 
-		if eval.Treatments.Control.Name == "" {
-			errs = append(errs, fmt.Sprintf("%s: control treatment name is required", prefix))
+		if len(eval.Variants) == 0 {
+			errs = append(errs, fmt.Sprintf("%s: at least one variant is required", prefix))
 		}
 
-		// Every treatment must resolve to a runner (treatment-level, eval-level, or defaults-level).
-		if eval.Treatments.Control.Runner == "" {
-			errs = append(errs, fmt.Sprintf("%s: control treatment %q has no runner (set runner on the eval, defaults, or treatment)", prefix, eval.Treatments.Control.Name))
-		} else if !validRunners[eval.Treatments.Control.Runner] {
-			errs = append(errs, fmt.Sprintf("%s: control treatment %q: unknown runner %q", prefix, eval.Treatments.Control.Name, eval.Treatments.Control.Runner))
-		}
-		for j, v := range eval.Treatments.Variations {
+		for j, v := range eval.Variants {
+			vp := fmt.Sprintf("%s.variant[%d]", prefix, j)
+
+			if v.Name == "" {
+				errs = append(errs, fmt.Sprintf("%s: name is required", vp))
+			}
+
+			// Every variant must resolve to a runner.
 			if v.Runner == "" {
-				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q has no runner (set runner on the eval, defaults, or treatment)", prefix, j, v.Name))
+				errs = append(errs, fmt.Sprintf("%s %q has no runner (set runner on the eval, defaults, or variant)", vp, v.Name))
 			} else if !validRunners[v.Runner] {
-				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: unknown runner %q", prefix, j, v.Name, v.Runner))
+				errs = append(errs, fmt.Sprintf("%s %q: unknown runner %q", vp, v.Name, v.Runner))
 			}
-		}
 
-		// Skill and skills are mutually exclusive on each treatment.
-		if eval.Treatments.Control.Skill != "" && len(eval.Treatments.Control.Skills) > 0 {
-			errs = append(errs, fmt.Sprintf("%s: control treatment %q: cannot set both skill and skills", prefix, eval.Treatments.Control.Name))
-		}
-		for j, v := range eval.Treatments.Variations {
+			// Skill and skills are mutually exclusive.
 			if v.Skill != "" && len(v.Skills) > 0 {
-				errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: cannot set both skill and skills", prefix, j, v.Name))
+				errs = append(errs, fmt.Sprintf("%s %q: cannot set both skill and skills", vp, v.Name))
 			}
-		}
 
-		// Validate config_dir paths exist.
-		if eval.Treatments.Control.ConfigDir != "" {
-			if _, err := os.Stat(eval.Treatments.Control.ConfigDir); err != nil {
-				errs = append(errs, fmt.Sprintf("%s: control treatment %q: config_dir %q does not exist", prefix, eval.Treatments.Control.Name, eval.Treatments.Control.ConfigDir))
-			}
-		}
-		for j, v := range eval.Treatments.Variations {
+			// Validate config_dir paths exist.
 			if v.ConfigDir != "" {
 				if _, err := os.Stat(v.ConfigDir); err != nil {
-					errs = append(errs, fmt.Sprintf("%s: variation[%d] %q: config_dir %q does not exist", prefix, j, v.Name, v.ConfigDir))
+					errs = append(errs, fmt.Sprintf("%s %q: config_dir %q does not exist", vp, v.Name, v.ConfigDir))
 				}
 			}
-		}
 
-		// Every treatment must resolve to a model (treatment-level or eval-level).
-		if eval.Model == "" {
-			if eval.Treatments.Control.Model == "" {
-				errs = append(errs, fmt.Sprintf("%s: control treatment %q has no model (set model on the eval or treatment)", prefix, eval.Treatments.Control.Name))
-			}
-			for j, v := range eval.Treatments.Variations {
-				if v.Model == "" {
-					errs = append(errs, fmt.Sprintf("%s: variation[%d] %q has no model (set model on the eval or treatment)", prefix, j, v.Name))
-				}
+			// Every variant must resolve to a model.
+			if eval.Model == "" && v.Model == "" {
+				errs = append(errs, fmt.Sprintf("%s %q has no model (set model on the eval or variant)", vp, v.Name))
 			}
 		}
 	}
@@ -173,9 +151,8 @@ func validate(s *Suite) error {
 	for i, eval := range s.Evals {
 		prefix := fmt.Sprintf("eval[%d]", i)
 		errs = append(errs, validateRetryConfig(eval.Retry, prefix+".retry")...)
-		errs = append(errs, validateRetryConfig(eval.Treatments.Control.Retry, prefix+".control.retry")...)
-		for j, v := range eval.Treatments.Variations {
-			errs = append(errs, validateRetryConfig(v.Retry, fmt.Sprintf("%s.variation[%d].retry", prefix, j))...)
+		for j, v := range eval.Variants {
+			errs = append(errs, validateRetryConfig(v.Retry, fmt.Sprintf("%s.variant[%d].retry", prefix, j))...)
 		}
 	}
 
@@ -245,8 +222,7 @@ func validateRetryConfig(r *Retry, path string) []string {
 // for the selected runner. This is advisory only and does not block loading.
 func warnModelRunnerCompat(s *Suite) {
 	for _, eval := range s.Evals {
-		warnTreatmentModelRunner(eval.Treatments.Control, eval.Model)
-		for _, v := range eval.Treatments.Variations {
+		for _, v := range eval.Variants {
 			warnTreatmentModelRunner(v, eval.Model)
 		}
 	}

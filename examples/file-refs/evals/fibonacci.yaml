@@ -4,9 +4,7 @@ prompt: |
   Write a program that prints the first 20 Fibonacci numbers, one per line.
   Save it to fib.py.
 complexity: low
-treatments:
-  control:
-    name: baseline
-  variations:
-    - name: opus-model
-      model: "claude-opus-4-6"
+variants:
+  - name: baseline
+  - name: opus-model
+    model: "claude-opus-4-6"

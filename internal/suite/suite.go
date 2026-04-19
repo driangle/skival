@@ -62,7 +62,7 @@ type Eval struct {
 	Correctness  Correctness    `yaml:"correctness"` // Deprecated: use Verify
 	Retry        *Retry         `yaml:"retry"`
 	Matrix       *Matrix        `yaml:"matrix,omitempty"`
-	Treatments   Treatments     `yaml:"treatments"`
+	Variants []Treatment `yaml:"variants"`
 }
 
 // VerifyStep defines a single verification step.
@@ -217,13 +217,7 @@ type MatrixDimensionValue struct {
 	Env          map[string]string `yaml:"env,omitempty"`
 }
 
-// Treatments defines the control and variation treatments for an eval.
-type Treatments struct {
-	Control    Treatment   `yaml:"control"`
-	Variations []Treatment `yaml:"variations"`
-}
-
-// Treatment defines a single treatment configuration.
+// Treatment defines a single treatment (variant) configuration.
 type Treatment struct {
 	Name            string            `yaml:"name"`
 	Prompt          string            `yaml:"prompt"`

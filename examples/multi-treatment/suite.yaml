@@ -1,4 +1,4 @@
-# Control vs. multiple variations with different models, skills, env vars,
+# Multiple variants with different models, skills, env vars,
 # and runner_config.
 version: 1
 description: "Demonstrates multiple treatment variations"
@@ -16,23 +16,21 @@ evals:
       and prints them sorted in ascending order.
     model: "claude-sonnet-4-6"
     dir: "./workdir"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: with-skill
-          skill: "./skills/python-best-practices.md"
-        - name: opus-model
-          model: "claude-opus-4-6"
-          dir: "./workdir-opus"
-        - name: with-env
-          env:
-            STYLE: "functional"
-            LANGUAGE: "python"
-        - name: custom-runner-config
-          runner_config:
-            max_turns: 5
-            allowed_tools:
-              - Read
-              - Write
-              - Bash
+    variants:
+      - name: baseline
+      - name: with-skill
+        skill: "./skills/python-best-practices.md"
+      - name: opus-model
+        model: "claude-opus-4-6"
+        dir: "./workdir-opus"
+      - name: with-env
+        env:
+          STYLE: "functional"
+          LANGUAGE: "python"
+      - name: custom-runner-config
+        runner_config:
+          max_turns: 5
+          allowed_tools:
+            - Read
+            - Write
+            - Bash

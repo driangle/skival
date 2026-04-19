@@ -1,11 +1,12 @@
 ---
 id: "01kpj1s17"
 title: "Replace treatments control/variations with flat variants list"
-status: pending
+status: completed
 priority: high
 dependencies: []
 tags: ["yaml-api"]
 created_at: 2026-04-19
+completed_at: 2026-04-19
 ---
 
 # Replace treatments control/variations with flat variants list
@@ -38,18 +39,18 @@ First variant is the control for ranking/reporting purposes.
 
 ## Tasks
 
-- [ ] Add `Variants []Treatment` field to `Eval` in `internal/suite/suite.go`
-- [ ] Migrate `treatments` → `variants` in loader (control becomes first element, variations follow)
-- [ ] Update `collectTreatments` in executor to iterate `Variants` (first entry gets `IsControl: true`)
-- [ ] Update `resolveRunnerConfig` to iterate `Variants` instead of `Control` + `Variations`
-- [ ] Update validation to check all variants (runner, model, prompt, skill/skills, config_dir)
-- [ ] Update matrix expansion to produce `Variants` instead of `Control` + `Variations`
-- [ ] Update `resolvePaths` / `resolveTreatmentPaths` for variants
-- [ ] Update `migrateAllowedTools` for variants
-- [ ] Update `apps/cli/cmd/validate.go` display
-- [ ] Update all example suite.yaml files to use `variants`
-- [ ] Update all tests (loader, validate, executor, report, persist)
-- [ ] Ensure `TestLoad_Examples` passes
+- [x] Add `Variants []Treatment` field to `Eval` in `internal/suite/suite.go`
+- [x] Migrate `treatments` → `variants` in loader (control becomes first element, variations follow)
+- [x] Update `collectTreatments` in executor to iterate `Variants` (first entry gets `IsControl: true`)
+- [x] Update `resolveRunnerConfig` to iterate `Variants` instead of `Control` + `Variations`
+- [x] Update validation to check all variants (runner, model, prompt, skill/skills, config_dir)
+- [x] Update matrix expansion to produce `Variants` instead of `Control` + `Variations`
+- [x] Update `resolvePaths` / `resolveTreatmentPaths` for variants
+- [x] Update `migrateAllowedTools` for variants
+- [x] Update `apps/cli/cmd/validate.go` display
+- [x] Update all example suite.yaml files to use `variants`
+- [x] Update all tests (loader, validate, executor, report, persist)
+- [x] Ensure `TestLoad_Examples` passes
 
 ## Acceptance Criteria
 

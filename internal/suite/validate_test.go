@@ -13,8 +13,8 @@ func TestValidate_ValidSuite(t *testing.T) {
 				ID:     "eval-1",
 				Prompt: "do something",
 				Model:  "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "baseline", Runner: "claude-code"},
+				Variants: []Treatment{
+					{Name: "baseline", Runner: "claude-code"},
 				},
 			},
 		},
@@ -29,7 +29,7 @@ func TestValidate_VersionRequired(t *testing.T) {
 	s := &Suite{
 		Version: 0,
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+			{ID: "e1", Prompt: "p", Variants: []Treatment{{Name: "c"}}},
 		},
 	}
 
@@ -47,7 +47,7 @@ func TestValidate_AtLeastOneEval(t *testing.T) {
 func TestValidate_EvalIDRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
-		Evals:   []Eval{{Prompt: "p", Treatments: Treatments{Control: Treatment{Name: "c"}}}},
+		Evals:   []Eval{{Prompt: "p", Variants: []Treatment{{Name: "c"}}}},
 	}
 
 	err := validate(s)
@@ -57,11 +57,11 @@ func TestValidate_EvalIDRequired(t *testing.T) {
 func TestValidate_EvalPromptRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
-		Evals:   []Eval{{ID: "e1", Treatments: Treatments{Control: Treatment{Name: "c"}}}},
+		Evals:   []Eval{{ID: "e1", Variants: []Treatment{{Name: "c"}}}},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, "prompt is required")
+	assertValidationContains(t, err, "has no prompt")
 }
 
 func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
@@ -71,9 +71,9 @@ func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
 			{
 				ID:    "e1",
 				Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Prompt: "do A", Runner: "claude-code"},
-					Variations: []Treatment{{Name: "v1", Prompt: "do B", Runner: "claude-code"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Prompt: "do A", Runner: "claude-code"},
+					{Name: "v1", Prompt: "do B", Runner: "claude-code"},
 				},
 			},
 		},
@@ -84,23 +84,23 @@ func TestValidate_TreatmentPromptOverridesEvalPrompt(t *testing.T) {
 	}
 }
 
-func TestValidate_VariationMissingPromptWhenNoEvalPrompt(t *testing.T) {
+func TestValidate_VariantMissingPromptWhenNoEvalPrompt(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID:    "e1",
 				Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Prompt: "do A"},
-					Variations: []Treatment{{Name: "v1"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Prompt: "do A"},
+					{Name: "v1"},
 				},
 			},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `variation[0] "v1" has no prompt`)
+	assertValidationContains(t, err, `variant[1] "v1" has no prompt`)
 }
 
 func TestValidate_ConfigDirMustExist(t *testing.T) {
@@ -109,8 +109,8 @@ func TestValidate_ConfigDirMustExist(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", ConfigDir: "/nonexistent/config/dir"},
+				Variants: []Treatment{
+					{Name: "ctrl", ConfigDir: "/nonexistent/config/dir"},
 				},
 			},
 		},
@@ -127,8 +127,8 @@ func TestValidate_ConfigDirValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", ConfigDir: dir, Runner: "claude-code"},
+				Variants: []Treatment{
+					{Name: "ctrl", ConfigDir: dir, Runner: "claude-code"},
 				},
 			},
 		},
@@ -143,8 +143,8 @@ func TestValidate_DuplicateEvalIDs(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
-			{ID: "dup", Prompt: "p1", Treatments: Treatments{Control: Treatment{Name: "c"}}},
-			{ID: "dup", Prompt: "p2", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+			{ID: "dup", Prompt: "p1", Variants: []Treatment{{Name: "c"}}},
+			{ID: "dup", Prompt: "p2", Variants: []Treatment{{Name: "c"}}},
 		},
 	}
 
@@ -156,7 +156,7 @@ func TestValidate_InvalidComplexity(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Complexity: "extreme", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+			{ID: "e1", Prompt: "p", Complexity: "extreme", Variants: []Treatment{{Name: "c"}}},
 		},
 	}
 
@@ -169,7 +169,7 @@ func TestValidate_ValidComplexities(t *testing.T) {
 		s := &Suite{
 			Version: 1,
 			Evals: []Eval{
-				{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Complexity: c, Treatments: Treatments{Control: Treatment{Name: "c", Runner: "claude-code"}}},
+				{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Complexity: c, Variants: []Treatment{{Name: "c", Runner: "claude-code"}}},
 			},
 		}
 		if err := validate(s); err != nil {
@@ -178,14 +178,26 @@ func TestValidate_ValidComplexities(t *testing.T) {
 	}
 }
 
-func TestValidate_ControlTreatmentNameRequired(t *testing.T) {
+func TestValidate_AtLeastOneVariantRequired(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals:   []Eval{{ID: "e1", Prompt: "p"}},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, "control treatment name is required")
+	assertValidationContains(t, err, "at least one variant is required")
+}
+
+func TestValidate_VariantNameRequired(t *testing.T) {
+	s := &Suite{
+		Version: 1,
+		Evals: []Eval{
+			{ID: "e1", Prompt: "p", Variants: []Treatment{{}}},
+		},
+	}
+
+	err := validate(s)
+	assertValidationContains(t, err, "name is required")
 }
 
 func TestValidate_MultipleErrors(t *testing.T) {
@@ -201,76 +213,76 @@ func TestValidate_MultipleErrors(t *testing.T) {
 	}
 
 	if len(ve.Errors) < 4 {
-		t.Errorf("expected at least 4 errors (version, id, prompt, complexity, control), got %d: %v",
+		t.Errorf("expected at least 4 errors (version, id, complexity, variants), got %d: %v",
 			len(ve.Errors), ve.Errors)
 	}
 }
 
-func TestValidate_ModelRequiredOnControl(t *testing.T) {
+func TestValidate_ModelRequiredOnVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Treatments: Treatments{Control: Treatment{Name: "ctrl"}}},
+			{ID: "e1", Prompt: "p", Variants: []Treatment{{Name: "ctrl"}}},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `control treatment "ctrl" has no model`)
+	assertValidationContains(t, err, `"ctrl" has no model`)
 }
 
-func TestValidate_ModelRequiredOnVariation(t *testing.T) {
+func TestValidate_ModelRequiredOnSecondVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Model: "claude-sonnet-4-6"},
-					Variations: []Treatment{{Name: "v1"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Model: "claude-sonnet-4-6"},
+					{Name: "v1"},
 				},
 			},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `variation[0] "v1" has no model`)
+	assertValidationContains(t, err, `"v1" has no model`)
 }
 
-func TestValidate_EvalModelCoversAllTreatments(t *testing.T) {
+func TestValidate_EvalModelCoversAllVariants(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Runner: "claude-code"},
-					Variations: []Treatment{{Name: "v1", Runner: "claude-code"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Runner: "claude-code"},
+					{Name: "v1", Runner: "claude-code"},
 				},
 			},
 		},
 	}
 
 	if err := validate(s); err != nil {
-		t.Fatalf("eval-level model should cover all treatments, got: %v", err)
+		t.Fatalf("eval-level model should cover all variants, got: %v", err)
 	}
 }
 
-func TestValidate_TreatmentLevelModelsWithoutEvalModel(t *testing.T) {
+func TestValidate_VariantLevelModelsWithoutEvalModel(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Model: "claude-sonnet-4-6", Runner: "claude-code"},
-					Variations: []Treatment{{Name: "v1", Model: "claude-opus-4-6", Runner: "claude-code"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Model: "claude-sonnet-4-6", Runner: "claude-code"},
+					{Name: "v1", Model: "claude-opus-4-6", Runner: "claude-code"},
 				},
 			},
 		},
 	}
 
 	if err := validate(s); err != nil {
-		t.Fatalf("per-treatment models should be valid, got: %v", err)
+		t.Fatalf("per-variant models should be valid, got: %v", err)
 	}
 }
 
@@ -281,10 +293,8 @@ func TestValidate_ValidRunners(t *testing.T) {
 			Evals: []Eval{
 				{
 					ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-					Runner: runner,
-					Treatments: Treatments{
-						Control: Treatment{Name: "ctrl", Runner: runner},
-					},
+					Runner:   runner,
+					Variants: []Treatment{{Name: "ctrl", Runner: runner}},
 				},
 			},
 		}
@@ -294,39 +304,37 @@ func TestValidate_ValidRunners(t *testing.T) {
 	}
 }
 
-func TestValidate_MissingRunnerOnControl(t *testing.T) {
+func TestValidate_MissingRunnerOnVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl"},
-				},
+				Variants: []Treatment{{Name: "ctrl"}},
 			},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `control treatment "ctrl" has no runner`)
+	assertValidationContains(t, err, `"ctrl" has no runner`)
 }
 
-func TestValidate_MissingRunnerOnVariation(t *testing.T) {
+func TestValidate_MissingRunnerOnSecondVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl", Runner: "claude-code"},
-					Variations: []Treatment{{Name: "v1", Model: "claude-sonnet-4-6"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Runner: "claude-code"},
+					{Name: "v1", Model: "claude-sonnet-4-6"},
 				},
 			},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `variation[0] "v1" has no runner`)
+	assertValidationContains(t, err, `"v1" has no runner`)
 }
 
 func TestValidate_UnknownRunnerOnDefaults(t *testing.T) {
@@ -334,7 +342,7 @@ func TestValidate_UnknownRunnerOnDefaults(t *testing.T) {
 		Version:  1,
 		Defaults: Defaults{Runner: "unknown"},
 		Evals: []Eval{
-			{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Treatments: Treatments{Control: Treatment{Name: "c"}}},
+			{ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6", Variants: []Treatment{{Name: "c"}}},
 		},
 	}
 
@@ -348,8 +356,8 @@ func TestValidate_UnknownRunnerOnEval(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Runner:     "bad-runner",
-				Treatments: Treatments{Control: Treatment{Name: "c"}},
+				Runner:   "bad-runner",
+				Variants: []Treatment{{Name: "c"}},
 			},
 		},
 	}
@@ -358,76 +366,36 @@ func TestValidate_UnknownRunnerOnEval(t *testing.T) {
 	assertValidationContains(t, err, `eval[0]: unknown runner "bad-runner"`)
 }
 
-func TestValidate_UnknownRunnerOnControlTreatment(t *testing.T) {
+func TestValidate_UnknownRunnerOnVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", Runner: "nope"},
-				},
+				Variants: []Treatment{{Name: "ctrl", Runner: "nope"}},
 			},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `control treatment "ctrl": unknown runner "nope"`)
+	assertValidationContains(t, err, `"ctrl": unknown runner "nope"`)
 }
 
-func TestValidate_UnknownRunnerOnVariation(t *testing.T) {
+func TestValidate_SkillAndSkillsMutuallyExclusiveOnVariant(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control:    Treatment{Name: "ctrl"},
-					Variations: []Treatment{{Name: "v1", Model: "claude-sonnet-4-6", Runner: "fake"}},
+				Variants: []Treatment{
+					{Name: "ctrl", Skill: "a.md", Skills: []string{"b.md"}},
 				},
 			},
 		},
 	}
 
 	err := validate(s)
-	assertValidationContains(t, err, `variation[0] "v1": unknown runner "fake"`)
-}
-
-func TestValidate_SkillAndSkillsMutuallyExclusiveOnControl(t *testing.T) {
-	s := &Suite{
-		Version: 1,
-		Evals: []Eval{
-			{
-				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", Skill: "a.md", Skills: []string{"b.md"}},
-				},
-			},
-		},
-	}
-
-	err := validate(s)
-	assertValidationContains(t, err, `control treatment "ctrl": cannot set both skill and skills`)
-}
-
-func TestValidate_SkillAndSkillsMutuallyExclusiveOnVariation(t *testing.T) {
-	s := &Suite{
-		Version: 1,
-		Evals: []Eval{
-			{
-				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl"},
-					Variations: []Treatment{
-						{Name: "v1", Skill: "a.md", Skills: []string{"b.md"}},
-					},
-				},
-			},
-		},
-	}
-
-	err := validate(s)
-	assertValidationContains(t, err, `variation[0] "v1": cannot set both skill and skills`)
+	assertValidationContains(t, err, `"ctrl": cannot set both skill and skills`)
 }
 
 func TestValidate_SkillsAloneIsValid(t *testing.T) {
@@ -436,8 +404,8 @@ func TestValidate_SkillsAloneIsValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", Skills: []string{"a.md", "b.md"}, Runner: "claude-code"},
+				Variants: []Treatment{
+					{Name: "ctrl", Skills: []string{"a.md", "b.md"}, Runner: "claude-code"},
 				},
 			},
 		},
@@ -482,9 +450,7 @@ func TestWarnModelRunnerCompat_NoWarningForMatchingModel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl"},
-				},
+				Variants: []Treatment{{Name: "ctrl"}},
 			},
 		},
 	}
@@ -498,9 +464,7 @@ func TestWarnModelRunnerCompat_WarnsForMismatch(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "gpt-4o",
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", Runner: "claude-code"},
-				},
+				Variants: []Treatment{{Name: "ctrl", Runner: "claude-code"}},
 			},
 		},
 	}
@@ -515,10 +479,8 @@ func TestValidate_RetryConfigValid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Retry: &Retry{MaxAttempts: &attempts, Backoff: "exponential", Delay: "500ms", On: "all"},
-				Treatments: Treatments{
-					Control: Treatment{Name: "ctrl", Runner: "claude-code"},
-				},
+				Retry:    &Retry{MaxAttempts: &attempts, Backoff: "exponential", Delay: "500ms", On: "all"},
+				Variants: []Treatment{{Name: "ctrl", Runner: "claude-code"}},
 			},
 		},
 	}
@@ -534,8 +496,8 @@ func TestValidate_RetryMaxAttemptsInvalid(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Retry:      &Retry{MaxAttempts: &attempts},
-				Treatments: Treatments{Control: Treatment{Name: "c"}},
+				Retry:    &Retry{MaxAttempts: &attempts},
+				Variants: []Treatment{{Name: "c"}},
 			},
 		},
 	}
@@ -549,8 +511,8 @@ func TestValidate_RetryInvalidBackoff(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Retry:      &Retry{Backoff: "linear"},
-				Treatments: Treatments{Control: Treatment{Name: "c"}},
+				Retry:    &Retry{Backoff: "linear"},
+				Variants: []Treatment{{Name: "c"}},
 			},
 		},
 	}
@@ -564,8 +526,8 @@ func TestValidate_RetryInvalidDelay(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Retry:      &Retry{Delay: "not-a-duration"},
-				Treatments: Treatments{Control: Treatment{Name: "c"}},
+				Retry:    &Retry{Delay: "not-a-duration"},
+				Variants: []Treatment{{Name: "c"}},
 			},
 		},
 	}
@@ -579,8 +541,8 @@ func TestValidate_RetryInvalidOn(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Retry:      &Retry{On: "never"},
-				Treatments: Treatments{Control: Treatment{Name: "c"}},
+				Retry:    &Retry{On: "never"},
+				Variants: []Treatment{{Name: "c"}},
 			},
 		},
 	}
@@ -596,7 +558,7 @@ func TestValidate_RetryOnDefaultsLevel(t *testing.T) {
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{Control: Treatment{Name: "c"}},
+				Variants: []Treatment{{Name: "c"}},
 			},
 		},
 	}
@@ -604,20 +566,20 @@ func TestValidate_RetryOnDefaultsLevel(t *testing.T) {
 	assertValidationContains(t, err, "defaults.retry: max_attempts must be >= 1")
 }
 
-func TestValidate_RetryOnTreatmentLevel(t *testing.T) {
+func TestValidate_RetryOnVariantLevel(t *testing.T) {
 	s := &Suite{
 		Version: 1,
 		Evals: []Eval{
 			{
 				ID: "e1", Prompt: "p", Model: "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "c", Retry: &Retry{Backoff: "bad"}},
+				Variants: []Treatment{
+					{Name: "c", Retry: &Retry{Backoff: "bad"}},
 				},
 			},
 		},
 	}
 	err := validate(s)
-	assertValidationContains(t, err, "eval[0].control.retry: backoff must be")
+	assertValidationContains(t, err, "variant[0].retry: backoff must be")
 }
 
 func assertValidationContains(t *testing.T, err error, substr string) {
@@ -736,8 +698,8 @@ func validSuiteWith(modify func(*Eval)) *Suite {
 				ID:     "eval-1",
 				Prompt: "do something",
 				Model:  "claude-sonnet-4-6",
-				Treatments: Treatments{
-					Control: Treatment{Name: "baseline", Runner: "claude-code"},
+				Variants: []Treatment{
+					{Name: "baseline", Runner: "claude-code"},
 				},
 			},
 		},

@@ -1,4 +1,4 @@
-# Different runners across treatments in the same suite.
+# Different runners across variants in the same suite.
 version: 1
 description: "Demonstrates multiple runners in a single suite"
 
@@ -14,15 +14,13 @@ evals:
       less than 100, one per line.
     verify:
       - type: agent_exits_ok
-    treatments:
-      control:
-        name: claude-code
+    variants:
+      - name: claude-code
         model: "claude-sonnet-4-6"
         runner: claude-code
-      variations:
-        - name: codex
-          model: "gpt-4.1"
-          runner: codex
-        - name: aider
-          model: "claude-sonnet-4-6"
-          runner: aider
+      - name: codex
+        model: "gpt-4.1"
+        runner: codex
+      - name: aider
+        model: "claude-sonnet-4-6"
+        runner: aider

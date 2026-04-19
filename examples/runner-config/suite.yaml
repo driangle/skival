@@ -1,5 +1,5 @@
-# Runner and runner_config at defaults, eval, and treatment levels.
-# Shows override precedence: treatment > eval > defaults.
+# Runner and runner_config at defaults, eval, and variant levels.
+# Shows override precedence: variant > eval > defaults.
 version: 1
 description: "Demonstrates runner_config override precedence"
 
@@ -20,15 +20,13 @@ evals:
   # Inherits all defaults as-is
   - id: inherits-defaults
     prompt: "Write hello.py that prints 'hello'."
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: fewer-tools
-          runner_config:
-            allowed_tools:
-              - Read
-              - Write
+    variants:
+      - name: baseline
+      - name: fewer-tools
+        runner_config:
+          allowed_tools:
+            - Read
+            - Write
 
   # Eval-level overrides merge with defaults
   - id: eval-override
@@ -36,26 +34,22 @@ evals:
     runner_config:
       max_turns: 30              # overrides default of 20
       permission_mode: "plan"    # adds new key, defaults keys preserved
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: fewer-turns
-          runner_config:
-            max_turns: 15
+    variants:
+      - name: baseline
+      - name: fewer-turns
+        runner_config:
+          max_turns: 15
 
-  # Treatment-level overrides merge with eval + defaults
+  # Variant-level overrides merge with eval + defaults
   - id: treatment-override
     prompt: "Refactor the utils module into smaller files."
     runner_config:
       max_turns: 25
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: restricted
-          runner_config:
-            max_turns: 10          # overrides eval's 25
-            allowed_tools:         # overrides defaults
-              - Read
-              - Edit
+    variants:
+      - name: baseline
+      - name: restricted
+        runner_config:
+          max_turns: 10          # overrides eval's 25
+          allowed_tools:         # overrides defaults
+            - Read
+            - Edit

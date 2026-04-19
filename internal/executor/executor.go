@@ -110,12 +110,9 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 
 	var entries []treatmentEntry
 
-	if shouldInclude(eval.Treatments.Control.Name, filterSet) {
-		entries = append(entries, treatmentEntry{&eval.Treatments.Control, true})
-	}
-	for i := range eval.Treatments.Variations {
-		if shouldInclude(eval.Treatments.Variations[i].Name, filterSet) {
-			entries = append(entries, treatmentEntry{&eval.Treatments.Variations[i], false})
+	for i := range eval.Variants {
+		if shouldInclude(eval.Variants[i].Name, filterSet) {
+			entries = append(entries, treatmentEntry{&eval.Variants[i], i == 0})
 		}
 	}
 

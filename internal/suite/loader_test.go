@@ -18,9 +18,8 @@ evals:
   - id: eval-1
     prompt: "do the thing"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -51,9 +50,8 @@ func TestLoad_FileReference(t *testing.T) {
 id: file-eval
 prompt: "from file"
 model: "claude-sonnet-4-6"
-treatments:
-  control:
-    name: baseline
+variants:
+  - name: baseline
 `)
 
 	writeSuiteFile(t, dir, "suite.yaml", `
@@ -106,9 +104,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -143,9 +140,8 @@ evals:
     samples: 10
     timeout: 30
     model: "claude-opus"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -213,9 +209,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -243,9 +238,8 @@ evals:
     prompt: "task"
     model: "claude-sonnet-4-6"
     dir: workdir
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -276,13 +270,11 @@ evals:
     model: "claude-sonnet-4-6"
     correctness:
       check_output: "./verify.sh"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: with-skill
-          skill: "./skills/my-skill.md"
-          dir: "skills"
+    variants:
+      - name: baseline
+      - name: with-skill
+        skill: "./skills/my-skill.md"
+        dir: "skills"
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -301,13 +293,13 @@ evals:
 	}
 
 	expectedSkill := filepath.Join(dir, "skills", "my-skill.md")
-	if e.Treatments.Variations[0].Skill != expectedSkill {
-		t.Errorf("expected skill path %q, got %q", expectedSkill, e.Treatments.Variations[0].Skill)
+	if e.Variants[1].Skill != expectedSkill {
+		t.Errorf("expected skill path %q, got %q", expectedSkill, e.Variants[1].Skill)
 	}
 
 	expectedTreatDir := filepath.Join(dir, "skills")
-	if e.Treatments.Variations[0].Dir != expectedTreatDir {
-		t.Errorf("expected treatment dir %q, got %q", expectedTreatDir, e.Treatments.Variations[0].Dir)
+	if e.Variants[1].Dir != expectedTreatDir {
+		t.Errorf("expected treatment dir %q, got %q", expectedTreatDir, e.Variants[1].Dir)
 	}
 }
 
@@ -328,13 +320,11 @@ evals:
     dir: "%s"
     correctness:
       check_output: "%s"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: v1
-          skill: "%s"
-          dir: "%s"
+    variants:
+      - name: baseline
+      - name: v1
+        skill: "%s"
+        dir: "%s"
 `, absDir, absCheckOutput, absSkill, absDir))
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -353,11 +343,11 @@ evals:
 	if absCheckOutputStep.Run != absCheckOutput {
 		t.Errorf("expected script %q preserved, got %q", absCheckOutput, absCheckOutputStep.Run)
 	}
-	if e.Treatments.Variations[0].Skill != absSkill {
-		t.Errorf("expected skill %q preserved, got %q", absSkill, e.Treatments.Variations[0].Skill)
+	if e.Variants[1].Skill != absSkill {
+		t.Errorf("expected skill %q preserved, got %q", absSkill, e.Variants[1].Skill)
 	}
-	if e.Treatments.Variations[0].Dir != absDir {
-		t.Errorf("expected treatment dir %q preserved, got %q", absDir, e.Treatments.Variations[0].Dir)
+	if e.Variants[1].Dir != absDir {
+		t.Errorf("expected treatment dir %q preserved, got %q", absDir, e.Variants[1].Dir)
 	}
 }
 
@@ -376,9 +366,8 @@ evals:
     runner: "codex"
     runner_config:
       sandbox: "full"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         runner: "aider"
         runner_config:
           edit_format: "diff"
@@ -397,7 +386,7 @@ evals:
 		t.Errorf("expected eval runner_config.sandbox=%q, got %v", "full", e.RunnerConfig["sandbox"])
 	}
 
-	ctrl := e.Treatments.Control
+	ctrl := e.Variants[0]
 	if ctrl.Runner != "aider" {
 		t.Errorf("expected treatment runner %q, got %q", "aider", ctrl.Runner)
 	}
@@ -418,9 +407,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -447,9 +435,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         allowed_tools:
           - Read
           - Write
@@ -460,7 +447,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ctrl := s.Evals[0].Treatments.Control
+	ctrl := s.Evals[0].Variants[0]
 	if ctrl.AllowedTools != nil {
 		t.Error("expected AllowedTools to be nil after migration")
 	}
@@ -490,9 +477,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         allowed_tools:
           - Read
         runner_config:
@@ -506,7 +492,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ctrl := s.Evals[0].Treatments.Control
+	ctrl := s.Evals[0].Variants[0]
 	tools := ctrl.RunnerConfig["allowed_tools"]
 	// The explicit runner_config value should win over the deprecated field.
 	toolSlice, ok := tools.([]any)
@@ -534,9 +520,8 @@ evals:
     runner_config:
       max_turns: 20
       sandbox: "full"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -576,11 +561,9 @@ evals:
     prompt: "task"
     runner_config:
       sandbox: "full"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: v1
+    variants:
+      - name: baseline
+      - name: v1
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -588,7 +571,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ctrl := s.Evals[0].Treatments.Control
+	ctrl := s.Evals[0].Variants[0]
 	if ctrl.Runner != "claude-code" {
 		t.Errorf("expected control runner %q inherited from eval, got %q", "claude-code", ctrl.Runner)
 	}
@@ -599,7 +582,7 @@ evals:
 		t.Errorf("expected control sandbox=%q, got %v", "full", ctrl.RunnerConfig["sandbox"])
 	}
 
-	v1 := s.Evals[0].Treatments.Variations[0]
+	v1 := s.Evals[0].Variants[1]
 	if v1.Runner != "claude-code" {
 		t.Errorf("expected variation runner %q inherited from eval, got %q", "claude-code", v1.Runner)
 	}
@@ -622,9 +605,8 @@ evals:
     prompt: "task"
     runner_config:
       sandbox: "full"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         runner: "aider"
         runner_config:
           edit_format: "diff"
@@ -636,7 +618,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ctrl := s.Evals[0].Treatments.Control
+	ctrl := s.Evals[0].Variants[0]
 	// Treatment runner is not overwritten
 	if ctrl.Runner != "aider" {
 		t.Errorf("expected control runner %q (treatment override), got %q", "aider", ctrl.Runner)
@@ -672,15 +654,13 @@ evals:
     runner_config:
       max_turns: 10
       timeout: 30
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: custom
-          runner: "codex"
-          runner_config:
-            max_turns: 20
-            custom_flag: true
+    variants:
+      - name: baseline
+      - name: custom
+        runner: "codex"
+        runner_config:
+          max_turns: 20
+          custom_flag: true
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -691,7 +671,7 @@ evals:
 	e := s.Evals[0]
 
 	// Control inherits everything from eval (which merged defaults)
-	ctrl := e.Treatments.Control
+	ctrl := e.Variants[0]
 	if ctrl.Runner != "claude-code" {
 		t.Errorf("control runner: want %q, got %q", "claude-code", ctrl.Runner)
 	}
@@ -709,7 +689,7 @@ evals:
 	}
 
 	// Variation overrides runner and some config, inherits the rest
-	v := e.Treatments.Variations[0]
+	v := e.Variants[1]
 	if v.Runner != "codex" {
 		t.Errorf("variation runner: want %q, got %q", "codex", v.Runner)
 	}
@@ -756,15 +736,15 @@ evals:
 	}
 
 	e := s.Evals[0]
-	// 2x2 = 4 treatments: first is control, rest are variations
-	if e.Treatments.Control.Name != "claude-code_opus" {
-		t.Errorf("control name = %q, want %q", e.Treatments.Control.Name, "claude-code_opus")
+	// 2x2 = 4 variants: first is control
+	if len(e.Variants) != 4 {
+		t.Fatalf("expected 4 variants, got %d", len(e.Variants))
 	}
-	if len(e.Treatments.Variations) != 3 {
-		t.Fatalf("expected 3 variations, got %d", len(e.Treatments.Variations))
+	if e.Variants[0].Name != "claude-code_opus" {
+		t.Errorf("variant[0] name = %q, want %q", e.Variants[0].Name, "claude-code_opus")
 	}
-	if e.Treatments.Variations[0].Name != "claude-code_sonnet" {
-		t.Errorf("variation[0] name = %q, want %q", e.Treatments.Variations[0].Name, "claude-code_sonnet")
+	if e.Variants[1].Name != "claude-code_sonnet" {
+		t.Errorf("variant[1] name = %q, want %q", e.Variants[1].Name, "claude-code_sonnet")
 	}
 }
 
@@ -792,18 +772,21 @@ evals:
 	}
 
 	e := s.Evals[0]
-	if e.Treatments.Control.Name != "opus" {
-		t.Errorf("control name = %q, want %q", e.Treatments.Control.Name, "opus")
+	if len(e.Variants) != 2 {
+		t.Fatalf("expected 2 variants, got %d", len(e.Variants))
 	}
-	if e.Treatments.Control.Model != "claude-opus-4-6" {
-		t.Errorf("control model = %q, want %q", e.Treatments.Control.Model, "claude-opus-4-6")
+	if e.Variants[0].Name != "opus" {
+		t.Errorf("variant[0] name = %q, want %q", e.Variants[0].Name, "opus")
 	}
-	if len(e.Treatments.Variations) != 1 {
-		t.Fatalf("expected 1 variation, got %d", len(e.Treatments.Variations))
+	if e.Variants[0].Model != "claude-opus-4-6" {
+		t.Errorf("variant[0] model = %q, want %q", e.Variants[0].Model, "claude-opus-4-6")
+	}
+	if e.Variants[1].Name != "sonnet" {
+		t.Errorf("variant[1] name = %q, want %q", e.Variants[1].Name, "sonnet")
 	}
 }
 
-func TestLoad_MatrixAndTreatmentsMutuallyExclusive(t *testing.T) {
+func TestLoad_MatrixAndVariantsMutuallyExclusive(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
 version: 1
@@ -819,13 +802,12 @@ evals:
           values:
             - label: opus
               model: claude-opus-4-6
-    treatments:
-      control:
-        name: manual
+    variants:
+      - name: manual
 `)
 	_, err := Load(filepath.Join(dir, "suite.yaml"))
 	if err == nil {
-		t.Fatal("expected error for matrix+treatments, got nil")
+		t.Fatal("expected error for matrix+variants, got nil")
 	}
 
 	var ve *ValidationError
@@ -835,13 +817,13 @@ evals:
 
 	found := false
 	for _, e := range ve.Errors {
-		if contains(e, "cannot define both matrix and treatments") {
+		if contains(e, "cannot define both matrix and variants") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("expected error about matrix/treatments conflict, got: %v", ve.Errors)
+		t.Errorf("expected error about matrix/variants conflict, got: %v", ve.Errors)
 	}
 }
 
@@ -868,7 +850,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ctrl := s.Evals[0].Treatments.Control
+	ctrl := s.Evals[0].Variants[0]
 	if ctrl.DimensionValues["runner"] != "claude-code" {
 		t.Errorf("expected dimension runner=%q, got %q", "claude-code", ctrl.DimensionValues["runner"])
 	}
@@ -893,14 +875,12 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: with-skills
-          skills:
-            - "./skills/a.md"
-            - "./skills/b.md"
+    variants:
+      - name: baseline
+      - name: with-skills
+        skills:
+          - "./skills/a.md"
+          - "./skills/b.md"
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -908,7 +888,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	v := s.Evals[0].Treatments.Variations[0]
+	v := s.Evals[0].Variants[1]
 	expectedA := filepath.Join(dir, "skills", "a.md")
 	expectedB := filepath.Join(dir, "skills", "b.md")
 	if len(v.Skills) != 2 {
@@ -932,14 +912,12 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: v1
-          skills:
-            - "/absolute/skill-a.md"
-            - "/absolute/skill-b.md"
+    variants:
+      - name: baseline
+      - name: v1
+        skills:
+          - "/absolute/skill-a.md"
+          - "/absolute/skill-b.md"
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -947,7 +925,7 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	v := s.Evals[0].Treatments.Variations[0]
+	v := s.Evals[0].Variants[1]
 	if v.Skills[0] != "/absolute/skill-a.md" {
 		t.Errorf("expected absolute path preserved, got %q", v.Skills[0])
 	}
@@ -966,9 +944,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         skill: "a.md"
         skills:
           - "b.md"
@@ -1007,15 +984,13 @@ evals:
     prompt: "do the thing"
     model: "claude-sonnet-4-6"
     isolate: true
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
   - id: eval-2
     prompt: "another thing"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1045,9 +1020,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         config_dir: "./configs/strict"
 `)
 
@@ -1057,8 +1031,8 @@ evals:
 	}
 
 	expected := filepath.Join(dir, "configs", "strict")
-	if s.Evals[0].Treatments.Control.ConfigDir != expected {
-		t.Errorf("expected config_dir %q, got %q", expected, s.Evals[0].Treatments.Control.ConfigDir)
+	if s.Evals[0].Variants[0].ConfigDir != expected {
+		t.Errorf("expected config_dir %q, got %q", expected, s.Evals[0].Variants[0].ConfigDir)
 	}
 }
 
@@ -1071,13 +1045,11 @@ defaults:
 evals:
   - id: eval-1
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: ctrl
+    variants:
+      - name: ctrl
         prompt: "do A"
-      variations:
-        - name: v1
-          prompt: "do B"
+      - name: v1
+        prompt: "do B"
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1085,11 +1057,11 @@ evals:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.Evals[0].Treatments.Control.Prompt != "do A" {
-		t.Errorf("expected control prompt %q, got %q", "do A", s.Evals[0].Treatments.Control.Prompt)
+	if s.Evals[0].Variants[0].Prompt != "do A" {
+		t.Errorf("expected control prompt %q, got %q", "do A", s.Evals[0].Variants[0].Prompt)
 	}
-	if s.Evals[0].Treatments.Variations[0].Prompt != "do B" {
-		t.Errorf("expected variation prompt %q, got %q", "do B", s.Evals[0].Treatments.Variations[0].Prompt)
+	if s.Evals[0].Variants[1].Prompt != "do B" {
+		t.Errorf("expected variation prompt %q, got %q", "do B", s.Evals[0].Variants[1].Prompt)
 	}
 }
 
@@ -1143,9 +1115,8 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1187,18 +1158,15 @@ evals:
     retry:
       max_attempts: 3
       on: all
-    treatments:
-      control:
-        name: ctrl
-      variations:
-        - name: v1
-          retry:
-            max_attempts: 5
+    variants:
+      - name: ctrl
+      - name: v1
+        retry:
+          max_attempts: 5
   - id: eval-2
     prompt: "task2"
-    treatments:
-      control:
-        name: ctrl2
+    variants:
+      - name: ctrl2
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1216,13 +1184,13 @@ evals:
 	}
 
 	// control inherits from eval (eval > defaults)
-	ctrl := e1.Treatments.Control
+	ctrl := e1.Variants[0]
 	if ctrl.Retry == nil || *ctrl.Retry.MaxAttempts != 3 {
 		t.Errorf("control should inherit retry from eval (3)")
 	}
 
 	// v1 has its own retry, overrides eval
-	v1 := e1.Treatments.Variations[0]
+	v1 := e1.Variants[1]
 	if v1.Retry == nil || *v1.Retry.MaxAttempts != 5 {
 		t.Errorf("v1 should have retry max_attempts=5 (treatment override)")
 	}
@@ -1234,7 +1202,7 @@ evals:
 	}
 
 	// eval-2 control inherits from eval (which inherited from defaults)
-	ctrl2 := e2.Treatments.Control
+	ctrl2 := e2.Variants[0]
 	if ctrl2.Retry == nil || *ctrl2.Retry.MaxAttempts != 2 {
 		t.Errorf("ctrl2 should inherit retry from defaults via eval (2)")
 	}
@@ -1255,9 +1223,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1289,9 +1256,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1319,9 +1285,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	_, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1361,9 +1326,8 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	_, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1401,9 +1365,8 @@ evals:
     correctness:
       judge: ["output is correct"]
       judge_model: "claude-opus-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1429,9 +1392,8 @@ evals:
     prompt: "task"
     correctness:
       judge: ["output is correct"]
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1458,9 +1420,8 @@ evals:
     correctness:
       judge: ["output is correct"]
       judge_model: "claude-opus-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1485,9 +1446,8 @@ evals:
     model: "claude-sonnet-4-6"
     correctness:
       judge: ["output is correct"]
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1516,9 +1476,8 @@ evals:
         - url: "http://localhost:8080/ready"
           method: POST
           expect: "ready"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         runner: claude-code
 `)
 
@@ -1570,9 +1529,8 @@ evals:
             path: "output.txt"
             assert:
               exists: true
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         runner: claude-code
 `)
 
@@ -1602,9 +1560,8 @@ evals:
     verify:
       - type: file_contains
         path: "output.txt"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
         runner: claude-code
 `)
 
@@ -1641,9 +1598,8 @@ evals:
       check_output: "./verify.sh"
       judge: ["is correct"]
       judge_model: "claude-opus-4-6"
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))
@@ -1684,9 +1640,8 @@ evals:
         run: "go build ./..."
       - type: output_contains
         values: ["hello"]
-    treatments:
-      control:
-        name: baseline
+    variants:
+      - name: baseline
 `)
 
 	s, err := Load(filepath.Join(dir, "suite.yaml"))

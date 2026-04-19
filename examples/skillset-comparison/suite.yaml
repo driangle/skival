@@ -22,13 +22,11 @@ evals:
       - type: agent_exits_ok
       - type: check_output
         run: "./verify.sh"
-    treatments:
-      control:
-        name: "baseline"
-      variations:
-        - name: "shell-only"
-          skill: "./skills/shell-best-practices.md"
-        - name: "shell-and-testing"
-          skills:
-            - "./skills/shell-best-practices.md"
-            - "./skills/testing-guidelines.md"
+    variants:
+      - name: "baseline"
+      - name: "shell-only"
+        skill: "./skills/shell-best-practices.md"
+      - name: "shell-and-testing"
+        skills:
+          - "./skills/shell-best-practices.md"
+          - "./skills/testing-guidelines.md"

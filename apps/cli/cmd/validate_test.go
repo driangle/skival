@@ -22,11 +22,9 @@ evals:
     prompt: "do something"
     model: "claude-sonnet-4-6"
     complexity: medium
-    treatments:
-      control:
-        name: "baseline"
-      variations:
-        - name: "variant-1"
+    variants:
+      - name: "baseline"
+      - name: "variant-1"
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
@@ -41,7 +39,7 @@ evals:
 	assertContains(t, out, `eval "eval-1"`)
 	assertContains(t, out, `name:       Test Eval`)
 	assertContains(t, out, `complexity: medium`)
-	assertContains(t, out, `treatments: 2`)
+	assertContains(t, out, `variants:   2`)
 	assertContains(t, out, `"baseline"`)
 	assertContains(t, out, `"variant-1"`)
 }
@@ -97,9 +95,8 @@ evals:
         contains:
           - "hello"
       check_output: "./verify.sh"
-    treatments:
-      control:
-        name: "baseline"
+    variants:
+      - name: "baseline"
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)

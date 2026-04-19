@@ -22,9 +22,7 @@ evals:
       - type: agent_exits_ok
       - type: check_output
         run: "./verify.sh"
-    treatments:
-      control:
-        name: "baseline"
-      variations:
-        - name: "with-shell-skill"
-          skill: "./skills/shell-best-practices.md"
+    variants:
+      - name: "baseline"
+      - name: "with-shell-skill"
+        skill: "./skills/shell-best-practices.md"
