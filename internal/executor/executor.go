@@ -122,16 +122,10 @@ func collectTreatments(eval *suite.Eval, filter []string) []treatmentEntry {
 func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.TreatmentResult {
 	runnerName := t.Runner
 
-	// Model: treatment > eval.
-	model := eval.Model
-	if t.Model != "" {
-		model = t.Model
-	}
-
 	tr := result.TreatmentResult{
 		Name:      t.Name,
 		Runner:    runnerName,
-		Model:     model,
+		Model:     t.Model,
 		IsControl: isControl,
 	}
 
@@ -365,13 +359,8 @@ func executeSingleRun(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 func buildRunOptions(eval *suite.Eval, t *suite.Treatment, isolatedDir string, timeoutOverride int) ([]agentrunner.Option, error) {
 	var opts []agentrunner.Option
 
-	// Model: treatment > eval.
-	model := eval.Model
 	if t.Model != "" {
-		model = t.Model
-	}
-	if model != "" {
-		opts = append(opts, agentrunner.WithModel(model))
+		opts = append(opts, agentrunner.WithModel(t.Model))
 	}
 
 	// Working directory: isolated > treatment > eval.

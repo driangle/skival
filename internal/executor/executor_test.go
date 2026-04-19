@@ -261,13 +261,13 @@ func TestOptionsMapping(t *testing.T) {
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Model = "claude-sonnet-4-6"
 	s.Evals[0].Dir = "/tmp/eval-dir"
 	s.Evals[0].Timeout = intPtr(30)
 	s.Evals[0].Variants = []suite.Treatment{
 		{
 			Name:         "control",
 			Runner:       "claude-code",
+			Model:        "claude-sonnet-4-6",
 			Env:          map[string]string{"FOO": "bar"},
 			RunnerConfig: map[string]any{"allowed_tools": []string{"Read", "Write"}},
 		},
@@ -297,13 +297,12 @@ func TestOptionsMapping(t *testing.T) {
 	}
 }
 
-func TestTreatmentModelOverridesEval(t *testing.T) {
+func TestTreatmentModelUsed(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{}},
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Model = "claude-sonnet-4-6"
 	s.Evals[0].Variants = []suite.Treatment{
 		{
 			Name:   "control",
@@ -315,17 +314,17 @@ func TestTreatmentModelOverridesEval(t *testing.T) {
 	_, _ = Execute(context.Background(), s, fakeRegistry(runner), nil)
 
 	if runner.calls[0].Opts.Model != "claude-opus-4-6" {
-		t.Errorf("treatment model should override eval model, got %q", runner.calls[0].Opts.Model)
+		t.Errorf("expected treatment model, got %q", runner.calls[0].Opts.Model)
 	}
 }
 
-func TestTreatmentResultModelFromEval(t *testing.T) {
+func TestTreatmentResultModelFromVariant(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}},
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Model = "claude-sonnet-4-6"
+	s.Evals[0].Variants[0].Model = "claude-sonnet-4-6"
 
 	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
 	if err != nil {
@@ -338,16 +337,15 @@ func TestTreatmentResultModelFromEval(t *testing.T) {
 	}
 }
 
-func TestTreatmentResultModelOverride(t *testing.T) {
+func TestTreatmentResultModelPerVariant(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "ok"}, {Text: "ok"}},
 	}
 
 	s := newMinimalSuite()
-	s.Evals[0].Model = "claude-sonnet-4-6"
 	s.Evals[0].Variants = []suite.Treatment{
 		{Name: "control", Runner: "claude-code", Model: "claude-opus-4-6"},
-		{Name: "variation", Runner: "claude-code"},
+		{Name: "variation", Runner: "claude-code", Model: "claude-sonnet-4-6"},
 	}
 
 	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
@@ -356,10 +354,10 @@ func TestTreatmentResultModelOverride(t *testing.T) {
 	}
 
 	if sr.Evals[0].Treatments[0].Model != "claude-opus-4-6" {
-		t.Errorf("control should use treatment model, got %q", sr.Evals[0].Treatments[0].Model)
+		t.Errorf("control should use its own model, got %q", sr.Evals[0].Treatments[0].Model)
 	}
 	if sr.Evals[0].Treatments[1].Model != "claude-sonnet-4-6" {
-		t.Errorf("variation should use eval model, got %q", sr.Evals[0].Treatments[1].Model)
+		t.Errorf("variation should use its own model, got %q", sr.Evals[0].Treatments[1].Model)
 	}
 }
 
@@ -599,7 +597,7 @@ func TestNoOverrideUsesYAML(t *testing.T) {
 
 	s := newMinimalSuite()
 	s.Evals[0].Samples = intPtr(2)
-	s.Evals[0].Model = "claude-sonnet-4-6"
+	s.Evals[0].Variants[0].Model = "claude-sonnet-4-6"
 
 	sr, err := Execute(context.Background(), s, fakeRegistry(runner), &Options{})
 	if err != nil {

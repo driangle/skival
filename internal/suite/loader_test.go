@@ -161,6 +161,59 @@ evals:
 	}
 }
 
+func TestLoad_ModelPropagatesEvalToVariant(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    variants:
+      - name: baseline
+      - name: override
+        model: "claude-opus-4-6"
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Variants[0].Model != "claude-sonnet-4-6" {
+		t.Errorf("expected baseline model inherited from eval, got %q", s.Evals[0].Variants[0].Model)
+	}
+	if s.Evals[0].Variants[1].Model != "claude-opus-4-6" {
+		t.Errorf("expected override model preserved, got %q", s.Evals[0].Variants[1].Model)
+	}
+}
+
+func TestLoad_ModelPropagatesDefaultsToVariant(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+evals:
+  - id: eval-1
+    prompt: "task"
+    variants:
+      - name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.Evals[0].Variants[0].Model != "claude-sonnet-4-6" {
+		t.Errorf("expected model propagated from defaults through eval to variant, got %q", s.Evals[0].Variants[0].Model)
+	}
+}
+
 func TestLoad_InvalidYAML(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `

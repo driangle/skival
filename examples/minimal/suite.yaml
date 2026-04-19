@@ -7,8 +7,8 @@ defaults:
 evals:
   - id: hello
     prompt: "Write a file called hello.txt containing 'Hello, World!'"
-    model: "claude-sonnet-4-6"
     variants:
       - name: baseline
+        model: "claude-sonnet-4-6"
       - name: opus-model
         model: "claude-opus-4-6"

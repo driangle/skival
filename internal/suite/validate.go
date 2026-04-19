@@ -119,8 +119,8 @@ func validate(s *Suite) error {
 			}
 
 			// Every variant must resolve to a model.
-			if eval.Model == "" && v.Model == "" {
-				errs = append(errs, fmt.Sprintf("%s %q has no model (set model on the eval or variant)", vp, v.Name))
+			if v.Model == "" {
+				errs = append(errs, fmt.Sprintf("%s %q has no model (set model on the eval, defaults, or variant)", vp, v.Name))
 			}
 		}
 	}
@@ -205,26 +205,18 @@ func validateRetryConfig(r *Retry, path string) []string {
 func warnModelRunnerCompat(s *Suite) {
 	for _, eval := range s.Evals {
 		for _, v := range eval.Variants {
-			warnTreatmentModelRunner(v, eval.Model)
+			warnTreatmentModelRunner(v)
 		}
 	}
 }
 
-func warnTreatmentModelRunner(t Treatment, evalModel string) {
-	model := t.Model
-	if model == "" {
-		model = evalModel
-	}
-	if model == "" {
+func warnTreatmentModelRunner(t Treatment) {
+	if t.Model == "" || t.Runner == "" {
 		return
 	}
 
-	if t.Runner == "" {
-		return
-	}
-
-	if !modelLooksValidForRunner(model, t.Runner) {
-		log.Printf("WARNING: treatment %q: model %q may not be compatible with runner %q", t.Name, model, t.Runner)
+	if !modelLooksValidForRunner(t.Model, t.Runner) {
+		log.Printf("WARNING: treatment %q: model %q may not be compatible with runner %q", t.Name, t.Model, t.Runner)
 	}
 }
 

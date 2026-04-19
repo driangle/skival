@@ -331,6 +331,9 @@ func mergeRunnerIntoTreatment(e *Eval, t *Treatment) {
 	if t.Runner == "" && e.Runner != "" {
 		t.Runner = e.Runner
 	}
+	if t.Model == "" && e.Model != "" {
+		t.Model = e.Model
+	}
 	t.RunnerConfig = mergeMaps(e.RunnerConfig, t.RunnerConfig)
 	if t.Retry == nil && e.Retry != nil {
 		t.Retry = e.Retry
