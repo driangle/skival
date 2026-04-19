@@ -52,7 +52,7 @@ evals:
   # Verify via HTTP checks
   - id: http-check
     dir: "./workdir"
-    prompt: "Start a web server on port 8080 that responds to GET /health with 'ok'."
+    prompt: "Start a web server on port 8080 that responds to GET /health with 'ok' and GET /ready with 'ready'."
     verify:
       - type: http_check
         url: "http://localhost:8080/health"
