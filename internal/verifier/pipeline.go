@@ -148,10 +148,11 @@ func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...Pipel
 				steps = append(steps, namedVerifier{
 					name: name,
 					verifier: &JudgeVerifier{
-						Runner:   cfg.runner,
-						Criteria: step.Criteria,
-						Prompt:   cfg.evalPrompt,
-						Model:    step.Model,
+						Runner:     cfg.runner,
+						Criteria:   step.Criteria,
+						Prompt:     cfg.evalPrompt,
+						Model:      step.Model,
+						AgentModel: cfg.agentModel,
 					},
 				})
 			}
@@ -171,6 +172,7 @@ type PipelineOption func(*pipelineConfig)
 type pipelineConfig struct {
 	runner     agentrunner.Runner
 	evalPrompt string
+	agentModel string
 }
 
 // WithJudge provides a runner and eval prompt for the judge verifier.
@@ -178,6 +180,15 @@ func WithJudge(runner agentrunner.Runner, evalPrompt string) PipelineOption {
 	return func(c *pipelineConfig) {
 		c.runner = runner
 		c.evalPrompt = evalPrompt
+	}
+}
+
+// WithAgentModel tells the judge which model the agent-under-test ran as, so
+// it can evaluate criteria that reference the agent's model without guessing
+// from its own identity.
+func WithAgentModel(model string) PipelineOption {
+	return func(c *pipelineConfig) {
+		c.agentModel = model
 	}
 }
 

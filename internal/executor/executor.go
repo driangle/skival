@@ -264,7 +264,10 @@ func runSample(ctx context.Context, eval *suite.Eval, label string, v *suite.Var
 	}
 	var pipelineOpts []verifier.PipelineOption
 	if hasJudgeStep(eval.Verify) {
-		pipelineOpts = append(pipelineOpts, verifier.WithJudge(runner, judgePrompt))
+		pipelineOpts = append(pipelineOpts,
+			verifier.WithJudge(runner, judgePrompt),
+			verifier.WithAgentModel(v.Model),
+		)
 	}
 	pipeline := verifier.BuildPipeline(eval.Verify, verifyDir, pipelineOpts...)
 

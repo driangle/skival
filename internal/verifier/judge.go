@@ -14,6 +14,10 @@ const DefaultJudgeModel = "claude-haiku-4-5-20251001"
 
 const judgePromptTemplate = `You are an evaluation judge. Determine whether the agent's output satisfies the given criteria.
 
+## Agent Model
+The agent under evaluation ran as: %s
+This may differ from your own model. When a criterion references "the agent's model name," use the value above — not your own identity.
+
 ## Eval Prompt
 %s
 
@@ -37,10 +41,11 @@ FAIL: <brief reason explaining which criteria were not met>
 
 // JudgeVerifier uses an LLM to evaluate subjective correctness criteria.
 type JudgeVerifier struct {
-	Runner   agentrunner.Runner
-	Criteria []string
-	Prompt   string
-	Model    string
+	Runner     agentrunner.Runner
+	Criteria   []string
+	Prompt     string
+	Model      string
+	AgentModel string
 }
 
 func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyResult {
@@ -49,7 +54,7 @@ func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyRes
 	if toolActivity == "" {
 		toolActivity = "(no tool calls recorded)"
 	}
-	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.Prompt, toolActivity, input.RunOutput, "- "+criteria)
+	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.AgentModel, v.Prompt, toolActivity, input.RunOutput, "- "+criteria)
 
 	model := v.Model
 	if model == "" {

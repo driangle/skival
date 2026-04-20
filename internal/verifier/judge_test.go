@@ -225,6 +225,23 @@ func TestJudgeVerifier_NoConversationRendersPlaceholder(t *testing.T) {
 	}
 }
 
+func TestJudgeVerifier_IncludesAgentModelInPrompt(t *testing.T) {
+	r := &capturingRunner{fakeRunner: fakeRunner{text: "PASS: ok"}}
+	v := &JudgeVerifier{
+		Runner:     r,
+		Criteria:   []string{"output is correct"},
+		Prompt:     "do something",
+		AgentModel: "claude-opus-4-6",
+	}
+	v.Verify(context.Background(), VerifyInput{RunOutput: "hello"})
+	if !strings.Contains(r.capturedPrompt, "## Agent Model") {
+		t.Errorf("prompt missing agent model section: %q", r.capturedPrompt)
+	}
+	if !strings.Contains(r.capturedPrompt, "claude-opus-4-6") {
+		t.Errorf("prompt missing agent model value: %q", r.capturedPrompt)
+	}
+}
+
 func TestBuildPipeline_JudgeModelPropagated(t *testing.T) {
 	runner := &fakeRunner{text: "PASS: ok"}
 	p := BuildPipeline([]suite.VerifyStep{
@@ -267,6 +284,24 @@ func TestBuildPipeline_JudgeWithoutRunner(t *testing.T) {
 
 	if p != nil {
 		t.Error("expected nil pipeline when judge configured but no runner")
+	}
+}
+
+func TestBuildPipeline_AgentModelPropagated(t *testing.T) {
+	runner := &fakeRunner{text: "PASS: ok"}
+	p := BuildPipeline([]suite.VerifyStep{
+		{Type: "judge", Criteria: []string{"output is correct"}},
+	}, "", WithJudge(runner, "do something"), WithAgentModel("claude-opus-4-6"))
+
+	if p == nil {
+		t.Fatal("expected non-nil pipeline")
+	}
+	jv, ok := p.steps[0].verifier.(*JudgeVerifier)
+	if !ok {
+		t.Fatal("expected JudgeVerifier")
+	}
+	if jv.AgentModel != "claude-opus-4-6" {
+		t.Errorf("agent model = %q, want %q", jv.AgentModel, "claude-opus-4-6")
 	}
 }
 
