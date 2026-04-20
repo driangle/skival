@@ -289,8 +289,9 @@ func runSample(ctx context.Context, eval *suite.Eval, label string, v *suite.Var
 		if pipeline != nil && run.Err == nil {
 			slog.Debug("Running verification pipeline", "eval", label, "variant", v.Name, "sample", sample, "attempt", attempt)
 			input := verifier.VerifyInput{
-				RunOutput: run.Text,
-				ExitCode:  run.ExitCode,
+				RunOutput:    run.Text,
+				ExitCode:     run.ExitCode,
+				Conversation: run.Conversation,
 			}
 			pr := pipeline.Run(ctx, input)
 			run.Pass = &pr.Pass

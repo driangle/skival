@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	agentrunner "github.com/driangle/agentrunner/go"
@@ -137,13 +138,15 @@ func TestParseJudgeResponse_MultiLine(t *testing.T) {
 	}
 }
 
-// capturingRunner records the options passed to Start for inspection.
+// capturingRunner records the options and prompt passed to Start for inspection.
 type capturingRunner struct {
 	fakeRunner
-	capturedOpts agentrunner.Options
+	capturedOpts   agentrunner.Options
+	capturedPrompt string
 }
 
 func (c *capturingRunner) Start(ctx context.Context, prompt string, opts ...agentrunner.Option) (*agentrunner.Session, error) {
+	c.capturedPrompt = prompt
 	for _, o := range opts {
 		o(&c.capturedOpts)
 	}
@@ -180,6 +183,45 @@ func TestJudgeVerifier_DefaultModelWhenEmpty(t *testing.T) {
 	}
 	if r.capturedOpts.Model != DefaultJudgeModel {
 		t.Errorf("model = %q, want default %q", r.capturedOpts.Model, DefaultJudgeModel)
+	}
+}
+
+func TestJudgeVerifier_IncludesToolActivityInPrompt(t *testing.T) {
+	r := &capturingRunner{fakeRunner: fakeRunner{text: "PASS: ok"}}
+	v := &JudgeVerifier{
+		Runner:   r,
+		Criteria: []string{"used the right tools"},
+		Prompt:   "do something",
+	}
+	conv := []json.RawMessage{
+		json.RawMessage(`{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"gh pr list"}}]}}`),
+		json.RawMessage(`{"type":"user","message":{"content":[{"type":"tool_result","content":"Done"}]}}`),
+	}
+	result := v.Verify(context.Background(), VerifyInput{RunOutput: "done.", Conversation: conv})
+	if !result.Pass {
+		t.Fatalf("expected pass, got fail: %s", result.Reason)
+	}
+	if !strings.Contains(r.capturedPrompt, "tool_use Bash") {
+		t.Errorf("prompt missing tool_use: %q", r.capturedPrompt)
+	}
+	if !strings.Contains(r.capturedPrompt, "gh pr list") {
+		t.Errorf("prompt missing tool input: %q", r.capturedPrompt)
+	}
+	if !strings.Contains(r.capturedPrompt, "tool_result: Done") {
+		t.Errorf("prompt missing tool_result: %q", r.capturedPrompt)
+	}
+}
+
+func TestJudgeVerifier_NoConversationRendersPlaceholder(t *testing.T) {
+	r := &capturingRunner{fakeRunner: fakeRunner{text: "PASS: ok"}}
+	v := &JudgeVerifier{
+		Runner:   r,
+		Criteria: []string{"output is correct"},
+		Prompt:   "do something",
+	}
+	v.Verify(context.Background(), VerifyInput{RunOutput: "hello"})
+	if !strings.Contains(r.capturedPrompt, "(no tool calls recorded)") {
+		t.Errorf("prompt missing placeholder: %q", r.capturedPrompt)
 	}
 }
 

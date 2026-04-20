@@ -11,6 +11,9 @@ type VerifyInput struct {
 	RunOutput string
 	// ExitCode is the process exit code from the run.
 	ExitCode int
+	// Conversation is the raw stream of session messages, when available.
+	// The judge verifier uses it to include tool activity in its evaluation.
+	Conversation []json.RawMessage
 }
 
 // VerifyResult holds the outcome of a verification check.

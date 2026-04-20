@@ -17,14 +17,19 @@ const judgePromptTemplate = `You are an evaluation judge. Determine whether the 
 ## Eval Prompt
 %s
 
-## Agent Output
+## Agent Tool Activity
+The agent made the following tool calls and received these results during its session (values may be truncated):
+%s
+
+## Agent Final Response
 %s
 
 ## Criteria
 %s
 
 ## Instructions
-Evaluate whether the agent's output satisfies ALL of the criteria above.
+Evaluate whether the agent's tool activity and final response together satisfy ALL of the criteria above.
+When a criterion asks about tools the agent called or data it queried, rely on the tool activity — not the final response — as the source of truth.
 Respond with exactly one of these formats:
 PASS: <brief reason>
 FAIL: <brief reason explaining which criteria were not met>
@@ -40,7 +45,11 @@ type JudgeVerifier struct {
 
 func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyResult {
 	criteria := strings.Join(v.Criteria, "\n- ")
-	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.Prompt, input.RunOutput, "- "+criteria)
+	toolActivity := SummarizeToolActivity(input.Conversation)
+	if toolActivity == "" {
+		toolActivity = "(no tool calls recorded)"
+	}
+	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.Prompt, toolActivity, input.RunOutput, "- "+criteria)
 
 	model := v.Model
 	if model == "" {
