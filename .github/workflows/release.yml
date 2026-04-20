@@ -35,7 +35,10 @@ jobs:
 
       - name: Build binaries
         run: |
-          ldflags="-s -w -X github.com/driangle/skival/apps/cli/cmd.version=${{ steps.version.outputs.VERSION }}"
+          ldflags="-s -w \
+            -X github.com/driangle/skival/apps/cli/cmd.Version=${{ steps.version.outputs.VERSION }} \
+            -X github.com/driangle/skival/apps/cli/cmd.commit=${{ github.sha }} \
+            -X github.com/driangle/skival/apps/cli/cmd.suffix=release"
           platforms="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64"
           for platform in $platforms; do
             os="${platform%/*}"

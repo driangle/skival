@@ -1,11 +1,14 @@
 .PHONY: build install lint vet test check-lite check
 
 # ── Build ────────────────────────────────────────────────────────────
+COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+LDFLAGS := -X 'github.com/driangle/skival/apps/cli/cmd.commit=$(COMMIT)'
+
 build:
-	go build -o apps/cli/skival ./apps/cli
+	go build -ldflags "$(LDFLAGS)" -o apps/cli/skival ./apps/cli
 
 install:
-	go build -o $(shell go env GOPATH)/bin/skival ./apps/cli
+	go build -ldflags "$(LDFLAGS)" -o $(shell go env GOPATH)/bin/skival ./apps/cli
 
 # ── Lint & compile checks ───────────────────────────────────────────
 vet:
