@@ -100,7 +100,7 @@ func defaultRegistry() *registry.Registry {
 }
 
 func init() {
-	runCmd.Flags().Int("samples", 1, "Number of runs per variant")
+	runCmd.Flags().Int("samples", 0, "Number of runs per variant (overrides suite/eval-level samples)")
 	runCmd.Flags().IntP("parallel", "p", 0, "Max concurrent samples (default: sequential)")
 	runCmd.Flags().Int("parallel-variants", 0, "Max concurrent variants per eval (default: sequential, skips reset hook)")
 	runCmd.Flags().String("results-dir", "", "Directory for results output")
