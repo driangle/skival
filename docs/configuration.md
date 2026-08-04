@@ -65,7 +65,6 @@ evals:
     prompt: "Write a FizzBuzz program in Go"
     dir: ./workspace
     isolate: true
-    complexity: medium
     timeout: 120
     samples: 5
     model: "claude-sonnet-4-6"
@@ -90,7 +89,6 @@ evals:
 | `prompt` | Yes | The task prompt sent to the AI agent |
 | `dir` | No | Working directory for execution |
 | `isolate` | No | Create a temporary copy of `dir` for each sample |
-| `complexity` | No | Metadata: `low`, `medium`, or `high` |
 | `timeout` | No | Override default timeout (seconds) |
 | `samples` | No | Override default sample count |
 | `parallel` | No | Override default max concurrency |

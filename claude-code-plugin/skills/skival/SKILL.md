@@ -34,7 +34,6 @@ evals:                                # REQUIRED. At least one eval.
     prompt: |                         # REQUIRED. The task prompt sent to the agent.
       Write a function that...
     dir: "./evals/unique-eval-id"     # Optional. Working directory for this eval.
-    complexity: medium                # Optional. One of: low, medium, high.
     samples: 5                        # Optional. Overrides defaults.samples.
     timeout: 120                      # Optional. Overrides defaults.timeout (seconds).
     model: "claude-sonnet-4-20250514" # Optional. Overrides defaults.model.
@@ -87,9 +86,8 @@ These are enforced by skival and will cause errors if violated:
 2. At least one eval is required in `evals`
 3. Each eval must have a non-empty `id` (unique across the suite)
 4. Each eval must have a non-empty `prompt`
-5. `complexity` must be one of: `low`, `medium`, `high` (or omitted)
-6. `control.name` is required and must be non-empty
-7. All treatment names within an eval should be unique
+5. `control.name` is required and must be non-empty
+6. All treatment names within an eval should be unique
 
 ## Common Patterns
 

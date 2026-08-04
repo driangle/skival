@@ -247,7 +247,6 @@ evals:
   - id: low-complexity
     dir: "./workdir"
     prompt: "Create a file called hello.txt containing 'hello'."
-    complexity: low
     samples: 5
     timeout: 30
     verify:
@@ -258,7 +257,6 @@ evals:
   - id: medium-complexity
     dir: "./workdir"
     prompt: "Write a Python Flask app with a GET /users endpoint."
-    complexity: medium
     samples: 3
     timeout: 120
     verify:
@@ -269,7 +267,6 @@ evals:
   - id: high-complexity
     dir: "./workdir"
     prompt: "Build a complete TODO app with SQLite, CRUD, and validation."
-    complexity: high
     samples: 2
     timeout: 300
     verify:
@@ -511,7 +508,6 @@ evals:
       Write fizzbuzz.sh that prints FizzBuzz output for numbers 1 through 20.
       Rules: "Fizz" for multiples of 3, "Buzz" for 5,
       "FizzBuzz" for both, the number otherwise.
-    complexity: low
     setup:
       reset: "rm -f fizzbuzz.sh"
     verify:

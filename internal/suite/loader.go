@@ -1,6 +1,7 @@
 package suite
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,16 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+// decodeStrict unmarshals YAML into v with unknown fields rejected. Unlike
+// yaml.Unmarshal, a key that maps to no struct field (a typo like `varaints:`
+// or an unsupported block like `treatments:`) produces a loud error at load
+// time instead of being silently dropped.
+func decodeStrict(data []byte, v any) error {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	return dec.Decode(v)
+}
 
 // Load reads a suite YAML file, resolves file references, merges defaults, and validates.
 func Load(path string) (*Suite, error) {
@@ -22,7 +33,7 @@ func Load(path string) (*Suite, error) {
 	}
 
 	var s Suite
-	if err := yaml.Unmarshal(data, &s); err != nil {
+	if err := decodeStrict(data, &s); err != nil {
 		return nil, fmt.Errorf("parsing suite YAML: %w", err)
 	}
 
@@ -70,8 +81,8 @@ func resolveFileRefs(s *Suite, suiteDir string) error {
 		}
 
 		var resolved Eval
-		if err := yaml.Unmarshal(data, &resolved); err != nil {
-			return fmt.Errorf("parsing eval file %q: %w", eval.File, err)
+		if err := decodeStrict(data, &resolved); err != nil {
+			return fmt.Errorf("parsing eval file %q (eval index %d): %w", eval.File, i, err)
 		}
 
 		resolved.File = ""

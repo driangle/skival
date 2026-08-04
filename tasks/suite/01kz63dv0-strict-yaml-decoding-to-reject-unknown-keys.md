@@ -1,7 +1,7 @@
 ---
 id: "01kz63dv0"
 title: "Strict YAML decoding to reject unknown/typo'd keys"
-status: pending
+status: completed
 priority: high
 effort: small
 type: improvement
@@ -10,6 +10,7 @@ created: 2026-08-04
 verify:
   - type: bash
     run: "go test ./internal/suite/..."
+completed_at: 2026-08-04
 ---
 
 # Strict YAML decoding to reject unknown/typo'd keys
@@ -27,15 +28,15 @@ precise error at load time.
 
 ## Tasks
 
-- [ ] Replace `yaml.Unmarshal` in `Load` with a `yaml.Decoder` using
+- [x] Replace `yaml.Unmarshal` in `Load` with a `yaml.Decoder` using
       `dec.KnownFields(true)`
-- [ ] Apply the same strict decoding to external eval file refs in
+- [x] Apply the same strict decoding to external eval file refs in
       `resolveFileRefs`
-- [ ] Confirm every still-supported deprecated field remains a known struct
+- [x] Confirm every still-supported deprecated field remains a known struct
       field so strict mode does not break back-compat (`correctness`, `state`,
       `allowed_tools`, `file`)
-- [ ] Return a clear error that names the offending key and eval index
-- [ ] Add loader tests: unknown top-level key, unknown eval key, unknown
+- [x] Return a clear error that names the offending key and eval index
+- [x] Add loader tests: unknown top-level key, unknown eval key, unknown
       variant key, and a typo'd `variants` key all error
 
 ## Acceptance Criteria

@@ -1813,6 +1813,177 @@ evals:
 	}
 }
 
+func TestLoad_StrictRejectsUnknownTopLevelKey(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+treatments:
+  - name: whoops
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for unknown top-level key")
+	}
+	if !contains(err.Error(), "treatments") {
+		t.Errorf("expected error to name the unknown key %q, got: %v", "treatments", err)
+	}
+}
+
+func TestLoad_StrictRejectsUnknownEvalKey(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    modle: "typo-model"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for unknown eval key")
+	}
+	if !contains(err.Error(), "modle") {
+		t.Errorf("expected error to name the unknown key %q, got: %v", "modle", err)
+	}
+}
+
+func TestLoad_StrictRejectsUnknownVariantKey(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+        modle: "typo-here"
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for unknown variant key")
+	}
+	if !contains(err.Error(), "modle") {
+		t.Errorf("expected error to name the unknown key %q, got: %v", "modle", err)
+	}
+}
+
+func TestLoad_StrictRejectsTypoedVariantsKey(t *testing.T) {
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
+    varaints:
+      - name: baseline
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for typo'd variants key")
+	}
+	if !contains(err.Error(), "varaints") {
+		t.Errorf("expected error to name the typo'd key %q, got: %v", "varaints", err)
+	}
+}
+
+func TestLoad_StrictRejectsUnknownKeyInFileRef(t *testing.T) {
+	dir := t.TempDir()
+
+	evalsDir := filepath.Join(dir, "evals")
+	if err := os.MkdirAll(evalsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSuiteFile(t, evalsDir, "my-eval.yaml", `
+id: file-eval
+prompt: "from file"
+model: "claude-sonnet-4-6"
+modle: "typo"
+verify:
+  - type: agent_exits_ok
+variants:
+  - name: baseline
+`)
+
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - file: evals/my-eval.yaml
+`)
+
+	_, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err == nil {
+		t.Fatal("expected error for unknown key in referenced eval file")
+	}
+	if !contains(err.Error(), "modle") {
+		t.Errorf("expected error to name the unknown key %q, got: %v", "modle", err)
+	}
+	if !contains(err.Error(), "my-eval.yaml") {
+		t.Errorf("expected error to name the offending file, got: %v", err)
+	}
+}
+
+func TestLoad_StrictAllowsDeprecatedFields(t *testing.T) {
+	// The still-supported deprecated fields must remain known so strict
+	// decoding does not break back-compat.
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    correctness:
+      agent_exits_ok: true
+      state:
+        - url: "http://localhost:8080/health"
+          method: GET
+          expect: "ok"
+    variants:
+      - name: baseline
+        allowed_tools:
+          - Read
+`)
+
+	if _, err := Load(filepath.Join(dir, "suite.yaml")); err != nil {
+		t.Fatalf("expected deprecated fields to remain valid under strict decoding, got: %v", err)
+	}
+}
+
 func findVerifyStep(steps []VerifyStep, typ string) *VerifyStep {
 	for i := range steps {
 		if steps[i].Type == typ {
