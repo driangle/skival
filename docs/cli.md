@@ -18,10 +18,10 @@ skival run <suite.yaml> [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--samples N` | `1` | Number of runs per treatment |
+| `--samples N` | `1` | Number of runs per variant |
 | `-p, --parallel N` | `0` | Max concurrent samples (`0` or `1` = sequential) |
 | `--results-dir <path>` | | Save results to disk for later reporting |
-| `--treatments <names>` | | Comma-separated list of treatment names to run |
+| `--variants <names>` | | Comma-separated list of variant names to run |
 | `--evals <ids>` | | Comma-separated list of eval IDs to run |
 | `--format <type>` | `markdown` | Output format: `markdown`, `json`, or `html` |
 | `--timeout <secs>` | | Timeout in seconds for all evals (overrides suite/eval-level timeouts) |
@@ -40,10 +40,10 @@ Run specific evals with 5 samples:
 skival run suite.yaml --evals fizzbuzz,sorting --samples 5
 ```
 
-Run only the control treatment and save results:
+Run only the baseline variant and save results:
 
 ```bash
-skival run suite.yaml --treatments control --results-dir ./results
+skival run suite.yaml --variants baseline --results-dir ./results
 ```
 
 Run with 4 concurrent samples:
@@ -80,7 +80,7 @@ skival report ./results --format json
 
 ## `skival validate`
 
-Parse and validate a suite file without executing it. Reports the suite structure including version, description, eval count, and treatment configuration.
+Parse and validate a suite file without executing it. Reports the suite structure including version, description, eval count, and variant configuration.
 
 ```bash
 skival validate <suite.yaml>
@@ -104,7 +104,7 @@ Suite is valid
 
 ## `skival compare`
 
-Compare two result directories and produce a diff report showing how treatments changed between runs. Useful for seeing what improved, regressed, or stayed the same after tweaking skills or prompts.
+Compare two result directories and produce a diff report showing how variants changed between runs. Useful for seeing what improved, regressed, or stayed the same after tweaking skills or prompts.
 
 ```bash
 skival compare <baseline-dir> <candidate-dir> [flags]
@@ -132,13 +132,13 @@ skival compare results/run-1 results/run-2 --format json
 
 ### Output
 
-The report shows per-eval, per-treatment deltas for:
+The report shows per-eval, per-variant deltas for:
 
 - **Pass rate** — percentage point change (e.g. `+50pp ↑`)
 - **Median cost** — absolute USD and percentage change (e.g. `-$0.0200 (-40.0%) ↓`)
 - **Median duration** — absolute and percentage change (e.g. `-2.0s (-20.0%) ↓`)
 
-Treatments that exist in only one run are labeled `added` or `removed` rather than causing errors.
+Variants that exist in only one run are labeled `added` or `removed` rather than causing errors.
 
 Returns a non-zero exit code if either directory is missing or invalid.
 

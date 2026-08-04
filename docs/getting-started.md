@@ -27,22 +27,23 @@ Create a file called `suite.yaml`:
 ```yaml
 version: 1
 description: "My first eval suite"
+defaults:
+  runner: claude-code
 evals:
   - id: hello-world
     prompt: "Create a file called hello.txt containing 'Hello, World!'"
     model: "claude-sonnet-4-6"
-    correctness:
-      agent_exits_ok: true
-      script: "cat hello.txt | grep 'Hello, World!'"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: with-skill
-          skill: "./skills/my-skill.md"
+    verify:
+      - type: agent_exits_ok
+      - type: check
+        run: "cat hello.txt | grep 'Hello, World!'"
+    variants:
+      - name: baseline
+      - name: with-skill
+        skill: "./skills/my-skill.md"
 ```
 
-This suite defines a single eval with two treatments: a baseline control and a variation that injects a skill.
+This suite defines a single eval with two variants: a baseline and a variant that injects a skill.
 
 ## Running the Suite
 
@@ -50,7 +51,7 @@ This suite defines a single eval with two treatments: a baseline control and a v
 skival run suite.yaml
 ```
 
-You'll see a markdown report printed to stdout with results for each treatment:
+You'll see a markdown report printed to stdout with results for each variant:
 
 ```
 # Eval Report
@@ -62,26 +63,26 @@ My first eval suite
 
 ## Results
 
-EVAL         TREATMENT   SAMPLE  STATUS  COST     DURATION
-----         ---------   ------  ------  ----     --------
+EVAL         VARIANT     SAMPLE  STATUS  COST     DURATION
+----         -------     ------  ------  ----     --------
 hello-world  baseline    1       pass    $0.0042  12.3s
 hello-world  with-skill  1       pass    $0.0038  9.1s
 
 ## Rankings
 
-RANK  TREATMENT   SCORE  PASS RATE  MEDIAN COST  MEDIAN DURATION
-----  ---------   -----  ---------  -----------  ---------------
+RANK  VARIANT     SCORE  PASS RATE  MEDIAN COST  MEDIAN DURATION
+----  -------     -----  ---------  -----------  ---------------
 #1    with-skill  0.872  100%       $0.0038      9.1s
 #2    baseline    0.811  100%       $0.0042      12.3s
 ```
 
-With `--samples 3`, you get aggregate statistics per treatment:
+With `--samples 3`, you get aggregate statistics per variant:
 
 ```
 ## Results
 
-EVAL         TREATMENT   SAMPLE  STATUS  COST     DURATION
-----         ---------   ------  ------  ----     --------
+EVAL         VARIANT     SAMPLE  STATUS  COST     DURATION
+----         -------     ------  ------  ----     --------
 hello-world  baseline    1       pass    $0.0042  12.3s
 hello-world  baseline    2       pass    $0.0039  11.8s
 hello-world  baseline    3       pass    $0.0045  13.1s
@@ -108,7 +109,7 @@ skival report ./results
 
 ### Multiple Samples
 
-For statistical confidence, run each treatment multiple times:
+For statistical confidence, run each variant multiple times:
 
 ```bash
 skival run suite.yaml --samples 3 --results-dir ./results

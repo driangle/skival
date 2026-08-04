@@ -29,7 +29,7 @@ evals:
 
 ## Defaults
 
-Defaults are inherited by all evals and can be overridden at the eval or treatment level.
+Defaults are inherited by all evals and can be overridden at the eval or variant level.
 
 ```yaml
 defaults:
@@ -49,9 +49,9 @@ defaults:
 | `model` | Model identifier |
 | `runner` | Runner to use (`claude-code`, `ollama`) |
 | `runner_config` | Runner-specific configuration (deep-merged) |
-| `samples` | Number of runs per treatment |
+| `samples` | Number of runs per variant |
 | `timeout` | Timeout in seconds |
-| `parallel` | Max concurrent samples per treatment (default: sequential) |
+| `parallel` | Max concurrent samples per variant (default: sequential) |
 | `retry` | Retry configuration for failed runs (see [Retry](#retry)) |
 | `judge_model` | Default model for the judge verifier (default: `claude-haiku-4-5-20251001`) |
 
@@ -69,18 +69,16 @@ evals:
     timeout: 120
     samples: 5
     model: "claude-sonnet-4-6"
-    correctness:
-      agent_exits_ok: true
+    verify:
+      - type: agent_exits_ok
     setup:
       before: "mkdir -p workspace"
       reset: "rm -rf workspace/*"
       after: "rm -rf workspace"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: with-skill
-          skill: "./skills/go-expert.md"
+    variants:
+      - name: baseline
+      - name: with-skill
+        skill: "./skills/go-expert.md"
 ```
 
 ### Eval Fields
@@ -99,10 +97,10 @@ evals:
 | `model` | No | Override default model |
 | `runner` | No | Override default runner |
 | `runner_config` | No | Runner-specific config (deep-merged with defaults) |
-| `correctness` | No | Verification configuration (see [Verifiers](/verifiers)) |
+| `verify` | No | Verification steps (see [Verifiers](/verifiers)) |
 | `setup` | No | Lifecycle hooks |
-| `treatments` | Yes* | Treatment definitions (*or use `matrix`) |
-| `matrix` | Yes* | Matrix dimensions (*or use `treatments`) |
+| `variants` | Yes* | Variant definitions (*or use `matrix`) |
+| `matrix` | Yes* | Matrix dimensions (*or use `variants`) |
 
 ### Prompt from File
 
@@ -124,28 +122,26 @@ setup:
   after: "rm -rf node_modules"  # Run once after all samples
 ```
 
-## Treatments
+## Variants
 
-Treatments define the variants being compared. Every eval needs a `control` and zero or more `variations`.
+Variants define the configurations being compared. Every eval needs at least one variant. The first variant in the list is treated as the baseline for ranking.
 
 ```yaml
-treatments:
-  control:
-    name: baseline
-  variations:
-    - name: with-skill
-      skill: "./skills/my-skill.md"
-    - name: with-skillset
-      skills:
-        - "./skills/skill-a.md"
-        - "./skills/skill-b.md"
+variants:
+  - name: baseline
+  - name: with-skill
+    skill: "./skills/my-skill.md"
+  - name: with-skillset
+    skills:
+      - "./skills/skill-a.md"
+      - "./skills/skill-b.md"
 ```
 
-### Treatment Fields
+### Variant Fields
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | Yes | Unique name for this treatment |
+| `name` | Yes | Unique name for this variant |
 | `prompt` | No | Override the eval prompt |
 | `skill` | No | Path to a single skill file |
 | `skills` | No | List of skill file paths (concatenated) |
@@ -154,18 +150,18 @@ treatments:
 | `model` | No | Override the model |
 | `runner` | No | Override the runner |
 | `runner_config` | No | Runner-specific config (deep-merged with defaults) |
-| `env` | No | Environment variables for this treatment |
+| `env` | No | Environment variables for this variant |
 | `retry` | No | Override retry configuration |
 
 ### Override Precedence
 
-Treatment > Eval > Defaults
+Variant > Eval > Defaults
 
-For `runner_config`, values are deep-merged (treatment keys override, but unset keys are inherited).
+For `runner_config`, values are deep-merged (variant keys override, but unset keys are inherited).
 
 ## Matrix
 
-Use `matrix` instead of `treatments` to generate a cartesian product of dimensions. This is useful for cross-cutting comparisons (e.g., model x skill).
+Use `matrix` instead of `variants` to generate a cartesian product of dimensions. This is useful for cross-cutting comparisons (e.g., model x skill).
 
 ```yaml
 evals:
@@ -186,15 +182,15 @@ evals:
               skill: "./skills/expert.md"
 ```
 
-This generates four treatments: `sonnet-baseline`, `sonnet-with-skill`, `haiku-baseline`, `haiku-with-skill`. The first combination becomes the control.
+This generates four variants: `sonnet-baseline`, `sonnet-with-skill`, `haiku-baseline`, `haiku-with-skill`. The first combination is treated as the baseline for ranking.
 
 ### Matrix Value Fields
 
-Each value in a dimension can override any treatment-level field:
+Each value in a dimension can override any variant-level field:
 
 | Field | Description |
 |-------|-------------|
-| `label` | Required. Used to generate the treatment name |
+| `label` | Required. Used to generate the variant name |
 | `prompt` | Override prompt |
 | `model` | Override model |
 | `runner` | Override runner |
@@ -203,12 +199,12 @@ Each value in a dimension can override any treatment-level field:
 | `runner_config` | Runner-specific config |
 
 ::: warning
-`matrix` and `treatments` are mutually exclusive within the same eval.
+`matrix` and `variants` are mutually exclusive within the same eval.
 :::
 
 ## Ranking
 
-Configure how treatments are scored and ranked. The composite score is a weighted sum of normalized correctness, cost, and duration metrics.
+Configure how variants are scored and ranked. The composite score is a weighted sum of normalized correctness, cost, and duration metrics.
 
 ```yaml
 ranking:
@@ -262,7 +258,7 @@ When multiple attempts are made, the **best** result is kept (not the last). Pas
 
 ### Override Precedence
 
-Retry config inherits via the standard precedence: treatment > eval > defaults.
+Retry config inherits via the standard precedence: variant > eval > defaults.
 
 ```yaml
 defaults:
@@ -270,16 +266,19 @@ defaults:
     max_attempts: 2
 evals:
   - id: flaky-eval
+    prompt: "..."
+    runner: claude-code
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     retry:
       max_attempts: 5        # overrides defaults for this eval
       on: all
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: experimental
-          retry:
-            max_attempts: 3   # overrides eval for this treatment
+    variants:
+      - name: baseline
+      - name: experimental
+        retry:
+          max_attempts: 3   # overrides eval for this variant
 ```
 
 ## Runner Configuration

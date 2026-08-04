@@ -1,12 +1,13 @@
 ---
 id: "01kz6nr0f"
 title: "Align documentation with the flat variants schema"
-status: pending
+status: completed
 priority: critical
 effort: medium
 type: docs
 tags: ["docs", "yaml-api"]
 created: 2026-08-04
+completed_at: 2026-08-04
 ---
 
 # Align documentation with the flat variants schema
@@ -34,20 +35,26 @@ syntax, so they are the reference for what the docs should say.
 
 ## Tasks
 
-- [ ] Replace `treatments/control/variations` with a flat `variants:` list in
+- [x] Replace `treatments/control/variations` with a flat `variants:` list in
       `README.md` (Quick Start + Features + Key Flags table)
-- [ ] Change the documented filter flag from `--treatments` to `--variants`
-- [ ] Update `docs/getting-started.md` examples and prose (control/variation wording)
-- [ ] Update `docs/configuration.md` examples (incl. the matrix section that says
+- [x] Change the documented filter flag from `--treatments` to `--variants`
+- [x] Update `docs/getting-started.md` examples and prose (control/variation wording)
+- [x] Update `docs/configuration.md` examples (incl. the matrix section that says
       "The first combination becomes the control")
-- [ ] Replace the deprecated `correctness:` block in the Quick Start with a
+- [x] Replace the deprecated `correctness:` block in the Quick Start with a
       `verify:` list (the current example also triggers a deprecation warning)
-- [ ] Decide the `treatments`→`variants` back-compat story: task `01kpj1s17`
+- [x] Decide the `treatments`→`variants` back-compat story: task `01kpj1s17`
       claimed old `treatments` YAML still loads via migration, but no such
       migration exists in `internal/suite/loader.go` (validate rejects it).
       Either restore the migration or drop that claim from the docs.
-- [ ] Add `make validate-examples`-style coverage or a doc-snippet test so doc
-      YAML can't drift from the schema again
+      **Decision: drop the claim.** The flat-`variants` migration was
+      deliberate and no user-facing doc actually promised back-compat, so no
+      restoration is needed. The docs now describe only the flat schema.
+- [x] Add `make validate-examples`-style coverage or a doc-snippet test so doc
+      YAML can't drift from the schema again — added
+      `internal/docsguard/docs_test.go` (runs under `make test`/`make check`):
+      it scans the published docs for removed tokens and loads every complete
+      suite example through `suite.Load`.
 
 ## Acceptance Criteria
 

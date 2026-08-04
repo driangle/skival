@@ -8,21 +8,27 @@ skival run examples/minimal/suite.yaml
 
 ## Minimal
 
-The simplest valid suite — one eval, two treatments.
+The simplest valid suite — one eval, two variants.
 
 ```yaml
 version: 1
 
+defaults:
+  runner: claude-code
+
 evals:
   - id: hello
+    dir: "./workdir"
     prompt: "Write a file called hello.txt containing 'Hello, World!'"
-    model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: opus-model
-          model: "claude-opus-4-6"
+    verify:
+      - type: file_contains
+        path: hello.txt
+        contains: "Hello, World!"
+    variants:
+      - name: baseline
+        model: "claude-sonnet-4-6"
+      - name: opus-model
+        model: "claude-opus-4-6"
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/minimal)
@@ -44,19 +50,28 @@ defaults:
 
 evals:
   - id: uses-defaults
+    dir: "./workdir"
     prompt: "Create a file called greeting.txt with a friendly greeting."
-    treatments:
-      control:
-        name: baseline
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+      - name: fewer-turns
+        runner_config:
+          max_turns: 5
 
   - id: overrides-defaults
+    dir: "./workdir"
     prompt: "Write a script that prints the current date."
     samples: 3        # overrides suite default
     timeout: 60       # overrides suite default
     model: "claude-opus-4-6"
-    treatments:
-      control:
-        name: baseline
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+      - name: sonnet-model
+        model: "claude-sonnet-4-6"
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/defaults)
@@ -69,6 +84,7 @@ Split eval definitions into separate files to keep large suites organized.
 version: 1
 
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   samples: 2
 
@@ -79,65 +95,108 @@ evals:
 
 [View source](https://github.com/driangle/skival/tree/main/examples/file-refs)
 
-## Correctness Verification
+## Verification
 
-Every verification mode in one suite: `compiles`, `agent_exits_ok`, `output`, `script`, `state`, and `judge`.
+Every verification mode in one suite. Each eval declares a `verify:` list of steps — a step type such as `check`, `agent_exits_ok`, `output_contains`, `check_output`, `http_check`, `file_contains`, `command`, `tcp_check`, or `judge`.
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
 evals:
-  # Verify compilation
-  - id: compiles-check
+  # Verify via a shell command
+  - id: check-verify
+    dir: "./workdir"
     prompt: "Write a Go program in main.go that prints 'hello'."
-    correctness:
-      compiles: "go build ./..."
+    verify:
+      - type: check
+        run: "go build ./..."
+    variants:
+      - name: baseline
 
   # Verify the agent exits successfully
   - id: agent-exits-ok-check
+    dir: "./workdir"
     prompt: "Write a shell script run.sh that exits with code 0."
-    correctness:
-      agent_exits_ok: true
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
 
-  # Verify expected strings in output
+  # Verify expected strings appear in the agent's output
   - id: expected-output-check
-    prompt: "Write a script that prints 'PASS: all tests green'."
-    correctness:
-      output:
-        contains:
-          - "PASS"
-          - "all tests green"
+    dir: "./workdir"
+    prompt: "What is 7 * 6? Reply with just the number."
+    verify:
+      - type: output_contains
+        values:
+          - "42"
+    variants:
+      - name: baseline
 
-  # Verify with a custom script
-  - id: script-check
+  # Verify by piping agent output to a script's stdin
+  - id: check-output-verify
+    dir: "./workdir"
     prompt: "Create output.txt containing exactly 'hello world'."
-    correctness:
-      script: "./scripts/verify-output.sh"
+    verify:
+      - type: check_output
+        run: "./scripts/verify-output.sh"
+    variants:
+      - name: baseline
 
-  # Verify HTTP state
-  - id: state-check
+  # Verify an HTTP endpoint
+  - id: http-check
+    dir: "./workdir"
     prompt: "Start a web server on port 8080 that responds to GET /health with 'ok'."
-    correctness:
-      state:
-        - url: "http://localhost:8080/health"
-          method: GET
-          expect: "ok"
+    verify:
+      - type: http_check
+        url: "http://localhost:8080/health"
+        method: GET
+        status: 200
+        body_contains: "ok"
+    variants:
+      - name: baseline
+
+  # Verify a file on disk
+  - id: file-contains-check
+    dir: "./workdir"
+    prompt: "Create output.txt containing 'hello world'."
+    verify:
+      - type: file_contains
+        path: "output.txt"
+        exists: true
+        contains: "hello world"
+    variants:
+      - name: baseline
 
   # Verify with an LLM judge
   - id: judge-check
+    dir: "./workdir"
     prompt: "Write a README.md explaining how to set up a Go project."
-    correctness:
-      judge:
-        - "Does the README explain how to initialize a Go module?"
-        - "Does it include instructions for running tests?"
+    verify:
+      - type: judge
+        criteria:
+          - "Does the README explain how to initialize a Go module?"
+          - "Does it include instructions for running tests?"
+    variants:
+      - name: baseline
 
   # Combine multiple checks
   - id: combined-check
-    prompt: "Write calc.py that reads two numbers and prints their sum."
-    correctness:
-      agent_exits_ok: true
-      output:
-        contains:
+    dir: "./workdir"
+    prompt: "Write calc.py that reads two numbers and prints their sum prefixed with 'Result:'."
+    verify:
+      - type: agent_exits_ok
+      - type: output_contains
+        values:
           - "Result:"
-      script: "./scripts/verify-calc.sh"
+      - type: check_output
+        run: "./scripts/verify-calc.sh"
+    variants:
+      - name: baseline
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/correctness)
@@ -147,8 +206,15 @@ evals:
 Lifecycle hooks for fixture creation and cleanup: `before` runs once at the start, `reset` runs between samples, `after` runs once at the end.
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
 evals:
   - id: with-hooks
+    dir: "./workdir"
     prompt: "Read input.txt and write its contents reversed to output.txt."
     isolate: true
     setup:
@@ -158,8 +224,10 @@ evals:
         rm -f output.txt
       after: |
         rm -f input.txt output.txt
-    correctness:
-      agent_exits_ok: true
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/setup-hooks)
@@ -169,52 +237,79 @@ evals:
 Tag evals by difficulty and adjust sample counts and timeouts accordingly.
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
 evals:
   - id: low-complexity
+    dir: "./workdir"
     prompt: "Create a file called hello.txt containing 'hello'."
     complexity: low
     samples: 5
     timeout: 30
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
 
   - id: medium-complexity
+    dir: "./workdir"
     prompt: "Write a Python Flask app with a GET /users endpoint."
     complexity: medium
     samples: 3
     timeout: 120
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
 
   - id: high-complexity
+    dir: "./workdir"
     prompt: "Build a complete TODO app with SQLite, CRUD, and validation."
     complexity: high
     samples: 2
     timeout: 300
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/complexity)
 
-## Multiple Treatments
+## Multiple Variants
 
-Compare a baseline control against multiple variations with different models, skills, environment variables, or runner configs.
+Compare a baseline against multiple variants with different models, skills, environment variables, or runner configs.
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+
 evals:
   - id: sort-algorithm
+    dir: "./workdir"
     prompt: "Write sort.py that reads integers from stdin and prints them sorted."
     model: "claude-sonnet-4-6"
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: with-skill
-          skill: "./skills/python-best-practices.md"
-        - name: opus-model
-          model: "claude-opus-4-6"
-        - name: with-env
-          env:
-            STYLE: "functional"
-        - name: custom-runner-config
-          runner_config:
-            max_turns: 5
-            allowed_tools: [Read, Write, Bash]
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+      - name: with-skill
+        skill: "./skills/python-best-practices.md"
+      - name: opus-model
+        model: "claude-opus-4-6"
+      - name: with-env
+        env:
+          STYLE: "functional"
+      - name: custom-runner-config
+        runner_config:
+          max_turns: 5
+          allowed_tools: [Read, Write, Bash]
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/multi-treatment)
@@ -224,37 +319,49 @@ evals:
 Compare different runners (claude-code, codex, aider) in the same suite.
 
 ```yaml
+version: 1
+
+defaults:
+  samples: 2
+  timeout: 120
+
 evals:
   - id: cross-runner
+    dir: "./workdir"
     prompt: "Write primes.py that prints all primes less than 100."
-    correctness:
-      agent_exits_ok: true
-    treatments:
-      control:
-        name: claude-code
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: claude-code
         model: "claude-sonnet-4-6"
         runner: claude-code
-      variations:
-        - name: codex
-          model: "gpt-4.1"
-          runner: codex
-        - name: aider
-          model: "claude-sonnet-4-6"
-          runner: aider
+      - name: codex
+        model: "gpt-4.1"
+        runner: codex
+      - name: aider
+        model: "claude-sonnet-4-6"
+        runner: aider
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/multi-runner)
 
 ## Matrix Comparison
 
-Use `matrix` instead of `treatments` to generate cross-product combinations from multiple dimensions.
+Use `matrix` instead of `variants` to generate cross-product combinations from multiple dimensions.
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+
 evals:
   - id: hello-world
+    dir: "./workdir"
     prompt: "Write hello.sh that prints 'Hello, World!' to stdout."
-    correctness:
-      script: "./verify.sh"
+    verify:
+      - type: check_output
+        run: "./verify.sh"
     matrix:
       dimensions:
         - name: runner
@@ -271,7 +378,7 @@ evals:
               model: claude-sonnet-4-6
 ```
 
-This generates four treatments: `claude-code × opus`, `claude-code × sonnet`, `codex × opus`, `codex × sonnet`.
+This generates four variants: `claude-code × opus`, `claude-code × sonnet`, `codex × opus`, `codex × sonnet`.
 
 [View source](https://github.com/driangle/skival/tree/main/examples/matrix-comparison)
 
@@ -280,81 +387,105 @@ This generates four treatments: `claude-code × opus`, `claude-code × sonnet`, 
 Compare no skill vs. a single skill vs. a composed skillset using `skills` (plural).
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
 evals:
   - id: fizzbuzz-skillset
+    dir: "./workdir"
     prompt: "Write fizzbuzz.sh that prints FizzBuzz for 1-20."
-    treatments:
-      control:
-        name: "baseline"
-      variations:
-        - name: "shell-only"
-          skill: "./skills/shell-best-practices.md"
-        - name: "shell-and-testing"
-          skills:
-            - "./skills/shell-best-practices.md"
-            - "./skills/testing-guidelines.md"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+      - name: shell-only
+        skill: "./skills/shell-best-practices.md"
+      - name: shell-and-testing
+        skills:
+          - "./skills/shell-best-practices.md"
+          - "./skills/testing-guidelines.md"
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/skillset-comparison)
 
 ## Runner Config Precedence
 
-Runner config merges at three levels: defaults → eval → treatment. Each level overrides the one above.
+Runner config merges at three levels: defaults → eval → variant. Each level overrides the one above.
 
 ```yaml
+version: 1
+
 defaults:
   runner: claude-code
+  model: "claude-sonnet-4-6"
   runner_config:
     max_turns: 20
     allowed_tools: [Read, Write, Bash, Glob, Grep]
 
 evals:
   - id: eval-override
+    dir: "./workdir"
     prompt: "Write a test suite for a calculator module."
+    verify:
+      - type: agent_exits_ok
     runner_config:
       max_turns: 30             # overrides default
       permission_mode: "plan"   # new key, merged with defaults
+    variants:
+      - name: baseline
 
-  - id: treatment-override
+  - id: variant-override
+    dir: "./workdir"
     prompt: "Refactor the utils module."
+    verify:
+      - type: agent_exits_ok
     runner_config:
       max_turns: 25
-    treatments:
-      control:
-        name: baseline
-      variations:
-        - name: restricted
-          runner_config:
-            max_turns: 10       # overrides eval's 25
-            allowed_tools: [Read, Edit]
+    variants:
+      - name: baseline
+      - name: restricted
+        runner_config:
+          max_turns: 10         # overrides eval's 25
+          allowed_tools: [Read, Edit]
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/runner-config)
 
-## Per-Treatment Config
+## Per-Variant Config
 
-Override prompts and `config_dir` per treatment for full control over Claude Code settings, hooks, and MCP configuration.
+Override prompts and `config_dir` per variant for full control over Claude Code settings, hooks, and MCP configuration.
 
 ```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
 evals:
   - id: prompt-comparison
-    treatments:
-      control:
-        name: baseline
+    dir: "./workdir"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
         prompt: "Write a function that checks if a string is a palindrome."
-      variations:
-        - name: with-tests
-          prompt: "Write a palindrome checker with comprehensive pytest tests."
+      - name: with-tests
+        prompt: "Write a palindrome checker with comprehensive pytest tests."
 
   - id: config-comparison
+    dir: "./workdir"
     prompt: "List the files in the current directory"
-    treatments:
-      control:
-        name: strict-config
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: strict-config
         config_dir: "./configs/strict"
-      variations:
-        - name: permissive-config
-          config_dir: "./configs/permissive"
+      - name: permissive-config
+        config_dir: "./configs/permissive"
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/per-treatment-config)
@@ -368,12 +499,14 @@ version: 1
 description: "FizzBuzz benchmark — compare baseline vs shell best-practices skill"
 
 defaults:
+  runner: claude-code
   model: "claude-sonnet-4-6"
   samples: 3
   timeout: 60
 
 evals:
   - id: fizzbuzz-basic
+    dir: "./workdir"
     prompt: |
       Write fizzbuzz.sh that prints FizzBuzz output for numbers 1 through 20.
       Rules: "Fizz" for multiples of 3, "Buzz" for 5,
@@ -381,15 +514,14 @@ evals:
     complexity: low
     setup:
       reset: "rm -f fizzbuzz.sh"
-    correctness:
-      agent_exits_ok: true
-      script: "./verify.sh"
-    treatments:
-      control:
-        name: "baseline"
-      variations:
-        - name: "with-shell-skill"
-          skill: "./skills/shell-best-practices.md"
+    verify:
+      - type: agent_exits_ok
+      - type: check_output
+        run: "./verify.sh"
+    variants:
+      - name: baseline
+      - name: with-shell-skill
+        skill: "./skills/shell-best-practices.md"
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/fizzbuzz)

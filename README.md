@@ -5,24 +5,24 @@
 
 A Go CLI for evaluating AI coding skill performance. Measures **time to completion**, **token usage**, **dollar cost**, and **correctness** across configurable eval suites.
 
-Define a control case and N treatment variations, then compare them head-to-head with statistical rigor.
+Define a baseline and any number of variants, then compare them head-to-head with statistical rigor.
 
 **[Documentation](https://driangle.github.io/skival/)**
 
 ## Features
 
 - **Configurable eval suites** — YAML-based definitions for prompts, correctness criteria, and environment setup
-- **Multi-treatment comparison** — Run a control and N treatments side-by-side, rank by weighted composite score
-- **Multi-sample runs** — Run each treatment multiple times for statistical confidence (median, CV)
-- **Matrix syntax** — Define dimensions (e.g. runner × model) and auto-generate a Cartesian product of treatments
-- **Per-treatment overrides** — Customize prompt, model, runner, skills, env vars, config directory, and allowed tools per treatment
+- **Multi-variant comparison** — Run any number of variants side-by-side, rank by weighted composite score
+- **Multi-sample runs** — Run each variant multiple times for statistical confidence (median, CV)
+- **Matrix syntax** — Define dimensions (e.g. runner × model) and auto-generate a Cartesian product of variants
+- **Per-variant overrides** — Customize prompt, model, runner, skills, env vars, config directory, and allowed tools per variant
 - **Skill injection** — Inject single or multiple skill files into agent system prompts for A/B testing skill effectiveness
 - **Working directory isolation** — Optionally copy the eval directory per sample to prevent cross-sample state pollution
 - **Setup lifecycle hooks** — Run shell commands before, between (reset), and after samples for fixture management
 - **Correctness verification** — Pluggable verifier pipeline: exit code, substring matching, custom scripts, HTTP state checks, LLM judge
 - **Multi-runner support** — Built on [agentrunner](https://github.com/driangle/agentrunner) with support for Claude Code, Ollama, Codex, and Aider
 - **External eval files** — Reference eval definitions from separate YAML files for reuse across suites
-- **Structured reporting** — Markdown and JSON output with per-eval breakdowns, aggregate metrics, and ranked treatments
+- **Structured reporting** — Markdown and JSON output with per-eval breakdowns, aggregate metrics, and ranked variants
 - **Suite validation** — Validate suite YAML structure and required fields without executing
 
 ## Quick Start
@@ -32,19 +32,19 @@ Define a control case and N treatment variations, then compare them head-to-head
 cat > suite.yaml <<EOF
 version: 1
 description: "My first eval suite"
+defaults:
+  runner: claude-code
 evals:
   - id: hello-world
     prompt: "Create a hello world program in Go"
     model: "claude-sonnet-4-6"
-    correctness:
-      output:
-        contains: ["Hello, world!"]
-    treatments:
-      control:
-        name: "baseline"
-      variations:
-        - name: "with-skill"
-          skill: "./skills/my-skill"
+    verify:
+      - type: output_contains
+        values: ["Hello, world!"]
+    variants:
+      - name: baseline
+      - name: with-skill
+        skill: "./skills/my-skill"
 EOF
 
 # Run the eval
@@ -63,9 +63,9 @@ skival report <results-dir>    Generate reports from saved results
 
 | Flag | Description |
 |------|-------------|
-| `--samples N` | Number of runs per treatment (default: 1) |
+| `--samples N` | Number of runs per variant (default: 1) |
 | `--results-dir` | Directory for results output |
-| `--treatments` | Filter to specific treatments |
+| `--variants` | Filter to specific variants |
 | `--evals` | Filter to specific eval IDs |
 | `--format` | Output format: `markdown`, `json` (default: `markdown`) |
 | `-v, --verbose` | Enable debug-level logging |
