@@ -664,6 +664,44 @@ func TestValidate_JudgeMissingCriteria(t *testing.T) {
 	requireValidationError(t, err, "judge requires criteria")
 }
 
+func TestValidate_VerifyStepWrongFieldForType(t *testing.T) {
+	cases := []struct {
+		name string
+		step VerifyStep
+		want string
+	}{
+		{
+			name: "port on judge",
+			step: VerifyStep{Type: "judge", Criteria: []string{"is correct"}, Port: 8080},
+			want: `field "port" is not valid for type "judge"`,
+		},
+		{
+			name: "url on tcp_check",
+			step: VerifyStep{Type: "tcp_check", Host: "localhost", Port: 8080, URL: "http://x"},
+			want: `field "url" is not valid for type "tcp_check"`,
+		},
+		{
+			name: "criteria on check",
+			step: VerifyStep{Type: "check", Run: "go build ./...", Criteria: []string{"nope"}},
+			want: `field "criteria" is not valid for type "check"`,
+		},
+		{
+			name: "values on http_check",
+			step: VerifyStep{Type: "http_check", URL: "http://localhost", Values: []string{"x"}},
+			want: `field "values" is not valid for type "http_check"`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := validSuiteWith(func(e *Eval) {
+				e.Verify = []VerifyStep{tc.step}
+			})
+			err := validate(s)
+			requireValidationError(t, err, tc.want)
+		})
+	}
+}
+
 func TestValidate_ValidVerifySteps(t *testing.T) {
 	trueVal := true
 	exitZero := 0

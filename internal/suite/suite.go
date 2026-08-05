@@ -64,7 +64,9 @@ Samples      *int           `yaml:"samples"`
 }
 
 // VerifyStep defines a single verification step.
-// Type determines which fields are relevant.
+// Type determines which fields are relevant; setting a field that does not
+// belong to the step's Type is rejected during validation (see verifyTypeFields
+// in validate.go), so irrelevant fields cannot be silently ignored.
 type VerifyStep struct {
 	Type string `yaml:"type"`
 	Name string `yaml:"name,omitempty"`

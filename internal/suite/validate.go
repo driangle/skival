@@ -252,6 +252,74 @@ var validVerifyTypes = map[string]bool{
 	"judge":           true,
 }
 
+// verifyTypeFields lists the type-specific YAML fields each verify type accepts.
+// The common `type` and `name` fields are always allowed and omitted here.
+// Setting a field not listed for a step's type is a validation error.
+var verifyTypeFields = map[string]map[string]bool{
+	"agent_exits_ok":  {},
+	"check":           {"run": true},
+	"check_output":    {"run": true},
+	"output_contains": {"values": true},
+	"command":         {"run": true, "exits": true, "stdout_contains": true},
+	"file_contains":   {"path": true, "contains": true, "exists": true},
+	"http_check":      {"url": true, "method": true, "status": true, "body_contains": true},
+	"tcp_check":       {"host": true, "port": true},
+	"judge":           {"criteria": true, "model": true},
+}
+
+// setVerifyFields returns the YAML names of the type-specific fields that are
+// populated on the step. It mirrors the non-zero checks used by the
+// required-field validation above.
+func setVerifyFields(step VerifyStep) []string {
+	var set []string
+	if step.Run != "" {
+		set = append(set, "run")
+	}
+	if step.Exits != nil {
+		set = append(set, "exits")
+	}
+	if step.StdoutContains != "" {
+		set = append(set, "stdout_contains")
+	}
+	if len(step.Values) > 0 {
+		set = append(set, "values")
+	}
+	if step.Path != "" {
+		set = append(set, "path")
+	}
+	if step.Contains != "" {
+		set = append(set, "contains")
+	}
+	if step.Exists != nil {
+		set = append(set, "exists")
+	}
+	if step.URL != "" {
+		set = append(set, "url")
+	}
+	if step.Method != "" {
+		set = append(set, "method")
+	}
+	if step.Status != nil {
+		set = append(set, "status")
+	}
+	if step.BodyContains != "" {
+		set = append(set, "body_contains")
+	}
+	if step.Host != "" {
+		set = append(set, "host")
+	}
+	if step.Port != 0 {
+		set = append(set, "port")
+	}
+	if len(step.Criteria) > 0 {
+		set = append(set, "criteria")
+	}
+	if step.Model != "" {
+		set = append(set, "model")
+	}
+	return set
+}
+
 func validateVerifySteps(steps []VerifyStep, prefix string) []string {
 	var errs []string
 	for i, step := range steps {
@@ -304,6 +372,14 @@ func validateVerifySteps(steps []VerifyStep, prefix string) []string {
 		case "judge":
 			if len(step.Criteria) == 0 {
 				errs = append(errs, fmt.Sprintf("%s: judge requires criteria", sp))
+			}
+		}
+
+		// Reject fields that don't belong to this step's type.
+		allowed := verifyTypeFields[step.Type]
+		for _, f := range setVerifyFields(step) {
+			if !allowed[f] {
+				errs = append(errs, fmt.Sprintf("%s: field %q is not valid for type %q", sp, f, step.Type))
 			}
 		}
 	}

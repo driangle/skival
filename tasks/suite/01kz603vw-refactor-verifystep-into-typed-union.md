@@ -1,7 +1,7 @@
 ---
 id: "01kz603vw"
 title: "Refactor VerifyStep god-struct into a typed discriminated union"
-status: pending
+status: completed
 priority: medium
 effort: medium
 type: improvement
@@ -10,6 +10,7 @@ created: 2026-08-04
 verify:
   - type: bash
     run: "go test ./internal/suite/... ./internal/verifier/..."
+completed_at: 2026-08-05
 ---
 
 # Refactor VerifyStep god-struct into a typed discriminated union
@@ -28,14 +29,14 @@ fields not relevant to the step's `Type`.
 
 ## Tasks
 
-- [ ] Choose approach: nested typed payloads per verify type, or field-level
-      validation keyed on `Type`
-- [ ] (If validating) extend `validateVerifySteps` to error when a field not
+- [x] Choose approach: nested typed payloads per verify type, or field-level
+      validation keyed on `Type` — chose field-level validation (keeps flat API)
+- [x] (If validating) extend `validateVerifySteps` to error when a field not
       belonging to `Type` is set (e.g. `port` on a non-`tcp_check`)
 - [ ] (If restructuring) migrate the flat fields into per-type structs and
-      update `BuildPipeline` + `migrateCorrectnessToVerify` accordingly
-- [ ] Keep the deprecated `correctness`→`verify` migration path working
-- [ ] Add tests covering wrong-field-for-type rejection
+      update `BuildPipeline` + `migrateCorrectnessToVerify` accordingly — N/A (validation approach)
+- [x] Keep the deprecated `correctness`→`verify` migration path working
+- [x] Add tests covering wrong-field-for-type rejection
 
 ## Acceptance Criteria
 
