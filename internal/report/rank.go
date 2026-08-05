@@ -34,33 +34,37 @@ type VariantRank struct {
 	Runner         string
 	Model          string
 	PassRate       float64
+	// MedianCostUSD and MedianDuration are the mean of the variant's per-eval
+	// medians, not a single median pooled across every eval. Pooling would mix
+	// the distributions of a cheap eval and an expensive eval into one number.
 	MedianCostUSD  float64
 	MedianDuration int64
 	CompositeScore float64
 	Rank           int
 }
 
-// RankVariants computes a weighted composite score for each variant
-// across all evals in a suite result and returns them sorted best-first.
+// RankVariants computes a weighted composite score for each variant across all
+// evals in a suite result and returns them sorted best-first.
+//
+// Cost and duration are normalized *within each eval* (relative to that eval's
+// best variant) and then averaged across evals, so the composite reflects the
+// magnitude of each gap — a variant twice as expensive as the eval's best
+// scores 0.5 on cost for that eval, not 0. Pass rate is already bounded to
+// [0,1] and needs no normalization.
+//
+// Single-variant evals: the lone variant is the best on cost and duration by
+// definition, so it scores 1.0 on both for that eval; only its pass rate can
+// pull the composite below the weight sum.
 func RankVariants(sr *result.SuiteResult, w Weights) []VariantRank {
-	stats := collectStats(sr)
-	if len(stats) == 0 {
+	accs := accumulate(sr)
+	if len(accs) == 0 {
 		return nil
 	}
 
-	ranks := make([]VariantRank, 0, len(stats))
-	for name, s := range stats {
-		ranks = append(ranks, VariantRank{
-			Name:           name,
-			Runner:         s.runner,
-			Model:          s.model,
-			PassRate:       s.passRate(),
-			MedianCostUSD:  s.medianCost(),
-			MedianDuration: s.medianDuration(),
-		})
+	ranks := make([]VariantRank, 0, len(accs))
+	for name, a := range accs {
+		ranks = append(ranks, a.toRank(name, w))
 	}
-
-	normalize(ranks, w)
 
 	sort.Slice(ranks, func(i, j int) bool {
 		if ranks[i].CompositeScore != ranks[j].CompositeScore {
@@ -76,140 +80,132 @@ func RankVariants(sr *result.SuiteResult, w Weights) []VariantRank {
 	return ranks
 }
 
-// variantStats accumulates raw data for a variant across evals.
-type variantStats struct {
-	runner    string
-	model     string
-	passed    int
-	verified  int
-	costs     []float64
-	durations []int64
+// variantAccumulator gathers a variant's cross-eval data. Cost and duration are
+// normalized within each eval before being summed, so per-eval distributions
+// are never pooled into a single figure.
+type variantAccumulator struct {
+	runner   string
+	model    string
+	passed   int
+	verified int
+
+	evalCount   int
+	costNormSum float64
+	durNormSum  float64
+	costMedSum  float64
+	durMedSum   float64
 }
 
-func (s *variantStats) passRate() float64 {
-	if s.verified == 0 {
-		return 0
+func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
+	passRate := 0.0
+	if a.verified > 0 {
+		passRate = float64(a.passed) / float64(a.verified)
 	}
-	return float64(s.passed) / float64(s.verified)
+
+	var costNorm, durNorm, medCost, medDur float64
+	if a.evalCount > 0 {
+		costNorm = a.costNormSum / float64(a.evalCount)
+		durNorm = a.durNormSum / float64(a.evalCount)
+		medCost = a.costMedSum / float64(a.evalCount)
+		medDur = a.durMedSum / float64(a.evalCount)
+	}
+
+	return VariantRank{
+		Name:           name,
+		Runner:         a.runner,
+		Model:          a.model,
+		PassRate:       passRate,
+		MedianCostUSD:  medCost,
+		MedianDuration: int64(medDur),
+		CompositeScore: w.Correctness*passRate + w.Cost*costNorm + w.Duration*durNorm,
+	}
 }
 
-func (s *variantStats) medianCost() float64 {
-	if len(s.costs) == 0 {
-		return 0
-	}
-	sorted := make([]float64, len(s.costs))
-	copy(sorted, s.costs)
-	sort.Float64s(sorted)
-	n := len(sorted)
-	if n%2 == 1 {
-		return sorted[n/2]
-	}
-	return (sorted[n/2-1] + sorted[n/2]) / 2
-}
-
-func (s *variantStats) medianDuration() int64 {
-	if len(s.durations) == 0 {
-		return 0
-	}
-	sorted := make([]int64, len(s.durations))
-	copy(sorted, s.durations)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
-	n := len(sorted)
-	if n%2 == 1 {
-		return sorted[n/2]
-	}
-	return (sorted[n/2-1] + sorted[n/2]) / 2
-}
-
-func collectStats(sr *result.SuiteResult) map[string]*variantStats {
-	stats := make(map[string]*variantStats)
-
+// accumulate walks every eval, scoring cost/duration relative to the eval's own
+// best variant, and folds the results into one accumulator per variant.
+func accumulate(sr *result.SuiteResult) map[string]*variantAccumulator {
+	accs := make(map[string]*variantAccumulator)
 	for _, eval := range sr.Evals {
-		for _, v := range eval.Variants {
-			s, ok := stats[v.Name]
-			if !ok {
-				s = &variantStats{runner: v.Runner, model: v.Model}
-				stats[v.Name] = s
-			}
+		scoreEval(eval, accs)
+	}
+	return accs
+}
 
-			for _, run := range v.Runs {
-				s.costs = append(s.costs, run.CostUSD)
-				s.durations = append(s.durations, run.DurationMs)
+// evalMetric is a variant's within-eval median cost and duration.
+type evalMetric struct {
+	name string
+	cost float64
+	dur  float64
+}
 
-				if run.Pass != nil {
-					s.verified++
-					if *run.Pass {
-						s.passed++
-					}
+// scoreEval accumulates pass counts for every variant in the eval and adds each
+// variant's cost/duration scored relative to the best variant in this eval.
+func scoreEval(eval result.EvalResult, accs map[string]*variantAccumulator) {
+	var metrics []evalMetric
+
+	for _, v := range eval.Variants {
+		a := accs[v.Name]
+		if a == nil {
+			a = &variantAccumulator{runner: v.Runner, model: v.Model}
+			accs[v.Name] = a
+		}
+
+		for _, run := range v.Runs {
+			if run.Pass != nil {
+				a.verified++
+				if *run.Pass {
+					a.passed++
 				}
 			}
 		}
+
+		agg := result.ComputeAggregate(v.Runs)
+		if agg == nil {
+			continue
+		}
+		metrics = append(metrics, evalMetric{
+			name: v.Name,
+			cost: agg.MedianCostUSD,
+			dur:  float64(agg.MedianDurationMs),
+		})
 	}
 
-	return stats
-}
-
-// normalize computes composite scores. For pass rate, higher is better (1.0 = best).
-// For cost and duration, lower is better, so normalization is inverted.
-func normalize(ranks []VariantRank, w Weights) {
-	if len(ranks) == 0 {
+	if len(metrics) == 0 {
 		return
 	}
 
-	var minCost, maxCost float64
-	var minDur, maxDur int64
-	var minPass, maxPass float64
-
-	for i, r := range ranks {
-		if i == 0 {
-			minCost, maxCost = r.MedianCostUSD, r.MedianCostUSD
-			minDur, maxDur = r.MedianDuration, r.MedianDuration
-			minPass, maxPass = r.PassRate, r.PassRate
-			continue
+	bestCost, bestDur := metrics[0].cost, metrics[0].dur
+	for _, m := range metrics[1:] {
+		if m.cost < bestCost {
+			bestCost = m.cost
 		}
-		if r.MedianCostUSD < minCost {
-			minCost = r.MedianCostUSD
-		}
-		if r.MedianCostUSD > maxCost {
-			maxCost = r.MedianCostUSD
-		}
-		if r.MedianDuration < minDur {
-			minDur = r.MedianDuration
-		}
-		if r.MedianDuration > maxDur {
-			maxDur = r.MedianDuration
-		}
-		if r.PassRate < minPass {
-			minPass = r.PassRate
-		}
-		if r.PassRate > maxPass {
-			maxPass = r.PassRate
+		if m.dur < bestDur {
+			bestDur = m.dur
 		}
 	}
 
-	for i := range ranks {
-		passNorm := normHigherBetter(ranks[i].PassRate, minPass, maxPass)
-		costNorm := normLowerBetter(ranks[i].MedianCostUSD, minCost, maxCost)
-		durNorm := normLowerBetter(float64(ranks[i].MedianDuration), float64(minDur), float64(maxDur))
-
-		ranks[i].CompositeScore = w.Correctness*passNorm + w.Cost*costNorm + w.Duration*durNorm
+	for _, m := range metrics {
+		a := accs[m.name]
+		a.costNormSum += ratioLowerBetter(m.cost, bestCost)
+		a.durNormSum += ratioLowerBetter(m.dur, bestDur)
+		a.costMedSum += m.cost
+		a.durMedSum += m.dur
+		a.evalCount++
 	}
 }
 
-// normHigherBetter returns 1.0 for the max value, 0.0 for the min.
-// If all values are equal, returns 1.0.
-func normHigherBetter(val, min, max float64) float64 {
-	if max == min {
+// ratioLowerBetter scores a value against the best (lowest) value among the
+// variants in an eval, for metrics where lower is better (cost, duration). The
+// best value scores 1.0; a value twice the best scores 0.5, giving the
+// composite sensitivity to the magnitude of the gap rather than only the
+// ordering. A zero or negative value is treated as the best possible; if the
+// best is zero while this value is positive, it scores 0.0.
+func ratioLowerBetter(val, best float64) float64 {
+	if val <= 0 {
 		return 1.0
 	}
-	return (val - min) / (max - min)
-}
-
-// normLowerBetter returns 1.0 for the min value, 0.0 for the max.
-// If all values are equal, returns 1.0.
-func normLowerBetter(val, min, max float64) float64 {
-	if max == min {
-		return 1.0
+	if best <= 0 {
+		return 0.0
 	}
-	return 1.0 - (val-min)/(max-min)
+	return best / val
 }

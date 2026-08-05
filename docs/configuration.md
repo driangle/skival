@@ -202,7 +202,7 @@ Each value in a dimension can override any variant-level field:
 
 ## Ranking
 
-Configure how variants are scored and ranked. The composite score is a weighted sum of normalized correctness, cost, and duration metrics.
+Configure how variants are scored and ranked. The composite score is a weighted sum of correctness, cost, and duration.
 
 ```yaml
 ranking:
@@ -219,6 +219,14 @@ ranking:
 | `weights.duration` | `0.12` | Weight for median duration (lower is better) |
 
 All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is omitted, the default weights apply.
+
+### How the composite score is computed
+
+- **Correctness** uses the pass rate directly (fraction of verified runs that passed), which is already on a `0–1` scale.
+- **Cost and duration are scored per eval, relative to that eval's best variant** (ratio-to-best): the cheapest/fastest variant in an eval scores `1.0`, one that is twice as expensive scores `0.5`, and so on. This makes the score sensitive to the *size* of a gap, not just who won — losing cost by 1% and by 90% produce different scores. The per-eval scores are then averaged across evals, so a cheap eval and an expensive eval are never pooled into a single figure.
+- **Single-variant evals** score `1.0` on cost and duration by definition (the lone variant is its own best), so only its pass rate can pull the composite below the weight sum.
+
+The `median cost` and `median duration` shown in the rankings table are the mean of each variant's per-eval medians.
 
 ## Retry
 

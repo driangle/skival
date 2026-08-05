@@ -279,26 +279,118 @@ func TestRankVariants_ZeroWeight(t *testing.T) {
 	}
 }
 
-func TestNormHigherBetter(t *testing.T) {
-	if v := normHigherBetter(10, 0, 10); v != 1.0 {
-		t.Errorf("max should be 1.0, got %f", v)
+func TestRatioLowerBetter(t *testing.T) {
+	if v := ratioLowerBetter(5, 5); v != 1.0 {
+		t.Errorf("best value should be 1.0, got %f", v)
 	}
-	if v := normHigherBetter(0, 0, 10); v != 0.0 {
-		t.Errorf("min should be 0.0, got %f", v)
+	if v := ratioLowerBetter(10, 5); v != 0.5 {
+		t.Errorf("twice the best should be 0.5, got %f", v)
 	}
-	if v := normHigherBetter(5, 5, 5); v != 1.0 {
-		t.Errorf("equal should be 1.0, got %f", v)
+	if v := ratioLowerBetter(0, 0); v != 1.0 {
+		t.Errorf("zero value should be 1.0, got %f", v)
+	}
+	if v := ratioLowerBetter(5, 0); v != 0.0 {
+		t.Errorf("positive value vs zero best should be 0.0, got %f", v)
 	}
 }
 
-func TestNormLowerBetter(t *testing.T) {
-	if v := normLowerBetter(0, 0, 10); v != 1.0 {
-		t.Errorf("min should be 1.0, got %f", v)
+// TestRankVariants_MagnitudeSensitivity is the flagship control + 1 treatment
+// case: with only two variants, min-max normalization would score the loser 0.0
+// regardless of whether it lost by 1% or 90%. Ratio-to-best must instead
+// separate a small gap from a large one.
+func TestRankVariants_MagnitudeSensitivity(t *testing.T) {
+	mk := func(treatmentCost float64) *result.SuiteResult {
+		return &result.SuiteResult{
+			Evals: []result.EvalResult{{
+				Variants: []result.VariantResult{
+					{Name: "control", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 1000, Pass: boolPtr(true)}}},
+					{Name: "treatment", Runs: []result.RunResult{{CostUSD: treatmentCost, DurationMs: 1000, Pass: boolPtr(true)}}},
+				},
+			}},
+		}
 	}
-	if v := normLowerBetter(10, 0, 10); v != 0.0 {
-		t.Errorf("max should be 0.0, got %f", v)
+
+	find := func(ranks []VariantRank, name string) VariantRank {
+		for _, r := range ranks {
+			if r.Name == name {
+				return r
+			}
+		}
+		t.Fatalf("variant %q not found", name)
+		return VariantRank{}
 	}
-	if v := normLowerBetter(5, 5, 5); v != 1.0 {
-		t.Errorf("equal should be 1.0, got %f", v)
+
+	smallGap := RankVariants(mk(1.01), DefaultWeights()) // treatment 1% pricier
+	largeGap := RankVariants(mk(10.0), DefaultWeights()) // treatment 10x pricier
+
+	smallTreatment := find(smallGap, "treatment").CompositeScore
+	largeTreatment := find(largeGap, "treatment").CompositeScore
+
+	if smallTreatment <= largeTreatment {
+		t.Errorf("magnitude should matter: 1%% gap score (%f) must exceed 90%% gap score (%f)",
+			smallTreatment, largeTreatment)
+	}
+	// The cheaper control still outranks the treatment in both suites.
+	if find(smallGap, "control").CompositeScore <= smallTreatment {
+		t.Error("control should outrank the pricier treatment")
+	}
+}
+
+// TestRankVariants_PerEvalNotPooled proves cost/duration are aggregated as the
+// mean of per-eval medians rather than a single median pooled across every run.
+// The cheap eval has three runs and the expensive eval one, so a global pooled
+// median would be dominated by the cheap runs (~1); per-eval aggregation yields
+// the mean of the two eval medians instead.
+func TestRankVariants_PerEvalNotPooled(t *testing.T) {
+	sr := &result.SuiteResult{
+		Evals: []result.EvalResult{
+			{Variants: []result.VariantResult{{Name: "a", Runs: []result.RunResult{
+				{CostUSD: 1, DurationMs: 10, Pass: boolPtr(true)},
+				{CostUSD: 1, DurationMs: 10, Pass: boolPtr(true)},
+				{CostUSD: 1, DurationMs: 10, Pass: boolPtr(true)},
+			}}}},
+			{Variants: []result.VariantResult{{Name: "a", Runs: []result.RunResult{
+				{CostUSD: 100, DurationMs: 1000, Pass: boolPtr(true)},
+			}}}},
+		},
+	}
+	ranks := RankVariants(sr, DefaultWeights())
+	if len(ranks) != 1 {
+		t.Fatalf("expected 1 rank, got %d", len(ranks))
+	}
+	// mean of per-eval medians: (1 + 100) / 2 = 50.5, not the pooled median (~1).
+	if math.Abs(ranks[0].MedianCostUSD-50.5) > 1e-9 {
+		t.Errorf("expected mean-of-per-eval-median cost 50.5, got %f", ranks[0].MedianCostUSD)
+	}
+	// duration: (10 + 1000) / 2 = 505.
+	if ranks[0].MedianDuration != 505 {
+		t.Errorf("expected mean-of-per-eval-median duration 505, got %d", ranks[0].MedianDuration)
+	}
+}
+
+// TestRankVariants_PerEvalNormalizationSymmetry: A wins eval1 on cost by 2x and
+// B wins eval2 on cost by 2x. Because each eval is normalized on its own scale,
+// their cost contributions are equal and the composites tie — global pooling of
+// raw costs across the two different scales would instead pick a winner.
+func TestRankVariants_PerEvalNormalizationSymmetry(t *testing.T) {
+	sr := &result.SuiteResult{
+		Evals: []result.EvalResult{
+			{Variants: []result.VariantResult{
+				{Name: "a", Runs: []result.RunResult{{CostUSD: 1, DurationMs: 1000, Pass: boolPtr(true)}}},
+				{Name: "b", Runs: []result.RunResult{{CostUSD: 2, DurationMs: 1000, Pass: boolPtr(true)}}},
+			}},
+			{Variants: []result.VariantResult{
+				{Name: "a", Runs: []result.RunResult{{CostUSD: 200, DurationMs: 1000, Pass: boolPtr(true)}}},
+				{Name: "b", Runs: []result.RunResult{{CostUSD: 100, DurationMs: 1000, Pass: boolPtr(true)}}},
+			}},
+		},
+	}
+	ranks := RankVariants(sr, DefaultWeights())
+	if len(ranks) != 2 {
+		t.Fatalf("expected 2 ranks, got %d", len(ranks))
+	}
+	if math.Abs(ranks[0].CompositeScore-ranks[1].CompositeScore) > 1e-9 {
+		t.Errorf("symmetric per-eval wins should tie, got %f and %f",
+			ranks[0].CompositeScore, ranks[1].CompositeScore)
 	}
 }

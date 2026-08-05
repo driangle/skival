@@ -1,7 +1,7 @@
 ---
 id: "01kz6fmer"
 title: "Fix composite ranking normalization and cross-eval pooling"
-status: pending
+status: completed
 priority: high
 effort: medium
 type: bug
@@ -12,6 +12,7 @@ verify:
     run: "go test ./internal/report/..."
   - type: assert
     check: "For a control + 1 treatment run, a small vs large metric gap produces different composite scores (not just 0/1)"
+completed_at: 2026-08-05
 ---
 
 # Fix composite ranking normalization and cross-eval pooling
@@ -33,13 +34,13 @@ especially in the flagship control + 1 treatment case.
 
 ## Tasks
 
-- [ ] Normalize per-eval, then aggregate across evals (e.g. mean of per-eval
+- [x] Normalize per-eval, then aggregate across evals (e.g. mean of per-eval
       normalized scores), instead of pooling raw costs/durations globally
-- [ ] Replace or supplement min-max with a magnitude-sensitive scheme
+- [x] Replace or supplement min-max with a magnitude-sensitive scheme
       (e.g. ratio-to-best or ratio-to-control) so a 1% gap and a 90% gap differ
-- [ ] Decide and document how a single-variant eval is scored (currently
+- [x] Decide and document how a single-variant eval is scored (currently
       `normLowerBetter`/`normHigherBetter` return 1.0 when all values are equal)
-- [ ] Update `rank_test.go` with a 2-variant case asserting magnitude sensitivity
+- [x] Update `rank_test.go` with a 2-variant case asserting magnitude sensitivity
       and a multi-eval case asserting per-eval aggregation
 
 ## Acceptance Criteria
