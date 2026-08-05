@@ -2,7 +2,7 @@
 
 ## Overview
 
-skival is a Go CLI that benchmarks AI coding skills by running configurable eval suites. It measures four dimensions — time, tokens, cost, correctness — and compares N treatments against a control.
+skival is a Go CLI that benchmarks AI coding skills by running configurable eval suites. It measures four dimensions — time, tokens, cost, correctness — and compares N variants against a baseline.
 
 ## Architecture
 
@@ -15,7 +15,7 @@ apps/cli/
 
 internal/
   suite/                   # Suite configuration parsing & validation
-    suite.go               # Suite, Eval, Treatment types
+    suite.go               # Suite, Eval, Variant types
     loader.go              # YAML loading and defaults
     validate.go            # Schema validation
 
@@ -24,7 +24,7 @@ internal/
     claude.go              # Claude Code runner (via agentrunner-go)
 
   result/                  # Result collection and aggregation
-    result.go              # EvalResult, TreatmentResult, Metrics types
+    result.go              # EvalResult, VariantResult, Metrics types
     aggregate.go           # Multi-sample aggregation (median, CV, min/max)
 
   verifier/                # Correctness checking
@@ -47,60 +47,61 @@ internal/
 
 ### Suite
 
-A suite is a YAML file defining a collection of evals and their treatments. Top-level structure:
+A suite is a YAML file defining a collection of evals and their variants. Top-level structure:
 
 ```yaml
 version: 1
 description: "Suite description"
 
 defaults:                        # Applied to all evals unless overridden
+  runner: claude-code
   samples: 3
   timeout: 60
-  model: "claude-sonnet-4-20250514"
+  model: "claude-sonnet-4-6"
 
 evals:
   - id: unique-eval-id
     name: "Human-readable name"
     prompt: "The task prompt sent to the agent"
     dir: "./evals/unique-eval-id"  # Working directory for this eval
-    complexity: medium               # low | medium | high (metadata)
     timeout: 30                      # Per-run timeout in seconds
 
     setup:                           # Optional lifecycle hooks
-      before: "npm install"          # Run before first treatment
-      after: "docker-compose down"   # Run after all treatments
-      reset: "npm run reset-db"      # Run between treatments
+      before: "npm install"          # Run before first variant
+      after: "docker-compose down"   # Run after all variants
+      reset: "npm run reset-db"      # Run between variants
 
-    correctness:
-      compiles: "go build ./..."     # Build command (exit 0 = pass)
-      agent_exits_ok: true           # Agent process exited with code 0
-      output:                          # Structured output matching
-        contains:                      # Substrings that must appear in stdout
+    verify:                          # Ordered verification steps (all must pass)
+      - type: check                  # Build/test command (exit 0 = pass)
+        run: "go build ./..."
+      - type: agent_exits_ok         # Agent process exited with code 0
+      - type: output_contains        # Substrings that must appear in the output
+        values:
           - "expected string"
-      script: "./verify.sh"          # Custom verification script (exit 0 = pass)
-      state:                         # HTTP assertions after execution
-        - url: "http://localhost:3000/api/items"
-          method: GET
-          expect: "item_name"
+      - type: check_output           # Custom verification script (exit 0 = pass)
+        run: "./verify.sh"
+      - type: http_check             # HTTP assertion after execution
+        url: "http://localhost:3000/api/items"
+        method: GET
+        body_contains: "item_name"
 
-    treatments:
-      control:
-        name: "baseline"
+    variants:                        # First variant is the ranking baseline
+      - name: "baseline"
         dir: "./evals/unique-eval-id/baseline"
-        env:                         # Extra env vars for this treatment
+        env:                         # Extra env vars for this variant
           SOME_VAR: "value"
-      variations:
-        - name: "with-skill"
-          dir: "./evals/unique-eval-id/with-skill"
-          skill: "./skills/my-skill"
+      - name: "with-skill"
+        dir: "./evals/unique-eval-id/with-skill"
+        skill: "./skills/my-skill.md"
+        runner_config:
           allowed_tools: ["Read", "Write", "Bash"]
-        - name: "different-model"
-          model: "claude-opus-4-20250514"
+      - name: "different-model"
+        model: "claude-opus-4-6"
 ```
 
-### Treatment
+### Variant
 
-A treatment is a single configuration variant being evaluated. Every eval has exactly one **control** and zero or more **variations**. Each treatment can override:
+A variant is a single configuration being evaluated. Every eval has at least one variant; the first is treated as the **baseline** for ranking. Each variant can override:
 
 - Working directory (different file context)
 - Model
@@ -138,7 +139,7 @@ CV is only computed for 3+ samples.
 
 ### Ranking
 
-Treatments are ranked by weighted composite score:
+Variants are ranked by weighted composite score:
 
 | Factor | Weight | Description |
 |--------|--------|-------------|
@@ -146,7 +147,7 @@ Treatments are ranked by weighted composite score:
 | Cost | 28% | Normalized inverse cost (lower is better) |
 | Duration | 12% | Normalized inverse duration (lower is better) |
 
-Scores are normalized across treatments so the best performer in each dimension gets 1.0.
+Scores are normalized across variants so the best performer in each dimension gets 1.0.
 
 ## Runner Interface
 
@@ -205,17 +206,17 @@ Built-in verifiers are composed into a pipeline: compile check -> agent_exits_ok
 1. Load suite.yaml, validate
 2. For each eval:
    a. Run setup.before (if defined)
-   b. For each treatment (control first, then variations):
-      i.   Run setup.reset (if not first treatment)
+   b. For each variant (baseline first, then the rest):
+      i.   Run setup.reset (if not first variant)
       ii.  For each sample 1..N:
-           - Invoke runner with treatment config
+           - Invoke runner with variant config
            - Collect RunOutput (text, metrics, history)
            - Run verifier pipeline
-           - Store TreatmentResult
-      iii. Aggregate samples into single TreatmentResult
+           - Store VariantResult
+      iii. Aggregate samples into single VariantResult
    c. Run setup.after (if defined)
-   d. Store EvalResult with all treatment results
-3. Rank treatments across all evals
+   d. Store EvalResult with all variant results
+3. Rank variants across all evals
 4. Generate report (markdown/JSON) to stdout or results-dir
 ```
 
@@ -230,21 +231,21 @@ results/
     summary.json                        # Machine-readable results
     evals/
       <eval-id>/
-        <treatment-name>/
+        <variant-name>/
           run-1.json                    # Per-run metrics and output
           run-1.conversation.jsonl      # Full conversation history
           run-2.json
           run-2.conversation.jsonl
-        aggregate.json                  # Aggregated treatment results
+        aggregate.json                  # Aggregated variant results
 ```
 
 ### Markdown Report
 
 The summary report includes:
 
-1. **Results table** — One row per eval, columns per treatment, showing pass/fail + cost + duration
-2. **Ranking table** — Treatments ranked by composite score with breakdown
-3. **Per-treatment details** — Individual run metrics, aggregate stats, variance
+1. **Results table** — One row per eval, columns per variant, showing pass/fail + cost + duration
+2. **Ranking table** — Variants ranked by composite score with breakdown
+3. **Per-variant details** — Individual run metrics, aggregate stats, variance
 
 ## Implementation Phases
 
@@ -269,7 +270,7 @@ The summary report includes:
 - Results directory persistence
 
 ### Phase 4: UX & Extensibility
-- CLI flags for filtering evals/treatments
+- CLI flags for filtering evals/variants
 - Progress display during runs
 - LLM judge verifier
 - Setup lifecycle hooks (before/after/reset)

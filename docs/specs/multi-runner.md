@@ -6,7 +6,7 @@ skival hardcodes `claudecode.NewRunner()` as the only agent runner. There is no 
 
 ## Goals
 
-1. Allow suite authors to specify which runner a treatment uses via `runner` in suite.yaml
+1. Allow suite authors to specify which runner a variant uses via `runner` in suite.yaml
 2. Support runner-specific configuration (e.g., `allowed_tools` for Claude Code, `temperature` for Ollama)
 3. Enable cross-runner comparisons within a single suite run
 4. Default to `claude-code` when no runner is specified (backward compatible)
@@ -14,60 +14,58 @@ skival hardcodes `claudecode.NewRunner()` as the only agent runner. There is no 
 ## Non-Goals
 
 - Adding new runner implementations to `agentrunner-go` (out of scope)
-- Parallel execution of evals/treatments (separate concern)
+- Parallel execution of evals/variants (separate concern)
 - Auto-detection of available runners
 
 ## Design
 
 ### Suite Schema Changes
 
-Add a `runner` field at the defaults, eval, and treatment levels. Add a `runner_config` map for runner-specific options.
+Add a `runner` field at the defaults, eval, and variant levels. Add a `runner_config` map for runner-specific options.
 
 ```yaml
 version: 1
 
 defaults:
-  runner: claude-code          # new: default runner for all treatments
+  runner: claude-code          # new: default runner for all variants
   runner_config:               # new: default runner-specific options
     allowed_tools: ["Read", "Write", "Bash"]
-  model: "claude-sonnet-4-20250514"
+  model: "claude-sonnet-4-6"
 
 evals:
   - id: fizzbuzz
     prompt: "Write fizzbuzz.sh"
-    treatments:
-      control:
-        name: "claude-code-baseline"
+    variants:
+      - name: "claude-code-baseline"
         # inherits runner: claude-code from defaults
 
-      variations:
-        - name: "claude-code-with-skill"
-          skill: "./skills/shell.md"
-          runner_config:
-            allowed_tools: ["Read", "Write", "Bash"]
+      - name: "claude-code-with-skill"
+        skill: "./skills/shell.md"
+        runner_config:
+          allowed_tools: ["Read", "Write", "Bash"]
 
-        - name: "ollama-local"
-          runner: ollama
-          model: "qwen3:8b"
-          runner_config:
-            temperature: 0.7
-            num_ctx: 8192
+      - name: "ollama-local"
+        runner: ollama
+        model: "qwen3:8b"
+        runner_config:
+          temperature: 0.7
+          num_ctx: 8192
 
-        - name: "codex"
-          runner: codex
-          runner_config:
-            sandbox: full
+      - name: "codex"
+        runner: codex
+        runner_config:
+          sandbox: full
 ```
 
 #### Precedence (highest to lowest)
 
-| Field | Treatment | Eval | Defaults |
-|-------|-----------|------|----------|
-| `runner` | treatment.runner | eval.runner | defaults.runner |
-| `runner_config` | deep-merged: treatment over eval over defaults | eval.runner_config | defaults.runner_config |
-| `model` | treatment.model | eval.model | defaults.model |
+| Field | Variant | Eval | Defaults |
+|-------|---------|------|----------|
+| `runner` | variant.runner | eval.runner | defaults.runner |
+| `runner_config` | deep-merged: variant over eval over defaults | eval.runner_config | defaults.runner_config |
+| `model` | variant.model | eval.model | defaults.model |
 
-`runner_config` values are **deep-merged** down the chain (treatment keys override eval keys which override default keys). This lets you set baseline runner config at the defaults level and override specific keys per treatment.
+`runner_config` values are **deep-merged** down the chain (variant keys override eval keys which override default keys). This lets you set baseline runner config at the defaults level and override specific keys per variant.
 
 #### Built-in Runner Names
 
@@ -97,14 +95,14 @@ type Eval struct {
     RunnerConfig map[string]any    `yaml:"runner_config"` // new
 }
 
-type Treatment struct {
+type Variant struct {
     // ... existing fields ...
     Runner       string            `yaml:"runner"`        // new
     RunnerConfig map[string]any    `yaml:"runner_config"` // new
 }
 ```
 
-Remove `AllowedTools` from `Treatment` — it moves into `runner_config` since it is Claude Code-specific. Existing suites using `allowed_tools` at the treatment level continue to work via a backward-compat shim in the loader that migrates it into `runner_config.allowed_tools`.
+Remove `AllowedTools` from `Variant` — it moves into `runner_config` since it is Claude Code-specific. Existing suites using `allowed_tools` at the variant level continue to work via a backward-compat shim in the loader that migrates it into `runner_config.allowed_tools`.
 
 #### `loader.go` — New Merge Logic
 
@@ -125,14 +123,14 @@ func mergeDefaults(s *Suite) {
 }
 ```
 
-A new `mergeEvalIntoTreatment` step resolves the final runner + runner_config for each treatment:
+A new `mergeRunnerIntoVariant` step resolves the final runner + runner_config for each variant:
 
 ```go
-func resolveRunnerConfig(eval *Eval, t *Treatment) {
-    if t.Runner == "" {
-        t.Runner = eval.Runner
+func mergeRunnerIntoVariant(eval *Eval, v *Variant) {
+    if v.Runner == "" {
+        v.Runner = eval.Runner
     }
-    t.RunnerConfig = mergeMaps(eval.RunnerConfig, t.RunnerConfig)
+    v.RunnerConfig = mergeMaps(eval.RunnerConfig, v.RunnerConfig)
 }
 ```
 
@@ -192,7 +190,7 @@ func defaultRegistry() *registry.Registry {
 
 ### Executor Changes
 
-The executor currently takes a single `agentrunner.Runner`. It needs to accept the registry instead and resolve the runner per treatment.
+The executor currently takes a single `agentrunner.Runner`. It needs to accept the registry instead and resolve the runner per variant.
 
 ```go
 // Before
@@ -202,11 +200,11 @@ func Execute(ctx context.Context, s *suite.Suite, runner agentrunner.Runner, opt
 func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *Options) (*result.SuiteResult, error)
 ```
 
-Runner instantiation moves into `executeTreatment`. Runners are cached by name so the same runner type is reused across treatments:
+Runner instantiation moves into `executeVariant`. Runners are cached by name so the same runner type is reused across variants:
 
 ```go
-func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment, ..., reg *registry.Registry, cache map[string]agentrunner.Runner, ...) result.TreatmentResult {
-    runnerName := t.Runner
+func executeVariant(ctx context.Context, eval *suite.Eval, v *suite.Variant, ..., reg *registry.Registry, cache map[string]agentrunner.Runner, ...) result.VariantResult {
+    runnerName := v.Runner
     if runnerName == "" {
         runnerName = "claude-code"
     }
@@ -214,7 +212,7 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
     runner, ok := cache[runnerName]
     if !ok {
         var err error
-        runner, err = reg.Create(runnerName, t.RunnerConfig)
+        runner, err = reg.Create(runnerName, v.RunnerConfig)
         if err != nil { /* handle */ }
         cache[runnerName] = runner
     }
@@ -228,16 +226,16 @@ func executeTreatment(ctx context.Context, eval *suite.Eval, t *suite.Treatment,
 `buildRunOptions` must translate `runner_config` into the appropriate `agentrunner.Option` values based on the runner type. Runner-specific option mapping:
 
 ```go
-func buildRunOptions(eval *suite.Eval, t *suite.Treatment, modelOverride string) ([]agentrunner.Option, error) {
+func buildRunOptions(eval *suite.Eval, v *suite.Variant, modelOverride string) ([]agentrunner.Option, error) {
     var opts []agentrunner.Option
 
     // ... model, dir, timeout, env (unchanged, these are runner-agnostic) ...
 
     // Skill file → appended system prompt (runner-agnostic)
-    if t.Skill != "" { /* unchanged */ }
+    if v.Skill != "" { /* unchanged */ }
 
     // Runner-specific options from runner_config
-    opts = append(opts, buildRunnerSpecificOpts(t.Runner, t.RunnerConfig)...)
+    opts = append(opts, buildRunnerSpecificOpts(v.Runner, v.RunnerConfig)...)
 
     opts = append(opts, agentrunner.WithSkipPermissions())
     return opts, nil
@@ -294,7 +292,7 @@ var validRunners = map[string]bool{
 if !validRunners[eval.Runner] {
     errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))
 }
-// Same for each treatment.Runner
+// Same for each variant.Runner
 ```
 
 ### Result Changes
@@ -302,7 +300,7 @@ if !validRunners[eval.Runner] {
 Add runner name to results for reporting context:
 
 ```go
-type TreatmentResult struct {
+type VariantResult struct {
     Name      string       `json:"name"`
     Runner    string       `json:"runner"` // new
     IsControl bool         `json:"is_control"`
@@ -313,7 +311,7 @@ type TreatmentResult struct {
 
 ### Reporting Changes
 
-The markdown report should display the runner in the treatment header when multiple runners are used in a suite:
+The markdown report should display the runner in the variant header when multiple runners are used in a suite:
 
 ```
 | Eval | baseline (claude-code) | ollama-local (ollama) | codex (codex) |
@@ -324,31 +322,31 @@ The markdown report should display the runner in the treatment header when multi
 Rankings table gains a Runner column:
 
 ```
-| Rank | Treatment | Runner | Score | Pass Rate | Cost | Duration |
+| Rank | Variant | Runner | Score | Pass Rate | Cost | Duration |
 |------|-----------|--------|-------|-----------|------|----------|
 ```
 
 ### Backward Compatibility
 
 1. **No `runner` specified** → defaults to `claude-code`. Existing suites work unchanged.
-2. **`allowed_tools` at treatment level** → loader migrates to `runner_config.allowed_tools` during loading (with deprecation log warning). This shim can be removed in version 2.
+2. **`allowed_tools` at variant level** → loader migrates to `runner_config.allowed_tools` during loading (with deprecation log warning). This shim can be removed in version 2.
 3. **Single runner `Execute` signature** → removed. Callers must pass a registry. The CLI is the only caller.
 
 ### CLI Changes
 
-No new flags needed. The runner is selected via suite.yaml, not the CLI. The existing `--model` flag continues to override model for all treatments regardless of runner.
+No new flags needed. The runner is selected via suite.yaml, not the CLI. The existing `--model` flag continues to override model for all variants regardless of runner.
 
 ## File Changes
 
 | File | Change |
 |------|--------|
-| `internal/suite/suite.go` | Add `Runner`, `RunnerConfig` to `Defaults`, `Eval`, `Treatment`. Remove `AllowedTools`. |
+| `internal/suite/suite.go` | Add `Runner`, `RunnerConfig` to `Defaults`, `Eval`, `Variant`. Remove `AllowedTools`. |
 | `internal/suite/loader.go` | Merge runner/runner_config in defaults. Migrate `allowed_tools` shim. Add `resolveRunnerConfig`. |
 | `internal/suite/validate.go` | Validate runner names. |
 | `internal/registry/registry.go` | New file: runner registry with `Register`/`Create`. |
 | `internal/executor/executor.go` | Accept `*registry.Registry` instead of `agentrunner.Runner`. Cache runners. |
 | `internal/executor/executor.go` | `buildRunOptions` delegates to per-runner option builders. |
-| `internal/result/result.go` | Add `Runner` field to `TreatmentResult`. |
+| `internal/result/result.go` | Add `Runner` field to `VariantResult`. |
 | `internal/report/markdown.go` | Show runner name in headers when multiple runners present. |
 | `internal/report/rank.go` | Include runner name in ranking output. |
 | `apps/cli/cmd/run.go` | Build default registry, pass to executor. |
@@ -363,38 +361,36 @@ defaults:
   samples: 3
   timeout: 120
   runner: claude-code
-  model: "claude-sonnet-4-20250514"
+  model: "claude-sonnet-4-6"
 
 evals:
   - id: fizzbuzz
     prompt: |
       Write fizzbuzz.sh that prints FizzBuzz for 1-20.
-    complexity: low
     setup:
       reset: "rm -f fizzbuzz.sh"
-    correctness:
-      agent_exits_ok: true
-      script: "./verify.sh"
+    verify:
+      - type: agent_exits_ok
+      - type: check_output
+        run: "./verify.sh"
 
-    treatments:
-      control:
-        name: "claude-sonnet"
+    variants:
+      - name: "claude-sonnet"
 
-      variations:
-        - name: "claude-opus"
-          model: "claude-opus-4-20250514"
+      - name: "claude-opus"
+        model: "claude-opus-4-6"
 
-        - name: "ollama-qwen3"
-          runner: ollama
-          model: "qwen3:32b"
-          runner_config:
-            temperature: 0.3
-            num_ctx: 16384
+      - name: "ollama-qwen3"
+        runner: ollama
+        model: "qwen3:32b"
+        runner_config:
+          temperature: 0.3
+          num_ctx: 16384
 
-        - name: "claude-with-skill"
-          skill: "./skills/shell-best-practices.md"
-          runner_config:
-            allowed_tools: ["Read", "Write", "Bash"]
+      - name: "claude-with-skill"
+        skill: "./skills/shell-best-practices.md"
+        runner_config:
+          allowed_tools: ["Read", "Write", "Bash"]
 ```
 
 ## Testing
