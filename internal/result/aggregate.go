@@ -80,7 +80,13 @@ func maxVal(vals []float64) float64 {
 }
 
 // cv returns the coefficient of variation (population stddev / mean).
-// Returns nil if fewer than 3 values or mean is zero.
+//
+// Returns nil for fewer than 3 values: CV is a measure of run-to-run
+// variability, and with only 1–2 samples that estimate is uninformative
+// (n=1 has no spread at all, n=2 is a single pair whose dispersion is too
+// unstable to report as a variability signal). A nil CV therefore means
+// "not enough samples to say", not "zero variance". It also returns nil
+// when the mean is zero, since CV normalizes by the mean.
 func cv(vals []float64) *float64 {
 	if len(vals) < 3 {
 		return nil

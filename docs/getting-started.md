@@ -93,6 +93,12 @@ hello-world  with-skill  3       pass    $0.0040  9.8s
 hello-world  with-skill  agg     PASS    $0.0038 [$0.0035–$0.0040]  9.1s [8.7s–9.8s] cost_cv=6.6% dur_cv=6.1%
 ```
 
+The `agg` row reports descriptive statistics only — the median, the min–max
+range in brackets, and the coefficient of variation (`cost_cv` / `dur_cv`) as a
+measure of run-to-run spread. These summarize the samples you collected; they
+are not confidence intervals or significance tests. The coefficient of variation
+requires at least 3 samples to be meaningful, so it is omitted for smaller runs.
+
 You can also output results as JSON with `--format json` for programmatic consumption.
 
 ### Save Results
@@ -109,7 +115,7 @@ skival report ./results
 
 ### Multiple Samples
 
-For statistical confidence, run each variant multiple times:
+To see how much a variant's results vary from run to run, sample each variant multiple times:
 
 ```bash
 skival run suite.yaml --samples 3 --results-dir ./results

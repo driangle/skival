@@ -5,7 +5,7 @@
 
 A Go CLI for evaluating AI coding skill performance. Measures **time to completion**, **token usage**, **dollar cost**, and **correctness** across configurable eval suites.
 
-Define a baseline and any number of variants, then compare them head-to-head with statistical rigor.
+Define a baseline and any number of variants, then compare them head-to-head with descriptive statistics across repeated samples.
 
 **[Documentation](https://driangle.github.io/skival/)**
 
@@ -13,7 +13,7 @@ Define a baseline and any number of variants, then compare them head-to-head wit
 
 - **Configurable eval suites** — YAML-based definitions for prompts, correctness criteria, and environment setup
 - **Multi-variant comparison** — Run any number of variants side-by-side, rank by weighted composite score
-- **Multi-sample runs** — Run each variant multiple times for statistical confidence (median, CV)
+- **Multi-sample runs** — Run each variant multiple times and summarize with descriptive statistics (median, min/max spread, coefficient of variation)
 - **Matrix syntax** — Define dimensions (e.g. runner × model) and auto-generate a Cartesian product of variants
 - **Per-variant overrides** — Customize prompt, model, runner, skills, env vars, config directory, and allowed tools per variant
 - **Skill injection** — Inject single or multiple skill files into agent system prompts for A/B testing skill effectiveness

@@ -17,7 +17,7 @@ features:
   - title: Know If It's Correct
     details: Check results with exit codes, expected output, custom scripts, HTTP assertions, or an LLM judge. Chain them together.
   - title: Run It Enough Times
-    details: One run is anecdotal. Run each variant multiple times and get medians, variance, and confidence that the difference is real.
+    details: One run is anecdotal. Run each variant multiple times and get medians, spread, and coefficient of variation so you can see how consistent the results are.
   - title: Cost, Speed, Correctness
     details: Every run tracks dollar cost, token usage, and time to completion alongside pass/fail -- so you can find the cheapest correct answer.
 ---
