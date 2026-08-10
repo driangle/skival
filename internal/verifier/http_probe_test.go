@@ -112,8 +112,10 @@ func TestHTTPProbeVerifier_FailOnConnectionError(t *testing.T) {
 }
 
 func TestHTTPProbeVerifier_RespectsContextCancellation(t *testing.T) {
+	// Block until the client disconnects so the handler returns promptly when
+	// Verify's context is cancelled, rather than racing a fixed real sleep.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(5 * time.Second)
+		<-r.Context().Done()
 	}))
 	defer srv.Close()
 

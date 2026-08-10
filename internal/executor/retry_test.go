@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -128,6 +129,25 @@ func TestBackoffDelay_Fixed(t *testing.T) {
 		if d < 75*time.Millisecond || d > 125*time.Millisecond {
 			t.Errorf("attempt %d: expected delay ~100ms, got %v", attempt, d)
 		}
+	}
+}
+
+func TestSleepContext_CompletesDelay(t *testing.T) {
+	if !sleepContext(context.Background(), 5*time.Millisecond) {
+		t.Error("expected true when the full delay elapses")
+	}
+}
+
+func TestSleepContext_ReturnsPromptlyOnCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	if sleepContext(ctx, time.Hour) {
+		t.Error("expected false when context is cancelled")
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("expected prompt return on cancel, took %v", elapsed)
 	}
 }
 

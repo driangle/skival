@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"time"
 
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/result"
@@ -92,7 +91,9 @@ func runSampleAttempts(ctx context.Context, eval *suite.Eval, label string, v *s
 		if attempt > 1 {
 			delay := backoffDelay(attempt-1, retryCfg)
 			slog.Debug("Retrying sample", "eval", label, "variant", v.Name, "sample", sample, "attempt", attempt, "delay", delay)
-			time.Sleep(delay)
+			if !sleepContext(ctx, delay) {
+				break // context cancelled during backoff; return best result so far
+			}
 		}
 
 		run := executeSingleRun(ctx, eval, v, sample, runner, sampleDir, timeoutOverride)

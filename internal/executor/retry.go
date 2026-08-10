@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"time"
@@ -92,4 +93,18 @@ func backoffDelay(attempt int, cfg retryConfig) time.Duration {
 	// Add jitter: +-25% of the base delay.
 	jitter := float64(base) * 0.25 * (rand.Float64()*2 - 1)
 	return base + time.Duration(jitter)
+}
+
+// sleepContext waits for d, returning true if the full delay elapsed and false
+// if ctx was cancelled first. It keeps retry backoffs responsive to
+// cancellation instead of blocking on a plain time.Sleep.
+func sleepContext(ctx context.Context, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }

@@ -92,7 +92,10 @@ func TestExecuteCode_CapturesNonZeroExitCode(t *testing.T) {
 }
 
 func TestExecuteCode_RespectsTimeout(t *testing.T) {
-	output := "```bash\nsleep 60\n```"
+	// Redirect the child's stdio to /dev/null so that when the shell is killed
+	// on timeout, the captured pipes close immediately instead of blocking on
+	// the orphaned sleep for the full cmd.WaitDelay.
+	output := "```bash\nsleep 60 </dev/null >/dev/null 2>&1\n```"
 	result := ExecuteCode(context.Background(), output, "", 100*time.Millisecond)
 	if result.Err == nil {
 		t.Fatal("expected timeout error")
