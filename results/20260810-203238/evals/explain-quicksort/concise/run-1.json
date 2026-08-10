@@ -1,0 +1,12 @@
+{
+  "sample": 1,
+  "text": "Quicksort picks a pivot element and partitions the array into two halves — elements less than the pivot, and elements greater — then recursively sorts each half in place.\n\n**Complexity:**\n- Average: O(n log n)\n- Worst case: O(n²) — occurs when the pivot is consistently the min or max (e.g., sorted input with naive pivot selection)\n- Space: O(log n) average (stack frames), vs mergesort's O(n)\n\n**Choose quicksort over mergesort when:**\n- You need in-place sorting (mergesort typically requires auxiliary space)\n- Cache performance matters — quicksort has better locality of reference\n- Average-case performance is acceptable and worst-case is mitigated (e.g., randomized pivot)\n\n**Choose mergesort when:**\n- You need guaranteed O(n log n) worst-case\n- Sorting linked lists (no random access needed)\n- Stability is required (equal elements must preserve original order)",
+  "is_error": false,
+  "exit_code": 0,
+  "cost_usd": 0.0659789,
+  "duration_ms": 9627,
+  "session_id": "c5154cc3-3fd5-4610-aa76-a531000bca2d",
+  "pass": true,
+  "attempt": 1,
+  "total_attempts": 1
+}

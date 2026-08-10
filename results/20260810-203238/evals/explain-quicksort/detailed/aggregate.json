@@ -1,0 +1,11 @@
+{
+  "MedianCostUSD": 0.0836029,
+  "MinCostUSD": 0.0836029,
+  "MaxCostUSD": 0.0836029,
+  "MedianDurationMs": 29360,
+  "MinDurationMs": 29360,
+  "MaxDurationMs": 29360,
+  "CostCV": null,
+  "DurationCV": null,
+  "Pass": true
+}

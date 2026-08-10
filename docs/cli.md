@@ -25,6 +25,10 @@ skival run <suite.yaml> [flags]
 | `--evals <ids>` | | Comma-separated list of eval IDs to run |
 | `--format <type>` | `markdown` | Output format: `markdown`, `json`, or `html` |
 | `--timeout <secs>` | | Timeout in seconds for all evals (overrides suite/eval-level timeouts) |
+| `--compare` | | Force comparative judging on where criteria are configured (overrides `enabled: false`) |
+| `--no-compare` | | Disable comparative judging even if the suite configures it |
+
+`--compare` and `--no-compare` are mutually exclusive. When neither is given, comparative judging follows the suite's [`compare`](/configuration#comparative-judging) configuration.
 
 ### Examples
 
@@ -56,6 +60,12 @@ Override timeout to 2 minutes for all evals:
 
 ```bash
 skival run suite.yaml --timeout 120
+```
+
+Run a cheap pass without comparative judging, even if the suite configures it:
+
+```bash
+skival run suite.yaml --no-compare
 ```
 
 ## `skival report`

@@ -521,3 +521,39 @@ evals:
 ```
 
 [View source](https://github.com/driangle/skival/tree/main/examples/fizzbuzz)
+
+## Comparative Judging
+
+Score the outputs of the variants that pass an eval against each other on a 1–5 quality scale, and feed the result into ranking through the `quality` weight. Comparison runs only as a tiebreaker among passing variants — see [Comparative Judging](/configuration#comparative-judging).
+
+```yaml
+version: 1
+description: "Compare explanation quality across variants that all pass"
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+  judge_model: "claude-haiku-4-5-20251001"
+
+compare:
+  criteria:
+    - "explanation is clear and easy to follow"
+    - "covers the key trade-offs"
+  weight: 0.2
+
+evals:
+  - id: explain-quicksort
+    prompt: "Explain how quicksort works and its time complexity."
+    verify:
+      - type: judge
+        criteria:
+          - "correctly describes partitioning around a pivot"
+          - "states average O(n log n) and worst-case O(n^2)"
+    variants:
+      - name: concise
+        prompt: "Explain quicksort and its time complexity in under 150 words."
+      - name: detailed
+        prompt: "Explain quicksort in depth, with pivot selection and an example."
+```
+
+[View source](https://github.com/driangle/skival/tree/main/examples/comparative-judging)

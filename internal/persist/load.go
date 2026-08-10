@@ -77,6 +77,16 @@ func loadEval(evalDir, evalID string) (result.EvalResult, error) {
 		er.Variants = append(er.Variants, tr)
 	}
 
+	// Load comparative-judge results if present (backwards compatible: older
+	// result dirs have no comparison.json).
+	if data, err := os.ReadFile(filepath.Join(evalDir, "comparison.json")); err == nil {
+		var cmp result.Comparison
+		if err := json.Unmarshal(data, &cmp); err == nil {
+			cmp.Conversation, _ = loadConversationJSONL(filepath.Join(evalDir, "comparison.judge.jsonl"))
+			er.Comparison = &cmp
+		}
+	}
+
 	return er, nil
 }
 

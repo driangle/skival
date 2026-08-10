@@ -6,6 +6,7 @@ type Suite struct {
 	Description string    `yaml:"description"`
 	Defaults    Defaults  `yaml:"defaults"`
 	Ranking     *Ranking  `yaml:"ranking,omitempty"`
+	Compare     *Compare  `yaml:"compare,omitempty"`
 	Evals       []Eval    `yaml:"evals"`
 }
 
@@ -20,6 +21,7 @@ type RankingWeights struct {
 	Correctness float64 `yaml:"correctness"`
 	Cost        float64 `yaml:"cost"`
 	Duration    float64 `yaml:"duration"`
+	Quality     float64 `yaml:"quality"`
 }
 // Retry configures retry behavior for failed sample runs.
 type Retry struct {
@@ -60,6 +62,7 @@ Samples      *int           `yaml:"samples"`
 	Correctness  Correctness    `yaml:"correctness"` // Deprecated: use Verify
 	Retry        *Retry         `yaml:"retry"`
 	Matrix       *Matrix        `yaml:"matrix,omitempty"`
+	Compare      *Compare       `yaml:"compare,omitempty"`
 	Variants []Variant `yaml:"variants"`
 }
 

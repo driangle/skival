@@ -36,6 +36,21 @@ func writeEvals(dir string, sr *result.SuiteResult) error {
 	evalsDir := filepath.Join(dir, "evals")
 
 	for _, eval := range sr.Evals {
+		if eval.Comparison != nil {
+			evalDir := filepath.Join(evalsDir, eval.EvalID)
+			if err := os.MkdirAll(evalDir, 0o755); err != nil {
+				return fmt.Errorf("creating eval dir: %w", err)
+			}
+			if err := writeAtomicJSON(filepath.Join(evalDir, "comparison.json"), eval.Comparison); err != nil {
+				return fmt.Errorf("writing comparison.json: %w", err)
+			}
+			if len(eval.Comparison.Conversation) > 0 {
+				convPath := filepath.Join(evalDir, "comparison.judge.jsonl")
+				if err := writeConversationJSONL(convPath, eval.Comparison.Conversation); err != nil {
+					return fmt.Errorf("writing comparison judge conversation: %w", err)
+				}
+			}
+		}
 		for _, variant := range eval.Variants {
 			variantDir := filepath.Join(evalsDir, eval.EvalID, variant.Name)
 			if err := os.MkdirAll(variantDir, 0o755); err != nil {

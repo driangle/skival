@@ -17,9 +17,13 @@ type Weights struct {
 	Correctness float64
 	Cost        float64
 	Duration    float64
+	// Quality weights the comparative-judge quality signal. It defaults to 0,
+	// so suites that do not use comparative judging rank exactly as before.
+	Quality float64
 }
 
-// DefaultWeights returns the default ranking weights.
+// DefaultWeights returns the default ranking weights. Quality is 0 so ranking
+// behavior is unchanged unless comparative judging is enabled.
 func DefaultWeights() Weights {
 	return Weights{
 		Correctness: DefaultWeightPass,
@@ -30,17 +34,31 @@ func DefaultWeights() Weights {
 
 // VariantRank holds the ranking data for a single variant.
 type VariantRank struct {
-	Name           string
-	Runner         string
-	Model          string
-	PassRate       float64
+	Name     string
+	Runner   string
+	Model    string
+	PassRate float64
 	// MedianCostUSD and MedianDuration are the mean of the variant's per-eval
 	// medians, not a single median pooled across every eval. Pooling would mix
 	// the distributions of a cheap eval and an expensive eval into one number.
 	MedianCostUSD  float64
 	MedianDuration int64
+	// QualityScore is the variant's mean comparative-judge score across the
+	// evals where it was compared, on a [0,1] scale. 0 when never compared.
+	QualityScore   float64
 	CompositeScore float64
 	Rank           int
+}
+
+// hasComparison reports whether any eval produced comparative quality scores.
+// Reports use it to decide whether to show quality columns and sections.
+func hasComparison(sr *result.SuiteResult) bool {
+	for _, eval := range sr.Evals {
+		if eval.Comparison != nil && len(eval.Comparison.Scores) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // RankVariants computes a weighted composite score for each variant across all
@@ -94,6 +112,12 @@ type variantAccumulator struct {
 	durNormSum  float64
 	costMedSum  float64
 	durMedSum   float64
+
+	// Quality is accumulated only over evals where this variant was compared,
+	// so a variant that failed (and was excluded from comparison) is not
+	// double-penalized on quality — its low pass rate already reflects that.
+	qualSum   float64
+	qualCount int
 }
 
 func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
@@ -110,6 +134,11 @@ func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
 		medDur = a.durMedSum / float64(a.evalCount)
 	}
 
+	qualScore := 0.0
+	if a.qualCount > 0 {
+		qualScore = a.qualSum / float64(a.qualCount)
+	}
+
 	return VariantRank{
 		Name:           name,
 		Runner:         a.runner,
@@ -117,7 +146,8 @@ func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
 		PassRate:       passRate,
 		MedianCostUSD:  medCost,
 		MedianDuration: int64(medDur),
-		CompositeScore: w.Correctness*passRate + w.Cost*costNorm + w.Duration*durNorm,
+		QualityScore:   qualScore,
+		CompositeScore: w.Correctness*passRate + w.Cost*costNorm + w.Duration*durNorm + w.Quality*qualScore,
 	}
 }
 
@@ -191,6 +221,23 @@ func scoreEval(eval result.EvalResult, accs map[string]*variantAccumulator) {
 		a.costMedSum += m.cost
 		a.durMedSum += m.dur
 		a.evalCount++
+	}
+
+	scoreComparison(eval, accs)
+}
+
+// scoreComparison folds this eval's comparative quality scores into each
+// compared variant's accumulator. A skipped or absent comparison contributes
+// nothing, leaving quality at 0 for variants never compared.
+func scoreComparison(eval result.EvalResult, accs map[string]*variantAccumulator) {
+	if eval.Comparison == nil || eval.Comparison.Skipped != "" {
+		return
+	}
+	for _, s := range eval.Comparison.Scores {
+		if a := accs[s.Variant]; a != nil {
+			a.qualSum += s.Score
+			a.qualCount++
+		}
 	}
 }
 

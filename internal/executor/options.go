@@ -19,4 +19,8 @@ type Options struct {
 	ParallelVariants int
 	// Timeout overrides the per-eval timeout (in seconds) when set (> 0).
 	Timeout int
+	// Compare overrides comparative-judging enablement: nil defers to the
+	// suite config, true forces it on where criteria are configured, false
+	// forces it off. Set from the --compare/--no-compare CLI flags.
+	Compare *bool
 }

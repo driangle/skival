@@ -312,6 +312,9 @@ func mergeDefaults(s *Suite) {
 					e.Verify[j].Model = d.JudgeModel
 				}
 			}
+			if e.Compare != nil && e.Compare.Model == "" {
+				e.Compare.Model = d.JudgeModel
+			}
 		}
 		if e.Isolate == nil {
 			t := true
@@ -321,6 +324,11 @@ func mergeDefaults(s *Suite) {
 		if e.Retry == nil && d.Retry != nil {
 			e.Retry = d.Retry
 		}
+	}
+
+	// Propagate the default judge model to the suite-level compare block too.
+	if d.JudgeModel != "" && s.Compare != nil && s.Compare.Model == "" {
+		s.Compare.Model = d.JudgeModel
 	}
 }
 

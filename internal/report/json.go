@@ -28,6 +28,20 @@ type jsonEval struct {
 	Error      string          `json:"error,omitempty"`
 	Variants []jsonVariant `json:"variants"`
 	Skipped    []jsonSkipped   `json:"skipped,omitempty"`
+	Comparison *jsonComparison `json:"comparison,omitempty"`
+}
+
+type jsonComparison struct {
+	Model   string                 `json:"model,omitempty"`
+	Skipped string                 `json:"skipped,omitempty"`
+	Scores  []jsonComparativeScore `json:"scores,omitempty"`
+}
+
+type jsonComparativeScore struct {
+	Variant string  `json:"variant"`
+	Rating  int     `json:"rating"`
+	Score   float64 `json:"score"`
+	Reason  string  `json:"reason,omitempty"`
 }
 
 type jsonVariant struct {
@@ -61,14 +75,15 @@ type jsonAggregate struct {
 }
 
 type jsonRanking struct {
-	Rank           int     `json:"rank"`
-	Name           string  `json:"name"`
-	Runner         string  `json:"runner,omitempty"`
-	Model          string  `json:"model,omitempty"`
-	CompositeScore float64 `json:"composite_score"`
-	PassRate       float64 `json:"pass_rate"`
-	MedianCostUSD  float64 `json:"median_cost_usd"`
-	MedianDuration int64   `json:"median_duration_ms"`
+	Rank           int      `json:"rank"`
+	Name           string   `json:"name"`
+	Runner         string   `json:"runner,omitempty"`
+	Model          string   `json:"model,omitempty"`
+	CompositeScore float64  `json:"composite_score"`
+	PassRate       float64  `json:"pass_rate"`
+	MedianCostUSD  float64  `json:"median_cost_usd"`
+	MedianDuration int64    `json:"median_duration_ms"`
+	QualityScore   *float64 `json:"quality_score,omitempty"`
 }
 
 // WriteJSON writes a machine-readable JSON report to w.
@@ -97,6 +112,18 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 		}
 		for _, s := range eval.Skipped {
 			je.Skipped = append(je.Skipped, jsonSkipped{Name: s.Name, Reason: s.Reason})
+		}
+		if c := eval.Comparison; c != nil {
+			jc := &jsonComparison{Model: c.Model, Skipped: c.Skipped}
+			for _, s := range c.Scores {
+				jc.Scores = append(jc.Scores, jsonComparativeScore{
+					Variant: s.Variant,
+					Rating:  s.Rating,
+					Score:   s.Score,
+					Reason:  s.Reason,
+				})
+			}
+			je.Comparison = jc
 		}
 		for _, v := range eval.Variants {
 			jt := jsonVariant{
@@ -136,9 +163,10 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 		r.Evals = append(r.Evals, je)
 	}
 
+	showQuality := hasComparison(sr)
 	ranks := RankVariants(sr, weights)
 	for _, rank := range ranks {
-		r.Rankings = append(r.Rankings, jsonRanking{
+		jr := jsonRanking{
 			Rank:           rank.Rank,
 			Name:           rank.Name,
 			Runner:         rank.Runner,
@@ -147,7 +175,12 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 			PassRate:       rank.PassRate,
 			MedianCostUSD:  rank.MedianCostUSD,
 			MedianDuration: rank.MedianDuration,
-		})
+		}
+		if showQuality {
+			q := rank.QualityScore
+			jr.QualityScore = &q
+		}
+		r.Rankings = append(r.Rankings, jr)
 	}
 
 	return r

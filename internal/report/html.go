@@ -18,8 +18,25 @@ type htmlData struct {
 	Results       []htmlResultRow
 	Errors        []htmlError
 	Skipped       []htmlSkippedGroup
+	Comparisons   []htmlComparison
 	Rankings      []htmlRanking
 	ShowRankings  bool
+	ShowQuality   bool
+}
+
+type htmlComparison struct {
+	Name    string
+	ID      string
+	Model   string
+	Skipped string
+	Scores  []htmlComparativeScore
+}
+
+type htmlComparativeScore struct {
+	Variant string
+	Rating  string
+	Score   string
+	Reason  string
 }
 
 type htmlResultRow struct {
@@ -57,6 +74,7 @@ type htmlRanking struct {
 	Model          string
 	CompositeScore string
 	PassRate       string
+	QualityScore   string
 	MedianCost     string
 	MedianDuration string
 }
@@ -137,12 +155,31 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 		d.Skipped = append(d.Skipped, group)
 	}
 
+	// Comparative quality
+	for _, eval := range sr.Evals {
+		c := eval.Comparison
+		if c == nil {
+			continue
+		}
+		hc := htmlComparison{Name: eval.EvalName, ID: eval.EvalID, Model: c.Model, Skipped: c.Skipped}
+		for _, s := range c.Scores {
+			hc.Scores = append(hc.Scores, htmlComparativeScore{
+				Variant: s.Variant,
+				Rating:  fmt.Sprintf("%d/5", s.Rating),
+				Score:   fmt.Sprintf("%.2f", s.Score),
+				Reason:  s.Reason,
+			})
+		}
+		d.Comparisons = append(d.Comparisons, hc)
+	}
+
 	// Rankings
+	d.ShowQuality = hasComparison(sr)
 	ranks := RankVariants(sr, weights)
 	if len(ranks) >= 2 {
 		d.ShowRankings = true
 		for _, r := range ranks {
-			d.Rankings = append(d.Rankings, htmlRanking{
+			hr := htmlRanking{
 				Rank:           r.Rank,
 				Name:           r.Name,
 				Runner:         r.Runner,
@@ -151,7 +188,11 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 				PassRate:       fmt.Sprintf("%.0f%%", r.PassRate*100),
 				MedianCost:     fmt.Sprintf("$%.4f", r.MedianCostUSD),
 				MedianDuration: formatDuration(r.MedianDuration),
-			})
+			}
+			if d.ShowQuality {
+				hr.QualityScore = fmt.Sprintf("%.2f", r.QualityScore)
+			}
+			d.Rankings = append(d.Rankings, hr)
 		}
 	}
 
@@ -227,6 +268,11 @@ const htmlTemplate = `<!DOCTYPE html>
   .skipped-group h3 { font-size: 0.95rem; font-weight: 600; }
   .skipped-group .eval-id { color: #9ca3af; font-family: monospace; font-size: 0.85em; }
   .skipped-group ul { list-style: disc; margin-left: 1.5rem; margin-top: 0.25rem; }
+  .comparison-group { margin-bottom: 1.5rem; }
+  .comparison-group h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .comparison-group .eval-id { color: #9ca3af; font-family: monospace; font-size: 0.85em; }
+  .comparison-group .judge-model { color: #9ca3af; font-size: 0.8em; }
+  .comparison-skipped { color: #6b7280; font-size: 0.875rem; font-style: italic; }
 </style>
 </head>
 <body>
@@ -277,6 +323,33 @@ const htmlTemplate = `<!DOCTYPE html>
 {{end}}
 {{end}}
 
+{{if .Comparisons}}
+<h2>Comparative Quality</h2>
+{{range .Comparisons}}<div class="comparison-group">
+<h3>{{.Name}} <span class="eval-id">({{.ID}})</span>{{if .Model}} <span class="judge-model">judge: {{.Model}}</span>{{end}}</h3>
+{{if .Scores}}<table>
+<thead>
+<tr>
+  <th onclick="sortTable(this, this.cellIndex)">Variant</th>
+  <th onclick="sortTable(this, this.cellIndex)">Rating</th>
+  <th onclick="sortTable(this, this.cellIndex)">Score</th>
+  <th onclick="sortTable(this, this.cellIndex)">Reason</th>
+</tr>
+</thead>
+<tbody>
+{{range .Scores}}<tr>
+  <td>{{.Variant}}</td>
+  <td>{{.Rating}}</td>
+  <td>{{.Score}}</td>
+  <td>{{.Reason}}</td>
+</tr>
+{{end}}</tbody>
+</table>
+{{else}}<p class="comparison-skipped">{{if .Skipped}}{{.Skipped}}{{else}}no scores produced{{end}}</p>
+{{end}}</div>
+{{end}}
+{{end}}
+
 {{if .ShowRankings}}
 <h2>Rankings</h2>
 <table>
@@ -290,6 +363,7 @@ const htmlTemplate = `<!DOCTYPE html>
   <th onclick="sortTable(this, {{if .MultiRunner}}{{if .MultiModel}}5{{else}}4{{end}}{{else}}{{if .MultiModel}}4{{else}}3{{end}}{{end}})">Pass Rate</th>
   <th onclick="sortTable(this, {{if .MultiRunner}}{{if .MultiModel}}6{{else}}5{{end}}{{else}}{{if .MultiModel}}5{{else}}4{{end}}{{end}})">Median Cost</th>
   <th onclick="sortTable(this, {{if .MultiRunner}}{{if .MultiModel}}7{{else}}6{{end}}{{else}}{{if .MultiModel}}6{{else}}5{{end}}{{end}})">Median Duration</th>
+  {{if .ShowQuality}}<th onclick="sortTable(this, this.cellIndex)">Quality</th>{{end}}
 </tr>
 </thead>
 <tbody>
@@ -302,6 +376,7 @@ const htmlTemplate = `<!DOCTYPE html>
   <td>{{.PassRate}}</td>
   <td>{{.MedianCost}}</td>
   <td>{{.MedianDuration}}</td>
+  {{if $.ShowQuality}}<td>{{.QualityScore}}</td>{{end}}
 </tr>
 {{end}}</tbody>
 </table>

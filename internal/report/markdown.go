@@ -22,9 +22,57 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	multiModel := hasMultipleModels(sr)
 	writeResultsTable(w, sr, multi, multiModel)
 	writeWorkdirsSection(w, sr)
+	writeComparisonSection(w, sr)
 	writeErrorsSection(w, sr)
 	writeSkippedSection(w, sr)
 	writeRankingTable(w, sr, multi, multiModel, weights)
+}
+
+// writeComparisonSection renders per-eval comparative quality scores, and notes
+// evals where comparison was requested but skipped (degraded to pass/fail).
+func writeComparisonSection(w io.Writer, sr *result.SuiteResult) {
+	var hasAny bool
+	for _, eval := range sr.Evals {
+		if eval.Comparison != nil {
+			hasAny = true
+			break
+		}
+	}
+	if !hasAny {
+		return
+	}
+
+	fmt.Fprintf(w, "## Comparative Quality\n\n")
+	for _, eval := range sr.Evals {
+		c := eval.Comparison
+		if c == nil {
+			continue
+		}
+		name := evalDisplayName(eval)
+		if len(c.Scores) == 0 {
+			reason := c.Skipped
+			if reason == "" {
+				reason = "no scores produced"
+			}
+			fmt.Fprintf(w, "**%s** — %s\n\n", name, reason)
+			continue
+		}
+
+		model := c.Model
+		if model != "" {
+			model = fmt.Sprintf(" (judge: %s)", model)
+		}
+		fmt.Fprintf(w, "**%s**%s\n\n", name, model)
+
+		tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+		fmt.Fprintf(tw, "VARIANT\tRATING\tSCORE\tREASON\n")
+		fmt.Fprintf(tw, "---------\t------\t-----\t------\n")
+		for _, s := range c.Scores {
+			fmt.Fprintf(tw, "%s\t%d/5\t%.2f\t%s\n", s.Variant, s.Rating, s.Score, s.Reason)
+		}
+		tw.Flush()
+		fmt.Fprintln(w)
+	}
 }
 
 // hasMultipleRunners returns true when the suite contains more than one distinct runner name.
@@ -216,6 +264,8 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 
 	fmt.Fprintf(w, "## Rankings\n\n")
 
+	showQuality := hasComparison(sr)
+
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 
 	// Build header dynamically based on which extra columns are needed.
@@ -229,8 +279,14 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 		header += "\tMODEL"
 		sep += "\t-----"
 	}
-	header += "\tSCORE\tPASS RATE\tMEDIAN COST\tMEDIAN DURATION\n"
-	sep += "\t-----\t---------\t-----------\t---------------\n"
+	header += "\tSCORE\tPASS RATE"
+	sep += "\t-----\t---------"
+	if showQuality {
+		header += "\tQUALITY"
+		sep += "\t-------"
+	}
+	header += "\tMEDIAN COST\tMEDIAN DURATION\n"
+	sep += "\t-----------\t---------------\n"
 	fmt.Fprint(tw, header)
 	fmt.Fprint(tw, sep)
 
@@ -242,9 +298,12 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 		if multiModel {
 			fmt.Fprintf(tw, "\t%s", r.Model)
 		}
-		fmt.Fprintf(tw, "\t%.3f\t%.0f%%\t$%.4f\t%s\n",
-			r.CompositeScore,
-			r.PassRate*100, r.MedianCostUSD,
+		fmt.Fprintf(tw, "\t%.3f\t%.0f%%", r.CompositeScore, r.PassRate*100)
+		if showQuality {
+			fmt.Fprintf(tw, "\t%.2f", r.QualityScore)
+		}
+		fmt.Fprintf(tw, "\t$%.4f\t%s\n",
+			r.MedianCostUSD,
 			formatDuration(r.MedianDuration))
 	}
 

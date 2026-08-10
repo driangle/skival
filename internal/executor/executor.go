@@ -38,7 +38,7 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 
 	for i := range evals {
 		prog.evalStart(i+1, len(evals), evalLabel(&evals[i]))
-		evalResult := executeEval(ctx, &evals[i], reg, opts, prog)
+		evalResult := executeEval(ctx, &evals[i], s.Compare, reg, opts, prog)
 		sr.Evals = append(sr.Evals, evalResult)
 	}
 
@@ -47,7 +47,7 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 	return sr, nil
 }
 
-func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, opts *Options, prog *progress) result.EvalResult {
+func executeEval(ctx context.Context, eval *suite.Eval, suiteCmp *suite.Compare, reg *registry.Registry, opts *Options, prog *progress) result.EvalResult {
 	er := result.EvalResult{
 		EvalID:   eval.ID,
 		EvalName: eval.Name,
@@ -125,6 +125,10 @@ func executeEval(ctx context.Context, eval *suite.Eval, reg *registry.Registry, 
 			er.Variants = append(er.Variants, vr)
 		}
 	}
+
+	// Comparative judging runs once, after every variant of the eval has been
+	// verified, scoring the passing variants against each other.
+	runComparison(ctx, eval, suiteCmp, &er, reg, opts.Compare)
 
 	return er
 }

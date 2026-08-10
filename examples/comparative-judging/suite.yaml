@@ -1,0 +1,55 @@
+# Comparative judging: beyond per-run PASS/FAIL, an LLM judge scores the
+# outputs of the variants that PASSED against each other on a 1-5 quality scale.
+# The scores feed ranking through a configurable `quality` weight, surfacing
+# quality differences that absolute grading misses.
+#
+# Comparison runs only as a tiebreaker — among variants that all passed their
+# per-run verify steps — so correctness always comes first. It is opt-in: remove
+# the `compare:` block (or pass --no-compare) and the suite ranks exactly as it
+# would without this feature.
+version: 1
+description: "Compare explanation quality across variants that all pass"
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+  samples: 1
+  timeout: 90
+  # Judge model for both per-run judge steps and comparative judging.
+  judge_model: "claude-haiku-4-5-20251001"
+
+# Suite-level comparative judging. `criteria` are the qualities the judge weighs
+# when scoring each output. `weight` (optional) is how much comparative quality
+# counts in the composite ranking score; the remaining weight is split across
+# correctness, cost, and duration.
+compare:
+  criteria:
+    - "explanation is clear and easy to follow"
+    - "covers the key trade-offs, not just the mechanics"
+    - "well-organized and appropriately concise"
+  # max_chars: 4000   # truncate each output before judging (default 4000)
+  weight: 0.2
+
+evals:
+  - id: explain-quicksort
+    name: "Explain quicksort"
+    prompt: |
+      Explain how the quicksort algorithm works, including its average and
+      worst-case time complexity and when you would choose it over mergesort.
+    verify:
+      # Per-run gate: only variants that pass this reach comparative judging.
+      - type: judge
+        criteria:
+          - "correctly describes partitioning around a pivot"
+          - "states average O(n log n) and worst-case O(n^2)"
+    variants:
+      - name: concise
+        prompt: |
+          Explain how the quicksort algorithm works, including its average and
+          worst-case time complexity and when you would choose it over
+          mergesort. Keep it under 150 words.
+      - name: detailed
+        prompt: |
+          Explain how the quicksort algorithm works in depth, including its
+          average and worst-case time complexity, the role of pivot selection,
+          and when you would choose it over mergesort. Use an example.

@@ -1,0 +1,29 @@
+{
+  "description": "Compare explanation quality across variants that all pass",
+  "started_at": "2026-08-10T20:32:38+02:00",
+  "finished_at": "2026-08-10T20:34:23+02:00",
+  "rankings": [
+    {
+      "Name": "concise",
+      "Runner": "claude-code",
+      "Model": "claude-sonnet-4-6",
+      "PassRate": 1,
+      "MedianCostUSD": 0.0659789,
+      "MedianDuration": 9627,
+      "QualityScore": 0.8,
+      "CompositeScore": 0.96,
+      "Rank": 1
+    },
+    {
+      "Name": "detailed",
+      "Runner": "claude-code",
+      "Model": "claude-sonnet-4-6",
+      "PassRate": 1,
+      "MedianCostUSD": 0.0836029,
+      "MedianDuration": 29360,
+      "QualityScore": 0.6,
+      "CompositeScore": 0.8082573662322569,
+      "Rank": 2
+    }
+  ]
+}

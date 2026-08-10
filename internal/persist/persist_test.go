@@ -294,3 +294,70 @@ func TestSave_EmptySuite(t *testing.T) {
 		t.Errorf("expected 0 evals, got %d", len(loaded.Evals))
 	}
 }
+
+func TestSave_WritesComparison(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+	sr.Evals[0].Comparison = &result.Comparison{
+		Model: "judge-model",
+		Scores: []result.ComparativeScore{
+			{Variant: "control", Rating: 4, Score: 0.8, Reason: "clear"},
+		},
+	}
+
+	outDir, err := Save(tmpDir, sr, defaultWeights())
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	path := filepath.Join(outDir, "evals", "eval1", "comparison.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("missing comparison.json: %v", err)
+	}
+
+	var parsed struct {
+		Model  string `json:"model"`
+		Scores []struct {
+			Variant string  `json:"variant"`
+			Score   float64 `json:"score"`
+		} `json:"scores"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("comparison.json invalid: %v", err)
+	}
+	if parsed.Model != "judge-model" {
+		t.Errorf("model = %q, want judge-model", parsed.Model)
+	}
+	if len(parsed.Scores) != 1 || parsed.Scores[0].Variant != "control" {
+		t.Errorf("unexpected scores: %+v", parsed.Scores)
+	}
+}
+
+func TestSaveAndLoad_ComparisonRoundTrip(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+	sr.Evals[0].Comparison = &result.Comparison{
+		Model: "judge-model",
+		Scores: []result.ComparativeScore{
+			{Variant: "control", Rating: 5, Score: 1.0, Reason: "best"},
+		},
+	}
+
+	outDir, err := Save(tmpDir, sr, defaultWeights())
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	loaded, err := Load(outDir)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	c := loaded.Evals[0].Comparison
+	if c == nil {
+		t.Fatal("comparison not restored on load")
+	}
+	if c.Model != "judge-model" || len(c.Scores) != 1 || c.Scores[0].Score != 1.0 {
+		t.Errorf("comparison round-trip mismatch: %+v", c)
+	}
+}

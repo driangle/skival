@@ -160,6 +160,8 @@ verify:
 
 `defaults.judge_model` applies to any judge step that doesn't set its own `model` (see [Configuration](configuration.md)).
 
+The `judge` step grades each run in isolation (pass/fail). To instead compare the outputs of the variants that *passed* an eval and rank them by relative quality, see [Comparative Judging](configuration.md#comparative-judging).
+
 ## Combining Verifiers
 
 List multiple steps under `verify:`. They run in order and evaluation stops at the first failure.

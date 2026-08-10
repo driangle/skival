@@ -132,6 +132,12 @@ func validate(s *Suite) error {
 	// Validate ranking weights.
 	errs = append(errs, validateRankingWeights(s.Ranking)...)
 
+	// Validate comparison config.
+	errs = append(errs, validateCompare(s.Compare, "compare")...)
+	for i, eval := range s.Evals {
+		errs = append(errs, validateCompare(eval.Compare, fmt.Sprintf("eval[%d].compare", i))...)
+	}
+
 	// Validate retry config at all levels.
 	errs = append(errs, validateRetryConfig(s.Defaults.Retry, "defaults.retry")...)
 	for i, eval := range s.Evals {
@@ -163,9 +169,29 @@ func validateRankingWeights(r *Ranking) []string {
 	if w.Duration < 0 {
 		errs = append(errs, fmt.Sprintf("ranking.weights.duration must be >= 0, got %g", w.Duration))
 	}
-	sum := w.Correctness + w.Cost + w.Duration
+	if w.Quality < 0 {
+		errs = append(errs, fmt.Sprintf("ranking.weights.quality must be >= 0, got %g", w.Quality))
+	}
+	sum := w.Correctness + w.Cost + w.Duration + w.Quality
 	if math.Abs(sum-1.0) > 1e-9 {
 		errs = append(errs, fmt.Sprintf("ranking.weights must sum to 1.0, got %g", sum))
+	}
+	return errs
+}
+
+// validateCompare checks a comparison block. An enabled block must define
+// criteria; a block disabled via enabled: false may omit them. A negative
+// weight is rejected (weight is only meaningful at suite level).
+func validateCompare(c *Compare, path string) []string {
+	if c == nil {
+		return nil
+	}
+	var errs []string
+	if c.isEnabled() && len(c.Criteria) == 0 {
+		errs = append(errs, fmt.Sprintf("%s: criteria is required when comparison is enabled", path))
+	}
+	if c.Weight != nil && (*c.Weight < 0 || *c.Weight > 1) {
+		errs = append(errs, fmt.Sprintf("%s: weight must be between 0 and 1, got %g", path, *c.Weight))
 	}
 	return errs
 }

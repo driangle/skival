@@ -46,6 +46,11 @@ var runCmd = &cobra.Command{
 			return fmt.Errorf("--timeout must be a positive number of seconds")
 		}
 
+		compareOverride, err := compareOverride(cmd)
+		if err != nil {
+			return err
+		}
+
 		execOpts := &executor.Options{
 			EvalIDs:          evalIDs,
 			Variants:         variants,
@@ -54,6 +59,7 @@ var runCmd = &cobra.Command{
 			Parallel:         parallel,
 			ParallelVariants: parallelVariants,
 			Timeout:          timeout,
+			Compare:          compareOverride,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
@@ -61,7 +67,7 @@ var runCmd = &cobra.Command{
 			return fmt.Errorf("executing suite: %w", err)
 		}
 
-		weights := rankingWeights(s)
+		weights := rankingWeights(s, compareOverride)
 
 		resultsDir, _ := cmd.Flags().GetString("results-dir")
 		if resultsDir != "" {
@@ -77,14 +83,55 @@ var runCmd = &cobra.Command{
 	},
 }
 
-func rankingWeights(s *suite.Suite) report.Weights {
-	if s.Ranking == nil {
-		return report.DefaultWeights()
+// compareOverride resolves the --compare/--no-compare flags into a tri-state
+// pointer: nil (defer to suite config), true (force on), or false (force off).
+func compareOverride(cmd *cobra.Command) (*bool, error) {
+	on := cmd.Flags().Changed("compare")
+	off := cmd.Flags().Changed("no-compare")
+	if on && off {
+		return nil, fmt.Errorf("--compare and --no-compare are mutually exclusive")
 	}
+	if on {
+		v := true
+		return &v, nil
+	}
+	if off {
+		v := false
+		return &v, nil
+	}
+	return nil, nil
+}
+
+// rankingWeights maps suite ranking config to report weights. When the suite
+// sets explicit weights they are used verbatim. Otherwise, if comparative
+// judging will run, a quality weight is carved out of the defaults (the base
+// correctness/cost/duration weights are renormalized to make room); if not, the
+// unchanged defaults preserve today's ranking behavior.
+func rankingWeights(s *suite.Suite, override *bool) report.Weights {
+	if s.Ranking != nil {
+		return report.Weights{
+			Correctness: s.Ranking.Weights.Correctness,
+			Cost:        s.Ranking.Weights.Cost,
+			Duration:    s.Ranking.Weights.Duration,
+			Quality:     s.Ranking.Weights.Quality,
+		}
+	}
+	w := report.DefaultWeights()
+	if s.CompareActive(override) {
+		return withQualityWeight(w, s.CompareWeight())
+	}
+	return w
+}
+
+// withQualityWeight allocates q to the quality weight and renormalizes the base
+// correctness/cost/duration weights to sum to 1-q, keeping the total at 1.0.
+func withQualityWeight(base report.Weights, q float64) report.Weights {
+	scale := 1 - q
 	return report.Weights{
-		Correctness: s.Ranking.Weights.Correctness,
-		Cost:        s.Ranking.Weights.Cost,
-		Duration:    s.Ranking.Weights.Duration,
+		Correctness: base.Correctness * scale,
+		Cost:        base.Cost * scale,
+		Duration:    base.Duration * scale,
+		Quality:     q,
 	}
 }
 
@@ -108,6 +155,8 @@ func init() {
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
 	runCmd.Flags().String("format", "markdown", "Output format: markdown, json, html")
 	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")
+	runCmd.Flags().Bool("compare", false, "Force comparative judging on where criteria are configured")
+	runCmd.Flags().Bool("no-compare", false, "Disable comparative judging even if configured in the suite")
 
 	rootCmd.AddCommand(runCmd)
 }

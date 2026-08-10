@@ -25,6 +25,7 @@ evals:
 | `description` | No | Human-readable suite description |
 | `defaults` | No | Default values inherited by all evals |
 | `ranking` | No | Ranking weight configuration (see [Ranking](#ranking)) |
+| `compare` | No | Comparative judging configuration (see [Comparative Judging](#comparative-judging)) |
 | `evals` | Yes | List of evaluations |
 
 ## Defaults
@@ -210,6 +211,7 @@ ranking:
     correctness: 0.60    # default: 0.60
     cost: 0.28           # default: 0.28
     duration: 0.12       # default: 0.12
+    quality: 0.00        # default: 0.00
 ```
 
 | Field | Default | Description |
@@ -217,8 +219,9 @@ ranking:
 | `weights.correctness` | `0.60` | Weight for pass rate (higher is better) |
 | `weights.cost` | `0.28` | Weight for median cost (lower is better) |
 | `weights.duration` | `0.12` | Weight for median duration (lower is better) |
+| `weights.quality` | `0.00` | Weight for comparative-judge quality (higher is better; see [Comparative Judging](#comparative-judging)) |
 
-All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is omitted, the default weights apply.
+All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is omitted, the default weights apply. `quality` defaults to `0.0`, so suites that do not use comparative judging rank exactly as before. When you enable `compare` **without** setting explicit `ranking.weights`, a quality weight is carved out automatically (see [Comparative Judging](#comparative-judging)).
 
 ### How the composite score is computed
 
@@ -227,6 +230,62 @@ All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is 
 - **Single-variant evals** score `1.0` on cost and duration by definition (the lone variant is its own best), so only its pass rate can pull the composite below the weight sum.
 
 The `median cost` and `median duration` shown in the rankings table are the mean of each variant's per-eval medians.
+
+## Comparative Judging
+
+Per-run verification answers "did this variant pass?" Comparative judging answers "which passing variant is *better*?" An LLM judge sees the outputs of the variants that passed an eval and scores each on a 1–5 quality scale against your criteria. The scores are normalized to `0–1` and fed into ranking through the `quality` weight.
+
+Comparative judging is **opt-in** and **correctness-first**:
+
+- It runs only as a **tiebreaker**, among the variants that passed every one of their per-run `verify` steps. A variant that failed can never win on quality, and an eval with fewer than two passing variants is skipped.
+- It is **bounded**: one judge call per eval, regardless of how many variants are compared.
+- It **degrades gracefully**: if the judge errors or returns unparseable output, that eval falls back to per-run pass/fail and the suite continues.
+
+To reduce bias, the judge sees the outputs in a **shuffled order under anonymous labels** (Output A, Output B, …) — never the variant names.
+
+```yaml
+compare:
+  criteria:
+    - "explanation is clear and easy to follow"
+    - "covers the key trade-offs"
+  model: "claude-haiku-4-5-20251001"   # optional; defaults to defaults.judge_model or the built-in judge model
+  max_chars: 4000                       # optional; truncate each output before judging (default 4000)
+  weight: 0.2                           # optional; quality weight when ranking.weights is not set explicitly (default 0.15)
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `criteria` | Yes (when enabled) | — | The qualities the judge weighs when scoring outputs |
+| `enabled` | No | `true` | Set to `false` to define a block without running it |
+| `model` | No | `defaults.judge_model`, else built-in | Judge model for the comparison |
+| `max_chars` | No | `4000` | Per-output truncation cap; set negative to disable truncation |
+| `weight` | No | `0.15` | Quality weight used when `ranking.weights` is not set (suite level only) |
+
+### Per-eval overrides
+
+An eval can override or disable the suite-level block with its own `compare:` field. Eval-level fields (criteria, model, max_chars) take precedence; setting `enabled: false` disables comparison for that eval only.
+
+```yaml
+compare:
+  criteria: ["clear and correct"]
+evals:
+  - id: sensitive-eval
+    # ...
+    compare:
+      enabled: false          # skip comparison for this eval
+  - id: prose-eval
+    # ...
+    compare:
+      criteria: ["engaging and well-structured"]   # different criteria for this eval
+```
+
+### How quality feeds ranking
+
+When comparison is enabled and you have **not** set explicit `ranking.weights`, skival allocates `compare.weight` (default `0.15`) to the `quality` dimension and renormalizes correctness/cost/duration to fill the rest, so the weights still sum to `1.0`. To control the balance precisely, set `ranking.weights` yourself (including a `quality` entry).
+
+A variant's quality score is the mean of its per-eval comparative scores, averaged **only over the evals where it was compared** — a variant excluded from an eval's comparison (because it failed there) is not additionally penalized on quality, since its pass rate already reflects the failure.
+
+Comparative scores appear per eval in all three report formats and, when persisted, as `comparison.json` under each eval's results directory.
 
 ## Retry
 
