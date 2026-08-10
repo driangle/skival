@@ -95,6 +95,33 @@ evals:
 
 [View source](https://github.com/driangle/skival/tree/main/examples/file-refs)
 
+## Prompt Files
+
+Source prompts from external files instead of inlining them, and parameterize a template across variants with `{{var}}` substitution.
+
+```yaml
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
+evals:
+  - id: refactor
+    prompt_file: prompts/refactor.md   # contains {{language}} / {{tone}}
+    vars:
+      language: "Go"
+    variants:
+      - name: strict
+        vars:
+          tone: "terse and precise"
+      - name: verbose
+        vars:
+          tone: "detailed and explanatory"
+```
+
+[View source](https://github.com/driangle/skival/tree/main/examples/prompt-file)
+
 ## Verification
 
 Every verification mode in one suite. Each eval declares a `verify:` list of steps — a step type such as `check`, `agent_exits_ok`, `output_contains`, `check_output`, `http_check`, `file_contains`, `command`, `tcp_check`, or `judge`.

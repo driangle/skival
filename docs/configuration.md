@@ -87,7 +87,9 @@ evals:
 |-------|----------|-------------|
 | `id` | Yes | Unique identifier for this eval |
 | `name` | No | Human-readable display name for this eval |
-| `prompt` | Yes | The task prompt sent to the AI agent |
+| `prompt` | Yes* | The task prompt sent to the AI agent (*or use `prompt_file`) |
+| `prompt_file` | Yes* | Path to a file whose contents become the prompt (*or use `prompt`) |
+| `vars` | No | Variables substituted into a `prompt_file` template (see below) |
 | `dir` | No | Working directory for execution |
 | `isolate` | No | Create a temporary copy of `dir` for each sample |
 | `timeout` | No | Override default timeout (seconds) |
@@ -103,14 +105,36 @@ evals:
 
 ### Prompt from File
 
-For long prompts, reference an external file:
+Long prompts bloat `suite.yaml`, lose syntax highlighting, and are awkward to diff. Use `prompt_file` to keep the prompt in a plain text/markdown file instead. Paths resolve relative to the suite file — or, for evals loaded via `file:`, relative to the eval file.
 
 ```yaml
 evals:
   - id: complex-task
-    prompt:
-      file: ./prompts/complex-task.md
+    prompt_file: prompts/complex-task.md
 ```
+
+`prompt` and `prompt_file` are mutually exclusive at the same level; setting both is a load error. A `prompt_file` may be set on the eval (shared by all variants) or on an individual variant (which overrides the eval-level one).
+
+#### Variable Substitution
+
+A `prompt_file` may contain `{{name}}` placeholders filled from a `vars:` map. This parameterizes a single template across variants without duplication. Variant `vars` override eval `vars`:
+
+```yaml
+evals:
+  - id: refactor
+    prompt_file: prompts/refactor.md   # contains {{language}} / {{tone}}
+    vars:
+      language: "Go"
+    variants:
+      - name: strict
+        vars:
+          tone: "terse and precise"
+      - name: verbose
+        vars:
+          tone: "detailed and explanatory"
+```
+
+Substitution only runs when at least one variable is defined; a template with no `vars` is used verbatim (literal `{{...}}` is preserved). When `vars` are defined, any placeholder left unresolved is a load error, so typos surface immediately instead of leaking into the prompt.
 
 ### Setup Hooks
 
@@ -142,6 +166,8 @@ variants:
 |-------|----------|-------------|
 | `name` | Yes | Unique name for this variant |
 | `prompt` | No | Override the eval prompt |
+| `prompt_file` | No | Override the eval prompt with a file's contents |
+| `vars` | No | Variables merged over eval `vars` for template substitution |
 | `skill` | No | Path to a single skill file |
 | `skills` | No | List of skill file paths (concatenated) |
 | `dir` | No | Override the eval working directory |

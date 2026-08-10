@@ -36,21 +36,9 @@ func Load(path string) (*Suite, error) {
 		return nil, fmt.Errorf("parsing suite YAML: %w", err)
 	}
 
-	suiteDir := filepath.Dir(absPath)
-	if err := resolveFileRefs(&s, suiteDir); err != nil {
+	if err := transform(&s, filepath.Dir(absPath)); err != nil {
 		return nil, err
 	}
-
-	if err := validateMatrixExclusive(&s); err != nil {
-		return nil, err
-	}
-	expandMatrices(&s)
-	resolvePaths(&s, suiteDir)
-	migrateStateToProbes(&s)
-	migrateCorrectnessToVerify(&s)
-	migrateAllowedTools(&s)
-	mergeDefaults(&s)
-	resolveRunnerConfig(&s)
 
 	if err := validate(&s); err != nil {
 		return nil, err
@@ -61,10 +49,38 @@ func Load(path string) (*Suite, error) {
 	return &s, nil
 }
 
+// transform resolves references and normalizes a freshly-parsed suite in place:
+// eval file refs, matrix expansion, prompt files, path resolution, deprecated-
+// field migrations, and default merging. suiteDir anchors relative paths.
+func transform(s *Suite, suiteDir string) error {
+	baseDirs, err := resolveFileRefs(s, suiteDir)
+	if err != nil {
+		return err
+	}
+	if err := validateMatrixExclusive(s); err != nil {
+		return err
+	}
+	expandMatrices(s)
+	if err := resolvePromptFiles(s, baseDirs); err != nil {
+		return err
+	}
+	resolvePaths(s, suiteDir)
+	migrateStateToProbes(s)
+	migrateCorrectnessToVerify(s)
+	migrateAllowedTools(s)
+	mergeDefaults(s)
+	resolveRunnerConfig(s)
+	return nil
+}
+
 // resolveFileRefs replaces eval entries that have a `file:` field with the
-// contents of the referenced YAML file. Paths are relative to suiteDir.
-func resolveFileRefs(s *Suite, suiteDir string) error {
+// contents of the referenced YAML file. It returns, per eval, the base
+// directory that eval-local references (such as prompt_file) resolve against:
+// the eval file's directory for file-referenced evals, else suiteDir.
+func resolveFileRefs(s *Suite, suiteDir string) ([]string, error) {
+	baseDirs := make([]string, len(s.Evals))
 	for i, eval := range s.Evals {
+		baseDirs[i] = suiteDir
 		if eval.File == "" {
 			continue
 		}
@@ -76,18 +92,19 @@ func resolveFileRefs(s *Suite, suiteDir string) error {
 
 		data, err := os.ReadFile(refPath)
 		if err != nil {
-			return fmt.Errorf("reading eval file reference %q: %w", eval.File, err)
+			return nil, fmt.Errorf("reading eval file reference %q: %w", eval.File, err)
 		}
 
 		var resolved Eval
 		if err := decodeStrict(data, &resolved); err != nil {
-			return fmt.Errorf("parsing eval file %q (eval index %d): %w", eval.File, i, err)
+			return nil, fmt.Errorf("parsing eval file %q (eval index %d): %w", eval.File, i, err)
 		}
 
 		resolved.File = ""
 		s.Evals[i] = resolved
+		baseDirs[i] = filepath.Dir(refPath)
 	}
-	return nil
+	return baseDirs, nil
 }
 
 // resolvePaths makes relative paths in the suite absolute, anchored to suiteDir.

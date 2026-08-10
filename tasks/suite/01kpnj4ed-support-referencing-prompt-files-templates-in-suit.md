@@ -1,11 +1,12 @@
 ---
 title: "Support referencing prompt files/templates in suite.yaml"
 id: "01kpnj4ed"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["yaml-api", "prompt"]
 created: "2026-04-20"
+completed_at: 2026-08-10
 ---
 
 # Support referencing prompt files/templates in suite.yaml
@@ -49,19 +50,19 @@ Where `prompts/refactor.md` contains `{{language}}` / `{{tone}}` placeholders.
 
 ## Tasks
 
-- [ ] Decide on field name (`promptFile` vs `prompt_file`) and document precedence rules (error if both `prompt` and `promptFile` are set on the same level)
-- [ ] Add `PromptFile string` to `Eval` and `Treatment` (variant) structs in `internal/suite/suite.go`
-- [ ] Resolve `promptFile` paths relative to the suite file (and relative to the eval file when loaded via `file:`), consistent with existing file-relative resolution for skills/scripts
-- [ ] Load file contents in the loader and populate the resolved `Prompt` field so the executor sees no behavior change
-- [ ] Validate that referenced files exist and are readable during `Load()` / `validate` command
-- [ ] Evaluate whether variable substitution is worth including in v1 — if yes:
-  - [ ] Add `vars: map[string]string` on `Eval` and `Treatment`; merge variant vars over eval vars
-  - [ ] Implement a minimal `{{name}}` substitution pass over the loaded prompt template
-  - [ ] Error on unresolved placeholders (strict mode) to avoid silent typos
-- [ ] Update `apps/cli/cmd/validate.go` to surface `promptFile` resolution errors clearly
-- [ ] Add loader unit tests covering: happy path, missing file, both `prompt` + `promptFile` set, per-variant override, path resolution from nested `file:` evals, and (if implemented) var substitution
-- [ ] Add an `examples/prompt-file/` suite demonstrating the feature so `TestLoad_Examples` exercises it
-- [ ] Update `docs/configuration.md` and `docs/examples.md` with the new field and a short template example
+- [x] Decide on field name (`promptFile` vs `prompt_file`) and document precedence rules (error if both `prompt` and `promptFile` are set on the same level)
+- [x] Add `PromptFile string` to `Eval` and `Treatment` (variant) structs in `internal/suite/suite.go`
+- [x] Resolve `promptFile` paths relative to the suite file (and relative to the eval file when loaded via `file:`), consistent with existing file-relative resolution for skills/scripts
+- [x] Load file contents in the loader and populate the resolved `Prompt` field so the executor sees no behavior change
+- [x] Validate that referenced files exist and are readable during `Load()` / `validate` command
+- [x] Evaluate whether variable substitution is worth including in v1 — if yes:
+  - [x] Add `vars: map[string]string` on `Eval` and `Treatment`; merge variant vars over eval vars
+  - [x] Implement a minimal `{{name}}` substitution pass over the loaded prompt template
+  - [x] Error on unresolved placeholders (strict mode) to avoid silent typos
+- [x] Update `apps/cli/cmd/validate.go` to surface `promptFile` resolution errors clearly
+- [x] Add loader unit tests covering: happy path, missing file, both `prompt` + `promptFile` set, per-variant override, path resolution from nested `file:` evals, and (if implemented) var substitution
+- [x] Add an `examples/prompt-file/` suite demonstrating the feature so `TestLoad_Examples` exercises it
+- [x] Update `docs/configuration.md` and `docs/examples.md` with the new field and a short template example
 
 ## Acceptance Criteria
 

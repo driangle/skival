@@ -7,6 +7,7 @@ Self-contained example suites demonstrating the full range of skival configurati
 | `minimal/` | Simplest valid suite: one eval, two treatments (baseline vs. model comparison) |
 | `defaults/` | Suite-level defaults (model, samples, timeout, runner, runner_config) inherited by evals |
 | `file-refs/` | Evals loaded via `file:` references to separate YAML files |
+| `prompt-file/` | Prompts sourced from external files with `{{var}}` template substitution |
 | `multi-treatment/` | Control vs. multiple variations with different models, skills, env vars, and runner_config |
 | `correctness/` | All correctness modes: compiles, agent_exits_ok, output, script, state assertions, judge |
 | `setup-hooks/` | Before/after/reset lifecycle hooks with isolation |

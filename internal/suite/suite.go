@@ -46,25 +46,27 @@ type Defaults struct {
 
 // Eval defines a single evaluation within a suite.
 type Eval struct {
-	File         string         `yaml:"file,omitempty"`
-	ID           string         `yaml:"id"`
-	Name         string         `yaml:"name"`
-	Prompt       string         `yaml:"prompt"`
-	Dir          string         `yaml:"dir"`
-	Isolate      *bool          `yaml:"isolate"`
-	Samples      *int           `yaml:"samples"`
-	Timeout      *int           `yaml:"timeout"`
-	Parallel     *int           `yaml:"parallel"`
-	Model        string         `yaml:"model"`
-	Runner       string         `yaml:"runner"`
-	RunnerConfig map[string]any `yaml:"runner_config"`
-	Setup        Setup          `yaml:"setup"`
-	Verify       []VerifyStep   `yaml:"verify,omitempty"`
-	Correctness  Correctness    `yaml:"correctness"` // Deprecated: use Verify
-	Retry        *Retry         `yaml:"retry"`
-	Matrix       *Matrix        `yaml:"matrix,omitempty"`
-	Compare      *Compare       `yaml:"compare,omitempty"`
-	Variants     []Variant      `yaml:"variants"`
+	File         string            `yaml:"file,omitempty"`
+	ID           string            `yaml:"id"`
+	Name         string            `yaml:"name"`
+	Prompt       string            `yaml:"prompt"`
+	PromptFile   string            `yaml:"prompt_file,omitempty"`
+	Vars         map[string]string `yaml:"vars,omitempty"`
+	Dir          string            `yaml:"dir"`
+	Isolate      *bool             `yaml:"isolate"`
+	Samples      *int              `yaml:"samples"`
+	Timeout      *int              `yaml:"timeout"`
+	Parallel     *int              `yaml:"parallel"`
+	Model        string            `yaml:"model"`
+	Runner       string            `yaml:"runner"`
+	RunnerConfig map[string]any    `yaml:"runner_config"`
+	Setup        Setup             `yaml:"setup"`
+	Verify       []VerifyStep      `yaml:"verify,omitempty"`
+	Correctness  Correctness       `yaml:"correctness"` // Deprecated: use Verify
+	Retry        *Retry            `yaml:"retry"`
+	Matrix       *Matrix           `yaml:"matrix,omitempty"`
+	Compare      *Compare          `yaml:"compare,omitempty"`
+	Variants     []Variant         `yaml:"variants"`
 }
 
 // VerifyStep defines a single verification step.
@@ -226,6 +228,8 @@ type MatrixDimensionValue struct {
 type Variant struct {
 	Name            string            `yaml:"name"`
 	Prompt          string            `yaml:"prompt"`
+	PromptFile      string            `yaml:"prompt_file"`
+	Vars            map[string]string `yaml:"vars"`
 	Dir             string            `yaml:"dir"`
 	ConfigDir       string            `yaml:"config_dir"`
 	Model           string            `yaml:"model"`

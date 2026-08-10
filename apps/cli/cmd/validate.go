@@ -37,6 +37,9 @@ var validateCmd = &cobra.Command{
 			if eval.Name != "" {
 				fmt.Fprintf(out, "    name:       %s\n", eval.Name)
 			}
+			if eval.PromptFile != "" {
+				fmt.Fprintf(out, "    prompt_file: %s\n", eval.PromptFile)
+			}
 			fmt.Fprintf(out, "    variants:   %d (", len(eval.Variants))
 			for i, v := range eval.Variants {
 				if i > 0 {

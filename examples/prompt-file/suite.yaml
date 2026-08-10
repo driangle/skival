@@ -1,0 +1,38 @@
+# Sourcing prompts from external files with variable substitution.
+#
+# The prompt lives in prompts/refactor.md (a plain markdown file) instead of
+# being inlined, keeping the suite focused on configuration. The {{language}}
+# and {{tone}} placeholders are filled from the vars maps below: eval-level vars
+# are shared, and each variant overrides {{tone}} to parameterize the template.
+version: 1
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+
+evals:
+  - id: refactor
+    dir: "./workdir"
+    prompt_file: prompts/refactor.md
+    vars:
+      language: "Go"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: strict
+        vars:
+          tone: "terse and precise"
+      - name: verbose
+        vars:
+          tone: "detailed and explanatory"
+
+  # A variant may also point at its own prompt file, overriding the eval-level one.
+  - id: fibonacci
+    dir: "./workdir"
+    prompt_file: prompts/fibonacci.md
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+      - name: opus
+        model: "claude-opus-4-6"
