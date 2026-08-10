@@ -12,6 +12,7 @@ import (
 	"github.com/driangle/skival/internal/persist"
 	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/report"
+	execrunner "github.com/driangle/skival/internal/runners/exec"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/spf13/cobra"
 )
@@ -142,6 +143,9 @@ func defaultRegistry() *registry.Registry {
 	})
 	reg.Register("ollama", func(config map[string]any) (agentrunner.Runner, error) {
 		return ollama.NewRunner(), nil
+	})
+	reg.Register("exec", func(config map[string]any) (agentrunner.Runner, error) {
+		return execrunner.NewRunner(execrunner.WithLogger(slog.Default())), nil
 	})
 	return reg
 }

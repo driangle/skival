@@ -369,6 +369,41 @@ evals:
 
 [View source](https://github.com/driangle/skival/tree/main/examples/multi-runner)
 
+## Exec Runner (Bring Your Own Agent)
+
+Evaluate an arbitrary program — here a standard-library Python script — with the
+generic `exec` runner. stdout drives the verifiers; an optional JSONL event
+stream surfaces tool activity, token usage, and cost. No `model` is required.
+
+```yaml
+version: 1
+defaults:
+  runner: exec
+
+evals:
+  - id: reverse
+    dir: "./"
+    prompt: "Reverse this text: hello world"
+    verify:
+      - type: output_contains
+        values: ["dlrow olleh"]
+      - type: agent_exits_ok
+    variants:
+      - name: black-box
+        runner_config:
+          command: ["python3", "agent.py"]
+          prompt_via: stdin
+      - name: with-events
+        runner_config:
+          command: ["python3", "agent.py"]
+          prompt_via: stdin
+          events_path: "${SKIVAL_RUN_DIR}/events.jsonl"
+```
+
+See the [Exec Runner](/exec-runner) reference for the full contract.
+
+[View source](https://github.com/driangle/skival/tree/main/examples/exec-python)
+
 ## Matrix Comparison
 
 Use `matrix` instead of `variants` to generate cross-product combinations from multiple dimensions.

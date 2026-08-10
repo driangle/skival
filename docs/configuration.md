@@ -48,13 +48,21 @@ defaults:
 | Field | Description |
 |-------|-------------|
 | `model` | Model identifier |
-| `runner` | Runner to use (`claude-code`, `ollama`) |
+| `runner` | Runner to use (`claude-code`, `ollama`, `exec`) |
 | `runner_config` | Runner-specific configuration (deep-merged) |
 | `samples` | Number of runs per variant |
 | `timeout` | Timeout in seconds |
 | `parallel` | Max concurrent samples per variant (default: sequential) |
 | `retry` | Retry configuration for failed runs (see [Retry](#retry)) |
 | `judge_model` | Default model for the judge verifier (default: `claude-haiku-4-5-20251001`) |
+
+### Runners
+
+Built-in runners include `claude-code` and `ollama`. To evaluate an **arbitrary
+program of your own** — in any language, calling any model or orchestration —
+use the generic `exec` runner and describe the invocation in `runner_config`.
+See [Exec Runner](/exec-runner) for the full contract (prompt delivery modes,
+injected environment variables, and the optional JSONL event protocol).
 
 ## Evals
 

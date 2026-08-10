@@ -20,4 +20,6 @@ features:
     details: One run is anecdotal. Run each variant multiple times and get medians, spread, and coefficient of variation so you can see how consistent the results are.
   - title: Cost, Speed, Correctness
     details: Every run tracks dollar cost, token usage, and time to completion alongside pass/fail -- so you can find the cheapest correct answer.
+  - title: Bring Your Own Agent
+    details: 'Evaluate any program you can run from a command line -- in any language, calling any model -- with the generic exec runner. <a href="/skival/exec-runner">Learn more</a>.'
 ---

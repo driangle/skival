@@ -28,11 +28,11 @@ func Cyan(s string) string   { return wrap("\033[36m", s) }
 func Dim(s string) string    { return wrap("\033[2m", s) }
 
 // Greenf formats and wraps in green.
-func Greenf(format string, a ...any) string { return Green(fmt.Sprintf(format, a...)) }
-func Redf(format string, a ...any) string   { return Red(fmt.Sprintf(format, a...)) }
+func Greenf(format string, a ...any) string  { return Green(fmt.Sprintf(format, a...)) }
+func Redf(format string, a ...any) string    { return Red(fmt.Sprintf(format, a...)) }
 func Yellowf(format string, a ...any) string { return Yellow(fmt.Sprintf(format, a...)) }
-func Cyanf(format string, a ...any) string  { return Cyan(fmt.Sprintf(format, a...)) }
-func Dimf(format string, a ...any) string   { return Dim(fmt.Sprintf(format, a...)) }
+func Cyanf(format string, a ...any) string   { return Cyan(fmt.Sprintf(format, a...)) }
+func Dimf(format string, a ...any) string    { return Dim(fmt.Sprintf(format, a...)) }
 
 // SetEnabled overrides automatic TTY/NO_COLOR detection. Useful for testing.
 func SetEnabled(v bool) { enabled = v }

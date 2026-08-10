@@ -6,6 +6,7 @@ import (
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/agentrunner/go/claudecode"
 	"github.com/driangle/agentrunner/go/ollama"
+	execrunner "github.com/driangle/skival/internal/runners/exec"
 	"github.com/driangle/skival/internal/suite"
 )
 
@@ -20,6 +21,8 @@ func buildRunnerSpecificOpts(runner string, config map[string]any) []agentrunner
 		return buildClaudeCodeOpts(config)
 	case "ollama":
 		return buildOllamaOpts(config)
+	case "exec":
+		return buildExecOpts(config)
 	default:
 		for key := range config {
 			slog.Warn("Unknown runner_config key ignored", "runner", runner, "key", key)
@@ -53,6 +56,18 @@ func buildClaudeCodeOpts(config map[string]any) []agentrunner.Option {
 	}
 
 	return opts
+}
+
+// buildExecOpts converts exec runner_config into an option carrying the parsed
+// Config. Parse failures are logged and drop the config; suite validation
+// already reports these to the user before a run reaches this point.
+func buildExecOpts(config map[string]any) []agentrunner.Option {
+	cfg, err := execrunner.ParseConfig(config)
+	if err != nil {
+		slog.Error("Invalid exec runner_config", "err", err)
+		return nil
+	}
+	return []agentrunner.Option{execrunner.WithConfig(cfg)}
 }
 
 // buildOllamaOpts maps runner_config keys to ollama options.

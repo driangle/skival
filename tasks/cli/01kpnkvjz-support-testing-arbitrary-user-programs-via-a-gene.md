@@ -1,13 +1,14 @@
 ---
 id: "01kpnkvjz"
 title: "Support testing arbitrary user programs via a generic exec runner"
-status: pending
+status: completed
 priority: medium
 effort: large
 type: feature
 dependencies: []
 tags: ["runner", "extensibility"]
 created_at: 2026-04-20
+completed_at: 2026-08-10
 ---
 
 # Support testing arbitrary user programs via a generic exec runner
@@ -56,22 +57,22 @@ Programs that emit no events still work — the judge verifier and all output/pr
 
 ## Tasks
 
-- [ ] Design the exec runner contract and document it in `docs/` (prompt delivery modes, event protocol, env vars injected by skival such as `SKIVAL_RUN_DIR`, `SKIVAL_PROMPT`, `SKIVAL_EVENTS_PATH`)
-- [ ] Decide whether the runner lives in the agentrunner dependency or in-tree under `internal/runners/exec/` (likely in-tree, since the protocol is skival-specific)
-- [ ] Implement the runner as an `agentrunner.Runner`:
-  - [ ] Start: spawn the configured command with cwd = eval `dir`, env merged from suite + skival-injected vars, timeout applied
-  - [ ] Deliver the prompt via the configured mode: `stdin` (default), `env`, or `arg-file` with a `{prompt_file}` placeholder
-  - [ ] Capture stdout into the final text output; stream stderr to logs
-  - [ ] If `events_path` is set, tail the JSONL file and forward events to `session.Messages` as `json.RawMessage`
-  - [ ] Parse the terminal `final` event (if any) to populate cost/usage/token fields in `RunResult`
-  - [ ] Return exit code; non-zero fails the `agent_exits_ok` verifier as usual
-- [ ] Register the runner in `defaultRegistry()` at `apps/cli/cmd/run.go:91`
-- [ ] Validate `runner_config` for the exec runner in suite validation (required `command`, enum for `prompt_via`, path checks)
-- [ ] Ensure `SummarizeToolActivity` handles the documented event shapes without changes; add fixtures if its assumptions need to widen slightly
-- [ ] Add unit tests for the runner (stdin/env/arg-file modes, events file ingestion, timeout, non-zero exit, missing events file is tolerated)
-- [ ] Add an `examples/exec-python/` suite with a minimal Python agent (one file, stdlib-only or a trivial `requests` call) plus a README — must be exercised by `TestLoad_Examples`
-- [ ] Write `docs/exec-runner.md` covering the contract, event schema, env vars, and two worked examples (black-box and event-emitting)
-- [ ] Link the new doc from `docs/configuration.md` and `docs/index.md`
+- [x] Design the exec runner contract and document it in `docs/` (prompt delivery modes, event protocol, env vars injected by skival such as `SKIVAL_RUN_DIR`, `SKIVAL_PROMPT`, `SKIVAL_EVENTS_PATH`)
+- [x] Decide whether the runner lives in the agentrunner dependency or in-tree under `internal/runners/exec/` (likely in-tree, since the protocol is skival-specific)
+- [x] Implement the runner as an `agentrunner.Runner`:
+  - [x] Start: spawn the configured command with cwd = eval `dir`, env merged from suite + skival-injected vars, timeout applied
+  - [x] Deliver the prompt via the configured mode: `stdin` (default), `env`, or `arg-file` with a `{prompt_file}` placeholder
+  - [x] Capture stdout into the final text output; stream stderr to logs
+  - [x] If `events_path` is set, tail the JSONL file and forward events to `session.Messages` as `json.RawMessage`
+  - [x] Parse the terminal `final` event (if any) to populate cost/usage/token fields in `RunResult`
+  - [x] Return exit code; non-zero fails the `agent_exits_ok` verifier as usual
+- [x] Register the runner in `defaultRegistry()` at `apps/cli/cmd/run.go:91`
+- [x] Validate `runner_config` for the exec runner in suite validation (required `command`, enum for `prompt_via`, path checks)
+- [x] Ensure `SummarizeToolActivity` handles the documented event shapes without changes; add fixtures if its assumptions need to widen slightly
+- [x] Add unit tests for the runner (stdin/env/arg-file modes, events file ingestion, timeout, non-zero exit, missing events file is tolerated)
+- [x] Add an `examples/exec-python/` suite with a minimal Python agent (one file, stdlib-only or a trivial `requests` call) plus a README — must be exercised by `TestLoad_Examples`
+- [x] Write `docs/exec-runner.md` covering the contract, event schema, env vars, and two worked examples (black-box and event-emitting)
+- [x] Link the new doc from `docs/configuration.md` and `docs/index.md`
 
 ## Acceptance Criteria
 

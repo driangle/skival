@@ -24,6 +24,7 @@ var validRunners = map[string]bool{
 	"ollama":      true,
 	"codex":       true,
 	"aider":       true,
+	"exec":        true,
 }
 
 // validateMatrixExclusive checks that no eval defines both matrix and variants.
@@ -138,6 +139,13 @@ func validateVariant(v Variant, vp string) []string {
 		if _, err := os.Stat(v.ConfigDir); err != nil {
 			errs = append(errs, fmt.Sprintf("%s %q: config_dir %q does not exist", vp, v.Name, v.ConfigDir))
 		}
+	}
+
+	// The exec runner drives an arbitrary program and needs no model; its
+	// runner_config carries the invocation contract instead.
+	if v.Runner == "exec" {
+		errs = append(errs, validateExecVariant(v, vp)...)
+		return errs
 	}
 
 	// Every variant must resolve to a model.

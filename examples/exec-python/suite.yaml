@@ -1,0 +1,34 @@
+# Generic exec runner: evaluate an arbitrary user program (here, a Python
+# script) with no claude-code dependency in the loop. See docs/exec-runner.md.
+version: 1
+description: "Evaluate a custom Python agent via the generic exec runner"
+
+defaults:
+  runner: exec
+
+evals:
+  - id: reverse
+    name: "Reverse text agent"
+    dir: "./"
+    prompt: "Reverse this text: hello world"
+    verify:
+      # stdout drives output_contains without any runner-specific handling.
+      - type: output_contains
+        values: ["dlrow olleh"]
+      # A non-zero exit would fail here; the exec runner propagates it faithfully.
+      - type: agent_exits_ok
+    variants:
+      # Black-box: prompt on stdin (the default), stdout is the whole answer.
+      - name: black-box
+        runner_config:
+          command: ["python3", "agent.py"]
+          prompt_via: stdin
+
+      # Event-emitting: same program, but it also writes JSONL session events
+      # to ${SKIVAL_RUN_DIR}/events.jsonl, which skival surfaces to the
+      # verifier pipeline (tool activity, token usage, cost).
+      - name: with-events
+        runner_config:
+          command: ["python3", "agent.py"]
+          prompt_via: stdin
+          events_path: "${SKIVAL_RUN_DIR}/events.jsonl"

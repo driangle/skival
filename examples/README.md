@@ -14,6 +14,7 @@ Self-contained example suites demonstrating the full range of skival configurati
 | `complexity/` | Evals at each complexity level (low, medium, high) with different sample counts |
 | `runner-config/` | Runner and runner_config at defaults, eval, and treatment levels showing override precedence |
 | `multi-runner/` | Different runners (claude-code, codex, aider) across treatments in the same suite |
+| `exec-python/` | Generic `exec` runner evaluating a custom Python program, with black-box and event-emitting variants |
 | `fizzbuzz/` | Baseline vs. skill comparison with script-based verification |
 | `matrix-comparison/` | Matrix syntax for cross-cutting runner x model evaluation |
 | `per-treatment-config/` | Per-treatment prompt and config_dir overrides |

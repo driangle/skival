@@ -82,6 +82,30 @@ func TestSummarizeToolActivity_TruncatesLongBlock(t *testing.T) {
 	}
 }
 
+func TestSummarizeToolActivity_FlatExecEvents(t *testing.T) {
+	// Exec-runner events carry type/name/input/content at the top level rather
+	// than nested under message.content.
+	msgs := []json.RawMessage{
+		json.RawMessage(`{"type":"tool_use","name":"read_file","input":{"path":"README.md"}}`),
+		json.RawMessage(`{"type":"tool_result","tool_use_id":"1","content":"file body"}`),
+		json.RawMessage(`{"type":"message","role":"assistant","content":"thinking out loud"}`),
+	}
+	got := SummarizeToolActivity(msgs)
+	if !strings.Contains(got, "tool_use read_file") {
+		t.Errorf("missing flat tool_use: %q", got)
+	}
+	if !strings.Contains(got, "README.md") {
+		t.Errorf("missing flat tool input: %q", got)
+	}
+	if !strings.Contains(got, "tool_result: file body") {
+		t.Errorf("missing flat tool_result: %q", got)
+	}
+	// A plain message event carries no tool activity and must not render.
+	if strings.Contains(got, "thinking out loud") {
+		t.Errorf("message event should not render as tool activity: %q", got)
+	}
+}
+
 func TestSummarizeToolActivity_MultipleMessages(t *testing.T) {
 	msgs := []json.RawMessage{
 		json.RawMessage(`{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"ls"}}]}}`),

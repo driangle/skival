@@ -11,13 +11,20 @@ import (
 // an ellipsis to keep the judge prompt bounded.
 const maxToolBlockLen = 800
 
-// streamEnvelope is a minimal view of a claude-code stream-json message
-// that exposes only the fields needed to summarize tool activity.
+// streamEnvelope is a minimal view of a session message that exposes only the
+// fields needed to summarize tool activity. It covers two shapes: the nested
+// claude-code stream-json message (tool blocks under message.content) and the
+// flat exec-runner event (type/name/input/content at the top level).
 type streamEnvelope struct {
 	Type    string `json:"type"`
 	Message *struct {
 		Content []streamContentBlock `json:"content,omitempty"`
 	} `json:"message,omitempty"`
+
+	// Flat top-level fields for exec-runner events.
+	Name    string          `json:"name,omitempty"`
+	Input   json.RawMessage `json:"input,omitempty"`
+	Content json.RawMessage `json:"content,omitempty"`
 }
 
 type streamContentBlock struct {
@@ -38,19 +45,37 @@ func SummarizeToolActivity(conversation []json.RawMessage) string {
 		if err := json.Unmarshal(raw, &env); err != nil {
 			continue
 		}
-		if env.Message == nil {
+		if env.Message != nil {
+			writeNestedBlocks(&sb, env.Message.Content)
 			continue
 		}
-		for _, b := range env.Message.Content {
-			switch b.Type {
-			case "tool_use":
-				fmt.Fprintf(&sb, "-> tool_use %s: %s\n", b.Name, truncate(string(b.Input), maxToolBlockLen))
-			case "tool_result":
-				fmt.Fprintf(&sb, "<- tool_result: %s\n", truncate(stringifyToolResult(b.Content), maxToolBlockLen))
-			}
-		}
+		writeFlatEvent(&sb, env)
 	}
 	return sb.String()
+}
+
+// writeNestedBlocks renders tool blocks nested under a claude-code
+// message.content array.
+func writeNestedBlocks(sb *strings.Builder, blocks []streamContentBlock) {
+	for _, b := range blocks {
+		switch b.Type {
+		case "tool_use":
+			fmt.Fprintf(sb, "-> tool_use %s: %s\n", b.Name, truncate(string(b.Input), maxToolBlockLen))
+		case "tool_result":
+			fmt.Fprintf(sb, "<- tool_result: %s\n", truncate(stringifyToolResult(b.Content), maxToolBlockLen))
+		}
+	}
+}
+
+// writeFlatEvent renders a flat exec-runner event whose type/name/input/content
+// live at the top level of the JSON object.
+func writeFlatEvent(sb *strings.Builder, env streamEnvelope) {
+	switch env.Type {
+	case "tool_use":
+		fmt.Fprintf(sb, "-> tool_use %s: %s\n", env.Name, truncate(string(env.Input), maxToolBlockLen))
+	case "tool_result":
+		fmt.Fprintf(sb, "<- tool_result: %s\n", truncate(stringifyToolResult(env.Content), maxToolBlockLen))
+	}
 }
 
 // stringifyToolResult flattens a tool_result content payload into a plain
