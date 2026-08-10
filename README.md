@@ -17,7 +17,7 @@ Define a baseline and any number of variants, then compare them head-to-head wit
 - **Matrix syntax** — Define dimensions (e.g. runner × model) and auto-generate a Cartesian product of variants
 - **Per-variant overrides** — Customize prompt, model, runner, skills, env vars, config directory, and allowed tools per variant
 - **Skill injection** — Inject single or multiple skill files into agent system prompts for A/B testing skill effectiveness
-- **Working directory isolation** — Optionally copy the eval directory per sample to prevent cross-sample state pollution
+- **Working directory isolation** — Opt in (`isolate: true`, off by default) to copy the eval directory per sample and prevent cross-sample state pollution
 - **Setup lifecycle hooks** — Run shell commands before, between (reset), and after samples for fixture management
 - **Correctness verification** — Pluggable verifier pipeline: exit code, substring matching, custom scripts, HTTP state checks, LLM judge
 - **Multi-runner support** — Built on [agentrunner](https://github.com/driangle/agentrunner) with support for Claude Code, Ollama, Codex, and Aider

@@ -174,6 +174,46 @@ func TestIsolateTempDirsPreserved(t *testing.T) {
 	}
 }
 
+func TestIsolateWithNoDirIsSkipped(t *testing.T) {
+	// An eval that opts into isolation but configures no working directory has
+	// nothing to copy; isolation should be skipped rather than erroring.
+	runner := &fakeRunner{
+		results: []*agentrunner.Result{{Text: "done"}},
+	}
+
+	s := &suite.Suite{
+		Description: "test",
+		Version:     1,
+		Evals: []suite.Eval{
+			{
+				ID:      "eval-1",
+				Name:    "Dirless Eval",
+				Prompt:  "do something",
+				Isolate: boolPtr(true),
+				Variants: []suite.Variant{
+					{Name: "control", Runner: "claude-code"},
+				},
+			},
+		},
+	}
+
+	sr, err := Execute(context.Background(), s, fakeRegistry(runner), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := runner.calls[0].Opts.WorkingDir; got != "" {
+		t.Errorf("expected no isolated working dir, got %q", got)
+	}
+	run := sr.Evals[0].Variants[0].Runs[0]
+	if run.Err != nil {
+		t.Errorf("run should succeed without a dir to isolate, got %v", run.Err)
+	}
+	if run.WorkDir != "" {
+		t.Errorf("expected empty WorkDir, got %q", run.WorkDir)
+	}
+}
+
 func TestNoIsolateBehaviorUnchanged(t *testing.T) {
 	runner := &fakeRunner{
 		results: []*agentrunner.Result{{Text: "done"}},

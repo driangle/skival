@@ -327,8 +327,8 @@ evals:
 	if s.Evals[0].Isolate == nil || !*s.Evals[0].Isolate {
 		t.Error("expected eval-1 isolate to be true (explicit)")
 	}
-	if s.Evals[1].Isolate == nil || !*s.Evals[1].Isolate {
-		t.Error("expected eval-2 isolate to be true (default)")
+	if s.Evals[1].Isolate != nil {
+		t.Error("expected eval-2 isolate to be unset (default: isolation off)")
 	}
 	if s.Evals[2].Isolate == nil || *s.Evals[2].Isolate {
 		t.Error("expected eval-3 isolate to be false (explicit)")

@@ -23,10 +23,9 @@ func mergeDefaults(s *Suite) {
 			e.Runner = d.Runner
 		}
 		applyDefaultJudgeModel(e, d.JudgeModel)
-		if e.Isolate == nil {
-			t := true
-			e.Isolate = &t
-		}
+		// Isolation is opt-in: when unset it stays nil, which the executor
+		// treats as disabled. Copying the working dir per sample has a real
+		// disk/time cost, so we don't turn it on behind the user's back.
 		e.RunnerConfig = mergeMaps(d.RunnerConfig, e.RunnerConfig)
 		if e.Retry == nil && d.Retry != nil {
 			e.Retry = d.Retry

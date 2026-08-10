@@ -99,7 +99,7 @@ evals:
 | `prompt_file` | Yes* | Path to a file whose contents become the prompt (*or use `prompt`) |
 | `vars` | No | Variables substituted into a `prompt_file` template (see below) |
 | `dir` | No | Working directory for execution |
-| `isolate` | No | Create a temporary copy of `dir` for each sample |
+| `isolate` | No | Copy `dir` into a fresh temp dir per sample (default: `false`, see below) |
 | `timeout` | No | Override default timeout (seconds) |
 | `samples` | No | Override default sample count |
 | `parallel` | No | Override default max concurrency |
@@ -110,6 +110,35 @@ evals:
 | `setup` | No | Lifecycle hooks |
 | `variants` | Yes* | Variant definitions (*or use `matrix`) |
 | `matrix` | Yes* | Matrix dimensions (*or use `variants`) |
+
+### Working Directory Isolation
+
+By default (`isolate: false`) every sample of an eval runs directly in the
+configured `dir`. Samples share that directory, so a run that mutates files can
+leak state into later samples of the same eval.
+
+Set `isolate: true` to run each sample in its own throwaway copy of `dir`:
+
+```yaml
+evals:
+  - id: fizzbuzz
+    dir: ./workspace
+    isolate: true      # each sample gets a fresh copy of ./workspace
+    samples: 5
+```
+
+Notes:
+
+- **Off by default.** Copying `dir` for every sample costs disk space and time
+  proportional to the directory's size × sample count, so isolation is opt-in.
+  Keep it off for read-only evals or ones with no `dir`.
+- **No `dir`, no copy.** If neither the eval nor the variant sets `dir`, there is
+  nothing to isolate and the flag is a no-op.
+- **Copies are kept for inspection.** Each isolated copy is created under the
+  system temp dir as `skival-isolate-*` and is *not* deleted after the run — its
+  path appears in the report's **Workdirs** section so you can inspect what the
+  agent produced. Clean these up yourself (e.g. `rm -rf $TMPDIR/skival-isolate-*`)
+  when you no longer need them.
 
 ### Prompt from File
 

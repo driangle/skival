@@ -38,16 +38,29 @@ func runSample(ctx context.Context, eval *suite.Eval, label string, v *suite.Var
 }
 
 // prepareSampleDir creates an isolated working directory when the eval requests
-// isolation, returning an empty string otherwise.
+// isolation, returning an empty string otherwise. Isolation is skipped when no
+// working directory is configured, since there is nothing to copy.
 func prepareSampleDir(eval *suite.Eval, v *suite.Variant) (string, error) {
 	if eval.Isolate == nil || !*eval.Isolate {
 		return "", nil
 	}
-	dir, err := createIsolatedDir(eval, v)
+	srcDir := isolationSource(eval, v)
+	if srcDir == "" {
+		return "", nil
+	}
+	dir, err := createIsolatedDir(srcDir)
 	if err != nil {
 		return "", fmt.Errorf("creating isolated dir: %w", err)
 	}
 	return dir, nil
+}
+
+// isolationSource resolves the directory to copy when isolating: variant > eval.
+func isolationSource(eval *suite.Eval, v *suite.Variant) string {
+	if v.Dir != "" {
+		return v.Dir
+	}
+	return eval.Dir
 }
 
 // resolveWorkdir resolves the working directory for display: isolated > variant > eval.
@@ -160,13 +173,10 @@ func attemptIsFinal(run result.RunResult, attempt int, cfg retryConfig) bool {
 	return false
 }
 
-// createIsolatedDir creates a temporary directory and copies the eval/variant working directory into it.
-func createIsolatedDir(eval *suite.Eval, v *suite.Variant) (string, error) {
-	srcDir := eval.Dir
-	if v.Dir != "" {
-		srcDir = v.Dir
-	}
-
+// createIsolatedDir creates a temporary directory and copies srcDir into it.
+// The temp dir is intentionally left in place after the run so users can
+// inspect it (it is reported in the run's Workdirs section).
+func createIsolatedDir(srcDir string) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "skival-isolate-*")
 	if err != nil {
 		return "", err
