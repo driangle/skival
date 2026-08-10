@@ -52,106 +52,99 @@ func validate(s *Suite) error {
 	if s.Version <= 0 {
 		errs = append(errs, "version must be greater than 0")
 	}
-
 	if len(s.Evals) == 0 {
 		errs = append(errs, "at least one eval is required")
 	}
-
 	if s.Defaults.Runner != "" && !validRunners[s.Defaults.Runner] {
 		errs = append(errs, fmt.Sprintf("defaults: unknown runner %q", s.Defaults.Runner))
 	}
 
 	seenIDs := make(map[string]bool)
 	for i, eval := range s.Evals {
-		prefix := fmt.Sprintf("eval[%d]", i)
-
-		if eval.ID == "" {
-			errs = append(errs, fmt.Sprintf("%s: id is required", prefix))
-		} else if seenIDs[eval.ID] {
-			errs = append(errs, fmt.Sprintf("%s: duplicate id %q", prefix, eval.ID))
-		} else {
-			seenIDs[eval.ID] = true
-		}
-
-		// Prompt is required at eval level unless every variant provides its own.
-		if eval.Prompt == "" {
-			for j, v := range eval.Variants {
-				if v.Prompt == "" {
-					errs = append(errs, fmt.Sprintf("%s: variant[%d] %q has no prompt (set prompt on the eval or variant)", prefix, j, v.Name))
-				}
-			}
-		}
-
-		if len(eval.Verify) == 0 {
-			errs = append(errs, fmt.Sprintf("%s: at least one verify step is required", prefix))
-		}
-
-		errs = append(errs, validateVerifySteps(eval.Verify, prefix)...)
-
-		if eval.Runner != "" && !validRunners[eval.Runner] {
-			errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))
-		}
-
-		if len(eval.Variants) == 0 {
-			errs = append(errs, fmt.Sprintf("%s: at least one variant is required", prefix))
-		}
-
-		for j, v := range eval.Variants {
-			vp := fmt.Sprintf("%s.variant[%d]", prefix, j)
-
-			if v.Name == "" {
-				errs = append(errs, fmt.Sprintf("%s: name is required", vp))
-			}
-
-			// Every variant must resolve to a runner.
-			if v.Runner == "" {
-				errs = append(errs, fmt.Sprintf("%s %q has no runner (set runner on the eval, defaults, or variant)", vp, v.Name))
-			} else if !validRunners[v.Runner] {
-				errs = append(errs, fmt.Sprintf("%s %q: unknown runner %q", vp, v.Name, v.Runner))
-			}
-
-			// Skill and skills are mutually exclusive.
-			if v.Skill != "" && len(v.Skills) > 0 {
-				errs = append(errs, fmt.Sprintf("%s %q: cannot set both skill and skills", vp, v.Name))
-			}
-
-			// Validate config_dir paths exist.
-			if v.ConfigDir != "" {
-				if _, err := os.Stat(v.ConfigDir); err != nil {
-					errs = append(errs, fmt.Sprintf("%s %q: config_dir %q does not exist", vp, v.Name, v.ConfigDir))
-				}
-			}
-
-			// Every variant must resolve to a model.
-			if v.Model == "" {
-				errs = append(errs, fmt.Sprintf("%s %q has no model (set model on the eval, defaults, or variant)", vp, v.Name))
-			}
-		}
+		errs = append(errs, validateEval(eval, fmt.Sprintf("eval[%d]", i), seenIDs)...)
 	}
 
-	// Validate ranking weights.
 	errs = append(errs, validateRankingWeights(s.Ranking)...)
-
-	// Validate comparison config.
-	errs = append(errs, validateCompare(s.Compare, "compare")...)
-	for i, eval := range s.Evals {
-		errs = append(errs, validateCompare(eval.Compare, fmt.Sprintf("eval[%d].compare", i))...)
-	}
-
-	// Validate retry config at all levels.
-	errs = append(errs, validateRetryConfig(s.Defaults.Retry, "defaults.retry")...)
-	for i, eval := range s.Evals {
-		prefix := fmt.Sprintf("eval[%d]", i)
-		errs = append(errs, validateRetryConfig(eval.Retry, prefix+".retry")...)
-		for j, v := range eval.Variants {
-			errs = append(errs, validateRetryConfig(v.Retry, fmt.Sprintf("%s.variant[%d].retry", prefix, j))...)
-		}
-	}
+	errs = append(errs, validateCompareLevels(s)...)
+	errs = append(errs, validateRetryLevels(s)...)
 
 	if len(errs) > 0 {
 		return &ValidationError{Errors: errs}
 	}
 	return nil
+}
+
+// validateEval checks a single eval and its variants for structural problems.
+func validateEval(eval Eval, prefix string, seenIDs map[string]bool) []string {
+	var errs []string
+
+	if eval.ID == "" {
+		errs = append(errs, fmt.Sprintf("%s: id is required", prefix))
+	} else if seenIDs[eval.ID] {
+		errs = append(errs, fmt.Sprintf("%s: duplicate id %q", prefix, eval.ID))
+	} else {
+		seenIDs[eval.ID] = true
+	}
+
+	// Prompt is required at eval level unless every variant provides its own.
+	if eval.Prompt == "" {
+		for j, v := range eval.Variants {
+			if v.Prompt == "" {
+				errs = append(errs, fmt.Sprintf("%s: variant[%d] %q has no prompt (set prompt on the eval or variant)", prefix, j, v.Name))
+			}
+		}
+	}
+
+	if len(eval.Verify) == 0 {
+		errs = append(errs, fmt.Sprintf("%s: at least one verify step is required", prefix))
+	}
+	errs = append(errs, validateVerifySteps(eval.Verify, prefix)...)
+
+	if eval.Runner != "" && !validRunners[eval.Runner] {
+		errs = append(errs, fmt.Sprintf("%s: unknown runner %q", prefix, eval.Runner))
+	}
+
+	if len(eval.Variants) == 0 {
+		errs = append(errs, fmt.Sprintf("%s: at least one variant is required", prefix))
+	}
+	for j, v := range eval.Variants {
+		errs = append(errs, validateVariant(v, fmt.Sprintf("%s.variant[%d]", prefix, j))...)
+	}
+	return errs
+}
+
+// validateVariant checks a single variant for structural problems.
+func validateVariant(v Variant, vp string) []string {
+	var errs []string
+
+	if v.Name == "" {
+		errs = append(errs, fmt.Sprintf("%s: name is required", vp))
+	}
+
+	// Every variant must resolve to a runner.
+	if v.Runner == "" {
+		errs = append(errs, fmt.Sprintf("%s %q has no runner (set runner on the eval, defaults, or variant)", vp, v.Name))
+	} else if !validRunners[v.Runner] {
+		errs = append(errs, fmt.Sprintf("%s %q: unknown runner %q", vp, v.Name, v.Runner))
+	}
+
+	// Skill and skills are mutually exclusive.
+	if v.Skill != "" && len(v.Skills) > 0 {
+		errs = append(errs, fmt.Sprintf("%s %q: cannot set both skill and skills", vp, v.Name))
+	}
+
+	// Validate config_dir paths exist.
+	if v.ConfigDir != "" {
+		if _, err := os.Stat(v.ConfigDir); err != nil {
+			errs = append(errs, fmt.Sprintf("%s %q: config_dir %q does not exist", vp, v.Name, v.ConfigDir))
+		}
+	}
+
+	// Every variant must resolve to a model.
+	if v.Model == "" {
+		errs = append(errs, fmt.Sprintf("%s %q has no model (set model on the eval, defaults, or variant)", vp, v.Name))
+	}
+	return errs
 }
 
 func validateRankingWeights(r *Ranking) []string {
@@ -179,6 +172,15 @@ func validateRankingWeights(r *Ranking) []string {
 	return errs
 }
 
+// validateCompareLevels validates the suite-level and per-eval comparison blocks.
+func validateCompareLevels(s *Suite) []string {
+	errs := validateCompare(s.Compare, "compare")
+	for i, eval := range s.Evals {
+		errs = append(errs, validateCompare(eval.Compare, fmt.Sprintf("eval[%d].compare", i))...)
+	}
+	return errs
+}
+
 // validateCompare checks a comparison block. An enabled block must define
 // criteria; a block disabled via enabled: false may omit them. A negative
 // weight is rejected (weight is only meaningful at suite level).
@@ -197,15 +199,29 @@ func validateCompare(c *Compare, path string) []string {
 }
 
 var validBackoffs = map[string]bool{
-	"":             true,
-	"fixed":        true,
-	"exponential":  true,
+	"":            true,
+	"fixed":       true,
+	"exponential": true,
 }
 
 var validRetryOn = map[string]bool{
 	"":          true,
 	"transient": true,
 	"all":       true,
+}
+
+// validateRetryLevels validates retry config at the defaults, eval, and variant
+// levels.
+func validateRetryLevels(s *Suite) []string {
+	errs := validateRetryConfig(s.Defaults.Retry, "defaults.retry")
+	for i, eval := range s.Evals {
+		prefix := fmt.Sprintf("eval[%d]", i)
+		errs = append(errs, validateRetryConfig(eval.Retry, prefix+".retry")...)
+		for j, v := range eval.Variants {
+			errs = append(errs, validateRetryConfig(v.Retry, fmt.Sprintf("%s.variant[%d].retry", prefix, j))...)
+		}
+	}
+	return errs
 }
 
 func validateRetryConfig(r *Retry, path string) []string {
@@ -265,150 +281,3 @@ func modelLooksValidForRunner(model, runner string) bool {
 		return true
 	}
 }
-
-var validVerifyTypes = map[string]bool{
-	"agent_exits_ok":  true,
-	"check":           true,
-	"check_output":    true,
-	"output_contains": true,
-	"command":         true,
-	"file_contains":   true,
-	"http_check":      true,
-	"tcp_check":       true,
-	"judge":           true,
-}
-
-// verifyTypeFields lists the type-specific YAML fields each verify type accepts.
-// The common `type` and `name` fields are always allowed and omitted here.
-// Setting a field not listed for a step's type is a validation error.
-var verifyTypeFields = map[string]map[string]bool{
-	"agent_exits_ok":  {},
-	"check":           {"run": true},
-	"check_output":    {"run": true},
-	"output_contains": {"values": true},
-	"command":         {"run": true, "exits": true, "stdout_contains": true},
-	"file_contains":   {"path": true, "contains": true, "exists": true},
-	"http_check":      {"url": true, "method": true, "status": true, "body_contains": true},
-	"tcp_check":       {"host": true, "port": true},
-	"judge":           {"criteria": true, "model": true},
-}
-
-// setVerifyFields returns the YAML names of the type-specific fields that are
-// populated on the step. It mirrors the non-zero checks used by the
-// required-field validation above.
-func setVerifyFields(step VerifyStep) []string {
-	var set []string
-	if step.Run != "" {
-		set = append(set, "run")
-	}
-	if step.Exits != nil {
-		set = append(set, "exits")
-	}
-	if step.StdoutContains != "" {
-		set = append(set, "stdout_contains")
-	}
-	if len(step.Values) > 0 {
-		set = append(set, "values")
-	}
-	if step.Path != "" {
-		set = append(set, "path")
-	}
-	if step.Contains != "" {
-		set = append(set, "contains")
-	}
-	if step.Exists != nil {
-		set = append(set, "exists")
-	}
-	if step.URL != "" {
-		set = append(set, "url")
-	}
-	if step.Method != "" {
-		set = append(set, "method")
-	}
-	if step.Status != nil {
-		set = append(set, "status")
-	}
-	if step.BodyContains != "" {
-		set = append(set, "body_contains")
-	}
-	if step.Host != "" {
-		set = append(set, "host")
-	}
-	if step.Port != 0 {
-		set = append(set, "port")
-	}
-	if len(step.Criteria) > 0 {
-		set = append(set, "criteria")
-	}
-	if step.Model != "" {
-		set = append(set, "model")
-	}
-	return set
-}
-
-func validateVerifySteps(steps []VerifyStep, prefix string) []string {
-	var errs []string
-	for i, step := range steps {
-		sp := fmt.Sprintf("%s.verify[%d]", prefix, i)
-
-		if step.Type == "" {
-			errs = append(errs, fmt.Sprintf("%s: type is required", sp))
-			continue
-		}
-		if !validVerifyTypes[step.Type] {
-			errs = append(errs, fmt.Sprintf("%s: unknown type %q", sp, step.Type))
-			continue
-		}
-
-		switch step.Type {
-		case "check":
-			if step.Run == "" {
-				errs = append(errs, fmt.Sprintf("%s: check requires run", sp))
-			}
-			if step.Run == "true" || step.Run == "false" {
-				errs = append(errs, fmt.Sprintf("%s: check run must be a shell command, not a boolean", sp))
-			}
-		case "check_output":
-			if step.Run == "" {
-				errs = append(errs, fmt.Sprintf("%s: check_output requires run", sp))
-			}
-		case "output_contains":
-			if len(step.Values) == 0 {
-				errs = append(errs, fmt.Sprintf("%s: output_contains requires values", sp))
-			}
-		case "command":
-			if step.Run == "" {
-				errs = append(errs, fmt.Sprintf("%s: command requires run", sp))
-			}
-		case "file_contains":
-			if step.Path == "" {
-				errs = append(errs, fmt.Sprintf("%s: file_contains requires path", sp))
-			}
-		case "http_check":
-			if step.URL == "" {
-				errs = append(errs, fmt.Sprintf("%s: http_check requires url", sp))
-			}
-		case "tcp_check":
-			if step.Host == "" {
-				errs = append(errs, fmt.Sprintf("%s: tcp_check requires host", sp))
-			}
-			if step.Port == 0 {
-				errs = append(errs, fmt.Sprintf("%s: tcp_check requires port", sp))
-			}
-		case "judge":
-			if len(step.Criteria) == 0 {
-				errs = append(errs, fmt.Sprintf("%s: judge requires criteria", sp))
-			}
-		}
-
-		// Reject fields that don't belong to this step's type.
-		allowed := verifyTypeFields[step.Type]
-		for _, f := range setVerifyFields(step) {
-			if !allowed[f] {
-				errs = append(errs, fmt.Sprintf("%s: field %q is not valid for type %q", sp, f, step.Type))
-			}
-		}
-	}
-	return errs
-}
-

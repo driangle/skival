@@ -6,9 +6,9 @@ import (
 
 // Comparison holds the result of comparing a baseline and candidate suite run.
 type Comparison struct {
-	Baseline  RunMeta           `json:"baseline"`
-	Candidate RunMeta           `json:"candidate"`
-	Evals     []EvalComparison  `json:"evals"`
+	Baseline  RunMeta          `json:"baseline"`
+	Candidate RunMeta          `json:"candidate"`
+	Evals     []EvalComparison `json:"evals"`
 }
 
 // RunMeta captures identifying info about one side of the comparison.
@@ -27,15 +27,15 @@ type EvalComparison struct {
 
 // VariantComparison holds the delta between baseline and candidate for one variant.
 type VariantComparison struct {
-	Name   string          `json:"name"`
+	Name   string           `json:"name"`
 	Status ComparisonStatus `json:"status"` // "matched", "added", "removed"
 
 	// Present only when Status == "matched".
-	PassRateDelta    *float64 `json:"pass_rate_delta_pp,omitempty"`    // percentage points
-	CostDelta        *float64 `json:"cost_delta_usd,omitempty"`       // absolute USD change
-	CostDeltaPct     *float64 `json:"cost_delta_pct,omitempty"`       // percent change
-	DurationDeltaMs  *int64   `json:"duration_delta_ms,omitempty"`    // absolute ms change
-	DurationDeltaPct *float64 `json:"duration_delta_pct,omitempty"`   // percent change
+	PassRateDelta    *float64 `json:"pass_rate_delta_pp,omitempty"` // percentage points
+	CostDelta        *float64 `json:"cost_delta_usd,omitempty"`     // absolute USD change
+	CostDeltaPct     *float64 `json:"cost_delta_pct,omitempty"`     // percent change
+	DurationDeltaMs  *int64   `json:"duration_delta_ms,omitempty"`  // absolute ms change
+	DurationDeltaPct *float64 `json:"duration_delta_pct,omitempty"` // percent change
 
 	BaselinePassRate  *float64 `json:"baseline_pass_rate,omitempty"`
 	CandidatePassRate *float64 `json:"candidate_pass_rate,omitempty"`
@@ -57,16 +57,8 @@ const (
 // Compare produces a diff between baseline and candidate suite results.
 func Compare(baseline, candidate *result.SuiteResult) *Comparison {
 	c := &Comparison{
-		Baseline: RunMeta{
-			Description: baseline.Description,
-			StartedAt:   baseline.StartedAt.Format("2006-01-02T15:04:05Z07:00"),
-			FinishedAt:  baseline.FinishedAt.Format("2006-01-02T15:04:05Z07:00"),
-		},
-		Candidate: RunMeta{
-			Description: candidate.Description,
-			StartedAt:   candidate.StartedAt.Format("2006-01-02T15:04:05Z07:00"),
-			FinishedAt:  candidate.FinishedAt.Format("2006-01-02T15:04:05Z07:00"),
-		},
+		Baseline:  newRunMeta(baseline),
+		Candidate: newRunMeta(candidate),
 	}
 
 	// Index candidate evals by ID for lookup.
@@ -84,36 +76,44 @@ func Compare(baseline, candidate *result.SuiteResult) *Comparison {
 		cEval, ok := candEvals[bEval.EvalID]
 		if !ok {
 			// Eval exists in baseline only — all variants are "removed".
-			ec := EvalComparison{EvalID: bEval.EvalID, EvalName: bEval.EvalName}
-			for _, bt := range bEval.Variants {
-				ec.Variants = append(ec.Variants, VariantComparison{
-					Name:   bt.Name,
-					Status: StatusRemoved,
-				})
-			}
-			c.Evals = append(c.Evals, ec)
+			c.Evals = append(c.Evals, evalWithStatus(bEval, StatusRemoved))
 			continue
 		}
-
 		c.Evals = append(c.Evals, compareEval(bEval, *cEval))
 	}
 
-	// Process candidate-only evals.
+	// Process candidate-only evals — all variants are "added".
 	for _, cEval := range candidate.Evals {
 		if seen[cEval.EvalID] {
 			continue
 		}
-		ec := EvalComparison{EvalID: cEval.EvalID, EvalName: cEval.EvalName}
-		for _, ct := range cEval.Variants {
-			ec.Variants = append(ec.Variants, VariantComparison{
-				Name:   ct.Name,
-				Status: StatusAdded,
-			})
-		}
-		c.Evals = append(c.Evals, ec)
+		c.Evals = append(c.Evals, evalWithStatus(cEval, StatusAdded))
 	}
 
 	return c
+}
+
+// newRunMeta builds the identifying metadata for one side of the comparison.
+func newRunMeta(sr *result.SuiteResult) RunMeta {
+	const layout = "2006-01-02T15:04:05Z07:00"
+	return RunMeta{
+		Description: sr.Description,
+		StartedAt:   sr.StartedAt.Format(layout),
+		FinishedAt:  sr.FinishedAt.Format(layout),
+	}
+}
+
+// evalWithStatus builds an EvalComparison whose variants all share the given
+// status, used for evals present on only one side of the comparison.
+func evalWithStatus(eval result.EvalResult, status ComparisonStatus) EvalComparison {
+	ec := EvalComparison{EvalID: eval.EvalID, EvalName: eval.EvalName}
+	for _, v := range eval.Variants {
+		ec.Variants = append(ec.Variants, VariantComparison{
+			Name:   v.Name,
+			Status: status,
+		})
+	}
+	return ec
 }
 
 func compareEval(baseline, candidate result.EvalResult) EvalComparison {
@@ -157,7 +157,14 @@ func compareVariant(baseline, candidate result.VariantResult) VariantComparison 
 		Name:   baseline.Name,
 		Status: StatusMatched,
 	}
+	setPassRateDeltas(&tc, baseline, candidate)
+	setCostDeltas(&tc, baseline, candidate)
+	setDurationDeltas(&tc, baseline, candidate)
+	return tc
+}
 
+// setPassRateDeltas fills in the pass-rate fields on tc.
+func setPassRateDeltas(tc *VariantComparison, baseline, candidate result.VariantResult) {
 	bPass := passRate(baseline.Runs)
 	cPass := passRate(candidate.Runs)
 	if bPass != nil && cPass != nil {
@@ -166,7 +173,10 @@ func compareVariant(baseline, candidate result.VariantResult) VariantComparison 
 	}
 	tc.BaselinePassRate = bPass
 	tc.CandidatePassRate = cPass
+}
 
+// setCostDeltas fills in the median-cost fields on tc.
+func setCostDeltas(tc *VariantComparison, baseline, candidate result.VariantResult) {
 	bCost := medianCost(baseline)
 	cCost := medianCost(candidate)
 	if bCost != nil && cCost != nil {
@@ -179,7 +189,10 @@ func compareVariant(baseline, candidate result.VariantResult) VariantComparison 
 	}
 	tc.BaselineCost = bCost
 	tc.CandidateCost = cCost
+}
 
+// setDurationDeltas fills in the median-duration fields on tc.
+func setDurationDeltas(tc *VariantComparison, baseline, candidate result.VariantResult) {
 	bDur := medianDuration(baseline)
 	cDur := medianDuration(candidate)
 	if bDur != nil && cDur != nil {
@@ -192,8 +205,6 @@ func compareVariant(baseline, candidate result.VariantResult) VariantComparison 
 	}
 	tc.BaselineDuration = bDur
 	tc.CandidateDuration = cDur
-
-	return tc
 }
 
 // passRate computes the pass rate from runs. Returns nil if no runs have Pass set.

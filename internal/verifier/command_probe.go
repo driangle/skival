@@ -26,25 +26,38 @@ func (v *CommandProbeVerifier) Verify(ctx context.Context, _ VerifyInput) Verify
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
-
-	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else if ctx.Err() != nil {
-			return VerifyResult{
-				Pass:   false,
-				Reason: fmt.Sprintf("command timed out: %v", ctx.Err()),
-			}
-		} else {
-			return VerifyResult{
-				Pass:   false,
-				Reason: fmt.Sprintf("command failed to run: %v", err),
-			}
-		}
+	exitCode, failure := runCommandProbe(ctx, cmd)
+	if failure != nil {
+		return *failure
 	}
 
+	return v.checkAssertions(exitCode, &stdout, &stderr)
+}
+
+// runCommandProbe runs cmd and returns its exit code. It returns a non-nil
+// failure result only when the command could not be run to completion (timeout
+// or launch failure), leaving assertion checks to the caller.
+func runCommandProbe(ctx context.Context, cmd *exec.Cmd) (int, *VerifyResult) {
+	err := cmd.Run()
+	if err == nil {
+		return 0, nil
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		return exitErr.ExitCode(), nil
+	}
+	if ctx.Err() != nil {
+		return 0, &VerifyResult{
+			Pass:   false,
+			Reason: fmt.Sprintf("command timed out: %v", ctx.Err()),
+		}
+	}
+	return 0, &VerifyResult{
+		Pass:   false,
+		Reason: fmt.Sprintf("command failed to run: %v", err),
+	}
+}
+
+func (v *CommandProbeVerifier) checkAssertions(exitCode int, stdout, stderr *bytes.Buffer) VerifyResult {
 	a := v.Probe.Assert
 
 	if a.Exits != nil && exitCode != *a.Exits {

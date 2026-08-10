@@ -38,124 +38,11 @@ func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...Pipel
 	for _, o := range opts {
 		o(&cfg)
 	}
+
 	var steps []namedVerifier
-
 	for i, step := range verifySteps {
-		name := step.Name
-
-		switch step.Type {
-		case "agent_exits_ok":
-			if name == "" {
-				name = "agent_exits_ok"
-			}
-			steps = append(steps, namedVerifier{
-				name:     name,
-				verifier: &ExecuteVerifier{},
-			})
-		case "check":
-			if name == "" {
-				name = "check"
-			}
-			steps = append(steps, namedVerifier{
-				name:     name,
-				verifier: &CheckVerifier{Dir: evalDir, Command: step.Run},
-			})
-		case "check_output":
-			if name == "" {
-				name = "check_output"
-			}
-			steps = append(steps, namedVerifier{
-				name:     name,
-				verifier: &CheckOutputVerifier{Command: step.Run, Dir: evalDir},
-			})
-		case "output_contains":
-			if name == "" {
-				name = "output_contains"
-			}
-			steps = append(steps, namedVerifier{
-				name:     name,
-				verifier: &OutputVerifier{ExpectedSubstrings: step.Values},
-			})
-		case "command":
-			if name == "" {
-				name = fmt.Sprintf("command[%d]", i)
-			}
-			steps = append(steps, namedVerifier{
-				name: name,
-				verifier: &CommandProbeVerifier{
-					Probe: suite.CommandProbe{
-						Run: step.Run,
-						Assert: suite.CommandProbeAssert{
-							Exits:          step.Exits,
-							StdoutContains: step.StdoutContains,
-						},
-					},
-					Dir: evalDir,
-				},
-			})
-		case "file_contains":
-			if name == "" {
-				name = fmt.Sprintf("file_contains[%d]", i)
-			}
-			steps = append(steps, namedVerifier{
-				name: name,
-				verifier: &FileProbeVerifier{
-					Probe: suite.FileProbe{
-						Path: step.Path,
-						Assert: suite.FileProbeAssert{
-							Exists:   step.Exists,
-							Contains: step.Contains,
-						},
-					},
-					Dir: evalDir,
-				},
-			})
-		case "http_check":
-			if name == "" {
-				name = fmt.Sprintf("http_check[%d]", i)
-			}
-			steps = append(steps, namedVerifier{
-				name: name,
-				verifier: &HTTPProbeVerifier{
-					Probe: suite.HTTPProbe{
-						URL:    step.URL,
-						Method: step.Method,
-						Assert: suite.HTTPProbeAssert{
-							Status:       step.Status,
-							BodyContains: step.BodyContains,
-						},
-					},
-				},
-			})
-		case "tcp_check":
-			if name == "" {
-				name = fmt.Sprintf("tcp_check[%d]", i)
-			}
-			steps = append(steps, namedVerifier{
-				name: name,
-				verifier: &TCPProbeVerifier{
-					Probe: suite.TCPProbe{
-						Host: step.Host,
-						Port: step.Port,
-					},
-				},
-			})
-		case "judge":
-			if cfg.runner != nil {
-				if name == "" {
-					name = "judge"
-				}
-				steps = append(steps, namedVerifier{
-					name: name,
-					verifier: &JudgeVerifier{
-						Runner:     cfg.runner,
-						Criteria:   step.Criteria,
-						Prompt:     cfg.evalPrompt,
-						Model:      step.Model,
-						AgentModel: cfg.agentModel,
-					},
-				})
-			}
+		if nv, ok := buildStepVerifier(step, i, evalDir, cfg); ok {
+			steps = append(steps, nv)
 		}
 	}
 
@@ -164,6 +51,86 @@ func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...Pipel
 	}
 
 	return &Pipeline{steps: steps}
+}
+
+// named builds a namedVerifier, defaulting the name to fallback when unset.
+func named(name, fallback string, v Verifier) namedVerifier {
+	if name == "" {
+		name = fallback
+	}
+	return namedVerifier{name: name, verifier: v}
+}
+
+// buildStepVerifier constructs the verifier for a single verify step. The bool
+// is false when the step type produces no verifier (unknown type, or a judge
+// step with no runner configured).
+func buildStepVerifier(step suite.VerifyStep, i int, evalDir string, cfg pipelineConfig) (namedVerifier, bool) {
+	switch step.Type {
+	case "agent_exits_ok":
+		return named(step.Name, "agent_exits_ok", &ExecuteVerifier{}), true
+	case "check":
+		return named(step.Name, "check", &CheckVerifier{Dir: evalDir, Command: step.Run}), true
+	case "check_output":
+		return named(step.Name, "check_output", &CheckOutputVerifier{Command: step.Run, Dir: evalDir}), true
+	case "output_contains":
+		return named(step.Name, "output_contains", &OutputVerifier{ExpectedSubstrings: step.Values}), true
+	case "judge":
+		return buildJudgeVerifier(step, cfg)
+	default:
+		return buildProbeVerifier(step, i, evalDir)
+	}
+}
+
+// buildProbeVerifier constructs probe-style verifiers whose default names are
+// suffixed with the step index. It returns false for unrecognized types.
+func buildProbeVerifier(step suite.VerifyStep, i int, evalDir string) (namedVerifier, bool) {
+	switch step.Type {
+	case "command":
+		return named(step.Name, fmt.Sprintf("command[%d]", i), &CommandProbeVerifier{
+			Probe: suite.CommandProbe{
+				Run:    step.Run,
+				Assert: suite.CommandProbeAssert{Exits: step.Exits, StdoutContains: step.StdoutContains},
+			},
+			Dir: evalDir,
+		}), true
+	case "file_contains":
+		return named(step.Name, fmt.Sprintf("file_contains[%d]", i), &FileProbeVerifier{
+			Probe: suite.FileProbe{
+				Path:   step.Path,
+				Assert: suite.FileProbeAssert{Exists: step.Exists, Contains: step.Contains},
+			},
+			Dir: evalDir,
+		}), true
+	case "http_check":
+		return named(step.Name, fmt.Sprintf("http_check[%d]", i), &HTTPProbeVerifier{
+			Probe: suite.HTTPProbe{
+				URL:    step.URL,
+				Method: step.Method,
+				Assert: suite.HTTPProbeAssert{Status: step.Status, BodyContains: step.BodyContains},
+			},
+		}), true
+	case "tcp_check":
+		return named(step.Name, fmt.Sprintf("tcp_check[%d]", i), &TCPProbeVerifier{
+			Probe: suite.TCPProbe{Host: step.Host, Port: step.Port},
+		}), true
+	default:
+		return namedVerifier{}, false
+	}
+}
+
+// buildJudgeVerifier constructs a judge verifier, returning false when no runner
+// is configured (judge steps are silently skipped in that case).
+func buildJudgeVerifier(step suite.VerifyStep, cfg pipelineConfig) (namedVerifier, bool) {
+	if cfg.runner == nil {
+		return namedVerifier{}, false
+	}
+	return named(step.Name, "judge", &JudgeVerifier{
+		Runner:     cfg.runner,
+		Criteria:   step.Criteria,
+		Prompt:     cfg.evalPrompt,
+		Model:      step.Model,
+		AgentModel: cfg.agentModel,
+	}), true
 }
 
 // PipelineOption configures optional pipeline behavior.

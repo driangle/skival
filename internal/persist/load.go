@@ -102,45 +102,10 @@ func loadVariant(varDir, name string) (result.VariantResult, error) {
 		if entry.IsDir() || !strings.HasPrefix(entry.Name(), "run-") || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-
-		data, err := os.ReadFile(filepath.Join(varDir, entry.Name()))
+		run, err := loadRun(varDir, entry.Name())
 		if err != nil {
-			return tr, fmt.Errorf("reading %s: %w", entry.Name(), err)
+			return tr, err
 		}
-
-		var rj runJSON
-		if err := json.Unmarshal(data, &rj); err != nil {
-			return tr, fmt.Errorf("parsing %s: %w", entry.Name(), err)
-		}
-
-		run := result.RunResult{
-			Sample:        rj.Sample,
-			Text:          rj.Text,
-			IsError:       rj.IsError,
-			ExitCode:      rj.ExitCode,
-			CostUSD:       rj.CostUSD,
-			DurationMs:    rj.DurationMs,
-			SessionID:     rj.SessionID,
-			Pass:          rj.Pass,
-			Attempt:       rj.Attempt,
-			TotalAttempts: rj.TotalAttempts,
-			Retried:       rj.Retried,
-		}
-		if rj.Error != "" {
-			run.Err = fmt.Errorf("%s", rj.Error)
-		}
-
-		// Load conversation JSONL files if they exist.
-		baseName := strings.TrimSuffix(entry.Name(), ".json")
-		run.Conversation, err = loadConversationJSONL(filepath.Join(varDir, baseName+".conversation.jsonl"))
-		if err != nil {
-			return tr, fmt.Errorf("loading conversation for %s: %w", entry.Name(), err)
-		}
-		run.JudgeConversation, err = loadConversationJSONL(filepath.Join(varDir, baseName+".judge.jsonl"))
-		if err != nil {
-			return tr, fmt.Errorf("loading judge conversation for %s: %w", entry.Name(), err)
-		}
-
 		tr.Runs = append(tr.Runs, run)
 	}
 
@@ -154,6 +119,50 @@ func loadVariant(varDir, name string) (result.VariantResult, error) {
 	}
 
 	return tr, nil
+}
+
+// loadRun reads a single run-*.json file (plus its conversation sidecars) and
+// reconstructs the RunResult.
+func loadRun(varDir, fileName string) (result.RunResult, error) {
+	data, err := os.ReadFile(filepath.Join(varDir, fileName))
+	if err != nil {
+		return result.RunResult{}, fmt.Errorf("reading %s: %w", fileName, err)
+	}
+
+	var rj runJSON
+	if err := json.Unmarshal(data, &rj); err != nil {
+		return result.RunResult{}, fmt.Errorf("parsing %s: %w", fileName, err)
+	}
+
+	run := result.RunResult{
+		Sample:        rj.Sample,
+		Text:          rj.Text,
+		IsError:       rj.IsError,
+		ExitCode:      rj.ExitCode,
+		CostUSD:       rj.CostUSD,
+		DurationMs:    rj.DurationMs,
+		SessionID:     rj.SessionID,
+		Pass:          rj.Pass,
+		Attempt:       rj.Attempt,
+		TotalAttempts: rj.TotalAttempts,
+		Retried:       rj.Retried,
+	}
+	if rj.Error != "" {
+		run.Err = fmt.Errorf("%s", rj.Error)
+	}
+
+	// Load conversation JSONL files if they exist.
+	baseName := strings.TrimSuffix(fileName, ".json")
+	run.Conversation, err = loadConversationJSONL(filepath.Join(varDir, baseName+".conversation.jsonl"))
+	if err != nil {
+		return result.RunResult{}, fmt.Errorf("loading conversation for %s: %w", fileName, err)
+	}
+	run.JudgeConversation, err = loadConversationJSONL(filepath.Join(varDir, baseName+".judge.jsonl"))
+	if err != nil {
+		return result.RunResult{}, fmt.Errorf("loading judge conversation for %s: %w", fileName, err)
+	}
+
+	return run, nil
 }
 
 // loadConversationJSONL reads a JSONL file and returns each line as json.RawMessage.

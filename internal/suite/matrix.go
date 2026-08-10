@@ -26,53 +26,61 @@ func expandMatrices(s *Suite) {
 func expandMatrix(m *Matrix) []Variant {
 	combos := cartesianProduct(m.Dimensions)
 	variants := make([]Variant, 0, len(combos))
-
 	for _, combo := range combos {
-		t := Variant{
-			DimensionValues: make(map[string]string, len(combo)),
-		}
+		variants = append(variants, variantFromCombo(combo))
+	}
+	return variants
+}
 
-		var nameParts []string
-		for _, entry := range combo {
-			nameParts = append(nameParts, entry.value.Label)
-			t.DimensionValues[entry.dimName] = entry.value.Label
-
-			if entry.value.Prompt != "" {
-				t.Prompt = entry.value.Prompt
-			}
-			if entry.value.ConfigDir != "" {
-				t.ConfigDir = entry.value.ConfigDir
-			}
-			if entry.value.Model != "" {
-				t.Model = entry.value.Model
-			}
-			if entry.value.Runner != "" {
-				t.Runner = entry.value.Runner
-			}
-			if entry.value.Skill != "" {
-				t.Skill = entry.value.Skill
-			}
-			if len(entry.value.Skills) > 0 {
-				t.Skills = append(t.Skills, entry.value.Skills...)
-			}
-			if entry.value.RunnerConfig != nil {
-				t.RunnerConfig = mergeMaps(t.RunnerConfig, entry.value.RunnerConfig)
-			}
-			if entry.value.Env != nil {
-				if t.Env == nil {
-					t.Env = make(map[string]string)
-				}
-				for k, v := range entry.value.Env {
-					t.Env[k] = v
-				}
-			}
-		}
-
-		t.Name = strings.Join(nameParts, "_")
-		variants = append(variants, t)
+// variantFromCombo builds a single variant from one combination of dimension
+// values, merging each value's fields into the variant.
+func variantFromCombo(combo []dimensionEntry) Variant {
+	t := Variant{
+		DimensionValues: make(map[string]string, len(combo)),
 	}
 
-	return variants
+	var nameParts []string
+	for _, entry := range combo {
+		nameParts = append(nameParts, entry.value.Label)
+		t.DimensionValues[entry.dimName] = entry.value.Label
+		applyDimensionValue(&t, entry.value)
+	}
+
+	t.Name = strings.Join(nameParts, "_")
+	return t
+}
+
+// applyDimensionValue merges a dimension value's non-empty fields into t.
+func applyDimensionValue(t *Variant, v MatrixDimensionValue) {
+	if v.Prompt != "" {
+		t.Prompt = v.Prompt
+	}
+	if v.ConfigDir != "" {
+		t.ConfigDir = v.ConfigDir
+	}
+	if v.Model != "" {
+		t.Model = v.Model
+	}
+	if v.Runner != "" {
+		t.Runner = v.Runner
+	}
+	if v.Skill != "" {
+		t.Skill = v.Skill
+	}
+	if len(v.Skills) > 0 {
+		t.Skills = append(t.Skills, v.Skills...)
+	}
+	if v.RunnerConfig != nil {
+		t.RunnerConfig = mergeMaps(t.RunnerConfig, v.RunnerConfig)
+	}
+	if v.Env != nil {
+		if t.Env == nil {
+			t.Env = make(map[string]string)
+		}
+		for k, val := range v.Env {
+			t.Env[k] = val
+		}
+	}
 }
 
 // dimensionEntry pairs a dimension name with one of its values.

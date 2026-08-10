@@ -1,4 +1,4 @@
-.PHONY: build install lint vet test check-lite check
+.PHONY: build install lint lint-filesize vet test check-lite check install-hooks
 
 # ── Build ────────────────────────────────────────────────────────────
 COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
@@ -17,6 +17,11 @@ vet:
 lint:
 	golangci-lint run ./...
 
+# Enforce per-file line limits (300 non-test / 500 test). See
+# scripts/check-file-length.sh and README.md ("Code size limits").
+lint-filesize:
+	bash scripts/check-file-length.sh
+
 # ── Tests ────────────────────────────────────────────────────────────
 test:
 	go test ./...
@@ -29,7 +34,14 @@ validate-examples: build
 	done; \
 	if [ $$fail -eq 0 ]; then echo "all example suites valid"; else exit 1; fi
 
+# ── Git hooks ────────────────────────────────────────────────────────
+# Point git at the tracked .githooks/ directory so the pre-commit hook
+# (which runs `make check-lite`) is active. Run once per clone.
+install-hooks:
+	git config core.hooksPath .githooks
+	@echo "pre-commit hook installed (core.hooksPath -> .githooks)"
+
 # ── Composite targets ───────────────────────────────────────────────
-check-lite: vet lint build validate-examples  ## Compile + lint + validate examples. No tests.
+check-lite: vet lint lint-filesize build validate-examples  ## Compile + lint + size limits + validate examples. No tests.
 
 check: check-lite test      ## Full validation: compile, lint, tests.

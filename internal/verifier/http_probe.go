@@ -29,9 +29,20 @@ func (v *HTTPProbeVerifier) Verify(ctx context.Context, _ VerifyInput) VerifyRes
 		method = http.MethodGet
 	}
 
+	statusCode, body, failure := v.request(ctx, method)
+	if failure != nil {
+		return *failure
+	}
+
+	return v.checkAssertions(method, statusCode, body)
+}
+
+// request issues the probe's HTTP request and reads the body. It returns a
+// non-nil failure result only on transport-level errors.
+func (v *HTTPProbeVerifier) request(ctx context.Context, method string) (int, []byte, *VerifyResult) {
 	req, err := http.NewRequestWithContext(ctx, method, v.Probe.URL, nil)
 	if err != nil {
-		return VerifyResult{
+		return 0, nil, &VerifyResult{
 			Pass:   false,
 			Reason: fmt.Sprintf("failed to create request for %s %s: %v", method, v.Probe.URL, err),
 		}
@@ -40,12 +51,12 @@ func (v *HTTPProbeVerifier) Verify(ctx context.Context, _ VerifyInput) VerifyRes
 	resp, err := v.client().Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
-			return VerifyResult{
+			return 0, nil, &VerifyResult{
 				Pass:   false,
 				Reason: fmt.Sprintf("request timed out for %s %s: %v", method, v.Probe.URL, ctx.Err()),
 			}
 		}
-		return VerifyResult{
+		return 0, nil, &VerifyResult{
 			Pass:   false,
 			Reason: fmt.Sprintf("request failed for %s %s: %v", method, v.Probe.URL, err),
 		}
@@ -54,18 +65,22 @@ func (v *HTTPProbeVerifier) Verify(ctx context.Context, _ VerifyInput) VerifyRes
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return VerifyResult{
+		return 0, nil, &VerifyResult{
 			Pass:   false,
 			Reason: fmt.Sprintf("failed to read response body from %s %s: %v", method, v.Probe.URL, err),
 		}
 	}
 
+	return resp.StatusCode, body, nil
+}
+
+func (v *HTTPProbeVerifier) checkAssertions(method string, statusCode int, body []byte) VerifyResult {
 	a := v.Probe.Assert
 
-	if a.Status != nil && resp.StatusCode != *a.Status {
+	if a.Status != nil && statusCode != *a.Status {
 		return VerifyResult{
 			Pass:   false,
-			Reason: fmt.Sprintf("expected status %d, got %d from %s %s", *a.Status, resp.StatusCode, method, v.Probe.URL),
+			Reason: fmt.Sprintf("expected status %d, got %d from %s %s", *a.Status, statusCode, method, v.Probe.URL),
 		}
 	}
 

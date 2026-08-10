@@ -2,12 +2,12 @@ package suite
 
 // Suite is the top-level configuration for a benchmark suite.
 type Suite struct {
-	Version     int       `yaml:"version"`
-	Description string    `yaml:"description"`
-	Defaults    Defaults  `yaml:"defaults"`
-	Ranking     *Ranking  `yaml:"ranking,omitempty"`
-	Compare     *Compare  `yaml:"compare,omitempty"`
-	Evals       []Eval    `yaml:"evals"`
+	Version     int      `yaml:"version"`
+	Description string   `yaml:"description"`
+	Defaults    Defaults `yaml:"defaults"`
+	Ranking     *Ranking `yaml:"ranking,omitempty"`
+	Compare     *Compare `yaml:"compare,omitempty"`
+	Evals       []Eval   `yaml:"evals"`
 }
 
 // Ranking configures how variants are scored and ranked.
@@ -23,6 +23,7 @@ type RankingWeights struct {
 	Duration    float64 `yaml:"duration"`
 	Quality     float64 `yaml:"quality"`
 }
+
 // Retry configures retry behavior for failed sample runs.
 type Retry struct {
 	MaxAttempts *int   `yaml:"max_attempts"` // total attempts including the first (default: 1)
@@ -51,7 +52,7 @@ type Eval struct {
 	Prompt       string         `yaml:"prompt"`
 	Dir          string         `yaml:"dir"`
 	Isolate      *bool          `yaml:"isolate"`
-Samples      *int           `yaml:"samples"`
+	Samples      *int           `yaml:"samples"`
 	Timeout      *int           `yaml:"timeout"`
 	Parallel     *int           `yaml:"parallel"`
 	Model        string         `yaml:"model"`
@@ -63,7 +64,7 @@ Samples      *int           `yaml:"samples"`
 	Retry        *Retry         `yaml:"retry"`
 	Matrix       *Matrix        `yaml:"matrix,omitempty"`
 	Compare      *Compare       `yaml:"compare,omitempty"`
-	Variants []Variant `yaml:"variants"`
+	Variants     []Variant      `yaml:"variants"`
 }
 
 // VerifyStep defines a single verification step.
@@ -202,7 +203,7 @@ type Matrix struct {
 
 // MatrixDimension defines a single axis of variation in a matrix.
 type MatrixDimension struct {
-	Name   string              `yaml:"name"`
+	Name   string                 `yaml:"name"`
 	Values []MatrixDimensionValue `yaml:"values"`
 }
 

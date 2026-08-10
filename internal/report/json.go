@@ -10,11 +10,11 @@ import (
 
 // jsonReport is the top-level JSON output structure.
 type jsonReport struct {
-	Description string          `json:"description"`
-	StartedAt   string          `json:"started_at"`
-	FinishedAt  string          `json:"finished_at"`
-	Evals       []jsonEval      `json:"evals"`
-	Rankings    []jsonRanking   `json:"rankings,omitempty"`
+	Description string        `json:"description"`
+	StartedAt   string        `json:"started_at"`
+	FinishedAt  string        `json:"finished_at"`
+	Evals       []jsonEval    `json:"evals"`
+	Rankings    []jsonRanking `json:"rankings,omitempty"`
 }
 
 type jsonSkipped struct {
@@ -26,7 +26,7 @@ type jsonEval struct {
 	ID         string          `json:"id"`
 	Name       string          `json:"name"`
 	Error      string          `json:"error,omitempty"`
-	Variants []jsonVariant `json:"variants"`
+	Variants   []jsonVariant   `json:"variants"`
 	Skipped    []jsonSkipped   `json:"skipped,omitempty"`
 	Comparison *jsonComparison `json:"comparison,omitempty"`
 }
@@ -106,65 +106,79 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 	}
 
 	for _, eval := range sr.Evals {
-		je := jsonEval{ID: eval.EvalID, Name: eval.EvalName}
-		if eval.Err != nil {
-			je.Error = eval.Err.Error()
-		}
-		for _, s := range eval.Skipped {
-			je.Skipped = append(je.Skipped, jsonSkipped{Name: s.Name, Reason: s.Reason})
-		}
-		if c := eval.Comparison; c != nil {
-			jc := &jsonComparison{Model: c.Model, Skipped: c.Skipped}
-			for _, s := range c.Scores {
-				jc.Scores = append(jc.Scores, jsonComparativeScore{
-					Variant: s.Variant,
-					Rating:  s.Rating,
-					Score:   s.Score,
-					Reason:  s.Reason,
-				})
-			}
-			je.Comparison = jc
-		}
-		for _, v := range eval.Variants {
-			jt := jsonVariant{
-				Name:      v.Name,
-				Runner:    v.Runner,
-				Model:     v.Model,
-				IsControl: v.IsControl,
-			}
-			for _, run := range v.Runs {
-				jr := jsonRun{
-					Sample:     run.Sample,
-					Status:     runStatus(run),
-					CostUSD:    run.CostUSD,
-					DurationMs: run.DurationMs,
-					Pass:       run.Pass,
-				}
-				if run.Err != nil {
-					jr.Error = run.Err.Error()
-				}
-				jt.Runs = append(jt.Runs, jr)
-			}
-			if agg := v.Aggregate; agg != nil {
-				jt.Aggregate = &jsonAggregate{
-					MedianCostUSD:    agg.MedianCostUSD,
-					MinCostUSD:       agg.MinCostUSD,
-					MaxCostUSD:       agg.MaxCostUSD,
-					MedianDurationMs: agg.MedianDurationMs,
-					MinDurationMs:    agg.MinDurationMs,
-					MaxDurationMs:    agg.MaxDurationMs,
-					CostCV:           agg.CostCV,
-					DurationCV:       agg.DurationCV,
-					Pass:             agg.Pass,
-				}
-			}
-			je.Variants = append(je.Variants, jt)
-		}
-		r.Evals = append(r.Evals, je)
+		r.Evals = append(r.Evals, buildJSONEval(eval))
 	}
+	r.Rankings = buildJSONRankings(sr, weights)
 
+	return r
+}
+
+func buildJSONEval(eval result.EvalResult) jsonEval {
+	je := jsonEval{ID: eval.EvalID, Name: eval.EvalName}
+	if eval.Err != nil {
+		je.Error = eval.Err.Error()
+	}
+	for _, s := range eval.Skipped {
+		je.Skipped = append(je.Skipped, jsonSkipped{Name: s.Name, Reason: s.Reason})
+	}
+	if c := eval.Comparison; c != nil {
+		jc := &jsonComparison{Model: c.Model, Skipped: c.Skipped}
+		for _, s := range c.Scores {
+			jc.Scores = append(jc.Scores, jsonComparativeScore{
+				Variant: s.Variant,
+				Rating:  s.Rating,
+				Score:   s.Score,
+				Reason:  s.Reason,
+			})
+		}
+		je.Comparison = jc
+	}
+	for _, v := range eval.Variants {
+		je.Variants = append(je.Variants, buildJSONVariant(v))
+	}
+	return je
+}
+
+func buildJSONVariant(v result.VariantResult) jsonVariant {
+	jt := jsonVariant{
+		Name:      v.Name,
+		Runner:    v.Runner,
+		Model:     v.Model,
+		IsControl: v.IsControl,
+	}
+	for _, run := range v.Runs {
+		jr := jsonRun{
+			Sample:     run.Sample,
+			Status:     runStatus(run),
+			CostUSD:    run.CostUSD,
+			DurationMs: run.DurationMs,
+			Pass:       run.Pass,
+		}
+		if run.Err != nil {
+			jr.Error = run.Err.Error()
+		}
+		jt.Runs = append(jt.Runs, jr)
+	}
+	if agg := v.Aggregate; agg != nil {
+		jt.Aggregate = &jsonAggregate{
+			MedianCostUSD:    agg.MedianCostUSD,
+			MinCostUSD:       agg.MinCostUSD,
+			MaxCostUSD:       agg.MaxCostUSD,
+			MedianDurationMs: agg.MedianDurationMs,
+			MinDurationMs:    agg.MinDurationMs,
+			MaxDurationMs:    agg.MaxDurationMs,
+			CostCV:           agg.CostCV,
+			DurationCV:       agg.DurationCV,
+			Pass:             agg.Pass,
+		}
+	}
+	return jt
+}
+
+func buildJSONRankings(sr *result.SuiteResult, weights Weights) []jsonRanking {
 	showQuality := hasComparison(sr)
 	ranks := RankVariants(sr, weights)
+	var rankings []jsonRanking
 	for _, rank := range ranks {
 		jr := jsonRanking{
 			Rank:           rank.Rank,
@@ -180,8 +194,7 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 			q := rank.QualityScore
 			jr.QualityScore = &q
 		}
-		r.Rankings = append(r.Rankings, jr)
+		rankings = append(rankings, jr)
 	}
-
-	return r
+	return rankings
 }

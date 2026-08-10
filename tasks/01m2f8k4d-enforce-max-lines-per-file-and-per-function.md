@@ -1,12 +1,13 @@
 ---
 id: "01m2f8k4d"
 title: "Enforce max lines per file and per function in check-lite + pre-commit"
-status: pending
+status: completed
 priority: medium
 effort: medium
 type: chore
 tags: ["tooling", "lint", "tech-debt"]
 created: 2026-08-10
+completed_at: 2026-08-10
 ---
 
 # Enforce max lines per file and per function in check-lite + pre-commit
@@ -38,16 +39,16 @@ files. Expect a meaningful refactor pass — several existing files are 2–6x o
 
 ## Tasks
 
-- [ ] Add a `.golangci.yml` that keeps the current default linters and enables
+- [x] Add a `.golangci.yml` that keeps the current default linters and enables
       function-length enforcement (`funlen`) plus file-length enforcement
       (`revive`'s `file-length-limit` rule, since golangci-lint has no standalone
       file-length linter)
-- [ ] Confirm the pinned golangci-lint version supports `file-length-limit`; if
+- [x] Confirm the pinned golangci-lint version supports `file-length-limit`; if
       not, either bump it or implement the file check as a small script invoked
       from a `make lint-filesize` target
-- [ ] Set per-path overrides so `_test.go` files get the larger file budget
+- [x] Set per-path overrides so `_test.go` files get the larger file budget
       (table-driven tests legitimately run long) while still being bounded
-- [ ] Run the linters and record the current violation list. File-length
+- [x] Run the linters and record the current violation list. File-length
       violations as of 2026-08-10 (9 files; re-measure at implementation time,
       the tree was dirty):
 
@@ -64,17 +65,17 @@ files. Expect a meaningful refactor pass — several existing files are 2–6x o
       ```
 
       Function-length violations are unknown until `funlen` runs.
-- [ ] Split or refactor existing violations, or add narrowly-scoped `//nolint`
+- [x] Split or refactor existing violations, or add narrowly-scoped `//nolint`
       exemptions with a reason where a split is not worth it — no blanket
       directory exclusions
-- [ ] Ensure `make check-lite` fails on a violation (it already depends on
+- [x] Ensure `make check-lite` fails on a violation (it already depends on
       `lint`; add any new target to the `check-lite` prerequisite list)
-- [ ] Add a checked-in pre-commit hook that runs `make check-lite`, plus a
+- [x] Add a checked-in pre-commit hook that runs `make check-lite`, plus a
       `make install-hooks` target (or `core.hooksPath` pointing at a tracked
       `.githooks/` directory) so the hook is set up with one command —
       `.git/hooks/` is not version-controlled and is currently empty
-- [ ] Document the limits and hook installation in `README.md` / `CLAUDE.md`
-- [ ] Add a test covering the new tooling: a check that fails if a file or
+- [x] Document the limits and hook installation in `README.md` / `CLAUDE.md`
+- [x] Add a test covering the new tooling: a check that fails if a file or
       function exceeds the limits, or a script test if the file check is
       implemented as a script
 
@@ -95,3 +96,22 @@ files. Expect a meaningful refactor pass — several existing files are 2–6x o
   to a custom script if the linter cannot express the file-length rule.
 - The hook should be fast enough to not be annoying — `check-lite` already skips
   tests, which is why it is the right target.
+
+## Implementation notes
+
+- **File-length via script, not revive.** `revive`'s `file-length-limit` is a
+  single global rule and cannot express per-path budgets (300 non-test / 500
+  test). File-length is enforced by `scripts/check-file-length.sh` (run as
+  `make lint-filesize`, wired into `check-lite` and CI), tested by
+  `scripts/check_file_length_test.go`.
+- **funlen (40 lines / 25 statements) applies to non-test code only.** Test
+  files are exempted in `.golangci.yml` (`issues.exclude-rules`) because
+  table-driven tests run long; they stay bounded by the 500-line file budget.
+- **All violations resolved by splitting/extraction — no `//nolint`.** The 5
+  oversized non-test files and 4 oversized test files were split into cohesive
+  same-package files; the 27 over-limit non-test functions were fixed by
+  extracting private helpers.
+- **Hook installation:** `.githooks/pre-commit` (runs `make check-lite`) is
+  tracked; `make install-hooks` points `core.hooksPath` at it for a fresh clone.
+- Limits documented in `README.md` (Development → Code size limits) and
+  `CLAUDE.md`.

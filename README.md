@@ -74,6 +74,39 @@ skival report <results-dir>    Generate reports from saved results
 
 See the [documentation site](https://driangle.github.io/skival/) for the full configuration schema, verifier reference, and CLI guide.
 
+## Development
+
+### Code size limits
+
+To keep files and functions readable, the following limits are enforced by
+`make check-lite`:
+
+| Scope | Limit |
+| --- | --- |
+| Lines per file (non-test) | 300 |
+| Lines per file (`_test.go`) | 500 |
+| Lines per function | 40 |
+| Statements per function | 25 |
+
+Function-length limits are enforced by [`funlen`](https://golangci-lint.run/usage/linters/#funlen)
+via `.golangci.yml` (test files are exempt — table-driven tests run long). File-length
+limits are enforced by `scripts/check-file-length.sh` (run as `make lint-filesize`).
+
+If a split is genuinely not worthwhile, add a narrowly-scoped
+`//nolint:funlen // <reason>` on the specific function — no blanket directory
+exclusions.
+
+### Pre-commit hook
+
+A tracked pre-commit hook (`.githooks/pre-commit`) runs `make check-lite` so
+size and lint violations are caught before they land. Install it once per clone:
+
+```bash
+make install-hooks
+```
+
+This points `core.hooksPath` at the tracked `.githooks/` directory.
+
 ## License
 
 MIT

@@ -204,6 +204,13 @@ func scoreEval(eval result.EvalResult, accs map[string]*variantAccumulator) {
 		return
 	}
 
+	foldMetrics(metrics, accs)
+	scoreComparison(eval, accs)
+}
+
+// foldMetrics scores each variant's cost/duration relative to the eval's best
+// variant and folds the results into the accumulators.
+func foldMetrics(metrics []evalMetric, accs map[string]*variantAccumulator) {
 	bestCost, bestDur := metrics[0].cost, metrics[0].dur
 	for _, m := range metrics[1:] {
 		if m.cost < bestCost {
@@ -222,8 +229,6 @@ func scoreEval(eval result.EvalResult, accs map[string]*variantAccumulator) {
 		a.durMedSum += m.dur
 		a.evalCount++
 	}
-
-	scoreComparison(eval, accs)
 }
 
 // scoreComparison folds this eval's comparative quality scores into each

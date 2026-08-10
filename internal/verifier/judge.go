@@ -49,27 +49,45 @@ type JudgeVerifier struct {
 }
 
 func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyResult {
-	criteria := strings.Join(v.Criteria, "\n- ")
-	toolActivity := SummarizeToolActivity(input.Conversation)
-	if toolActivity == "" {
-		toolActivity = "(no tool calls recorded)"
-	}
-	judgePrompt := fmt.Sprintf(judgePromptTemplate, v.AgentModel, v.Prompt, toolActivity, input.RunOutput, "- "+criteria)
+	judgePrompt := v.buildPrompt(input)
 
-	model := v.Model
-	if model == "" {
-		model = DefaultJudgeModel
-	}
-
-	session, err := v.Runner.Start(ctx, judgePrompt,
-		agentrunner.WithModel(model),
-		agentrunner.WithSkipPermissions(),
-	)
+	text, conversation, err := v.runJudge(ctx, judgePrompt)
 	if err != nil {
 		return VerifyResult{
 			Pass:   false,
 			Reason: fmt.Sprintf("judge invocation failed: %v", err),
 		}
+	}
+
+	vr := parseJudgeResponse(text)
+	vr.Conversation = conversation
+	return vr
+}
+
+// buildPrompt renders the judge prompt from the verifier's criteria and input.
+func (v *JudgeVerifier) buildPrompt(input VerifyInput) string {
+	criteria := strings.Join(v.Criteria, "\n- ")
+	toolActivity := SummarizeToolActivity(input.Conversation)
+	if toolActivity == "" {
+		toolActivity = "(no tool calls recorded)"
+	}
+	return fmt.Sprintf(judgePromptTemplate, v.AgentModel, v.Prompt, toolActivity, input.RunOutput, "- "+criteria)
+}
+
+// runJudge invokes the runner and returns the judge's final text along with the
+// captured conversation.
+func (v *JudgeVerifier) runJudge(ctx context.Context, prompt string) (string, []json.RawMessage, error) {
+	model := v.Model
+	if model == "" {
+		model = DefaultJudgeModel
+	}
+
+	session, err := v.Runner.Start(ctx, prompt,
+		agentrunner.WithModel(model),
+		agentrunner.WithSkipPermissions(),
+	)
+	if err != nil {
+		return "", nil, err
 	}
 
 	var conversation []json.RawMessage
@@ -81,15 +99,9 @@ func (v *JudgeVerifier) Verify(ctx context.Context, input VerifyInput) VerifyRes
 
 	res, err := session.Result()
 	if err != nil {
-		return VerifyResult{
-			Pass:   false,
-			Reason: fmt.Sprintf("judge invocation failed: %v", err),
-		}
+		return "", conversation, err
 	}
-
-	vr := parseJudgeResponse(res.Text)
-	vr.Conversation = conversation
-	return vr
+	return res.Text, conversation, nil
 }
 
 func parseJudgeResponse(text string) VerifyResult {

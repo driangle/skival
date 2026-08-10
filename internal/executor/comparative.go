@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
@@ -44,25 +45,35 @@ func runComparison(ctx context.Context, eval *suite.Eval, suiteCmp *suite.Compar
 		return
 	}
 
+	res := runComparativeJudge(ctx, eval, cmp, runner, candidates)
+	er.Comparison = buildComparison(eval.ID, model, res)
+}
+
+// runComparativeJudge builds the comparative input from the candidates and runs
+// the judge, returning its raw result.
+func runComparativeJudge(ctx context.Context, eval *suite.Eval, cmp *suite.Compare, runner agentrunner.Runner, candidates []comparisonCandidate) verifier.ComparativeResult {
 	vars := make([]verifier.ComparativeVariant, len(candidates))
 	for i, c := range candidates {
 		vars[i] = verifier.ComparativeVariant{Name: c.name, Output: c.output}
 	}
 
 	judge := &verifier.ComparativeJudge{Runner: runner, Model: cmp.Model}
-	res := judge.Compare(ctx, verifier.ComparativeInput{
+	return judge.Compare(ctx, verifier.ComparativeInput{
 		EvalPrompt: comparisonPrompt(eval),
 		Criteria:   cmp.Criteria,
 		Variants:   vars,
 		MaxChars:   cmp.EffectiveMaxChars(),
 	})
+}
 
+// buildComparison converts a comparative judge result into a Comparison,
+// degrading gracefully to a skip note when the judge failed.
+func buildComparison(evalID, model string, res verifier.ComparativeResult) *result.Comparison {
 	comp := &result.Comparison{Model: model, Conversation: res.Conversation}
 	if res.Err != nil {
-		slog.Debug("Comparative judge degraded to pass/fail", "eval", eval.ID, "err", res.Err)
+		slog.Debug("Comparative judge degraded to pass/fail", "eval", evalID, "err", res.Err)
 		comp.Skipped = fmt.Sprintf("comparison skipped: %v", res.Err)
-		er.Comparison = comp
-		return
+		return comp
 	}
 
 	for _, s := range res.Scores {
@@ -73,7 +84,7 @@ func runComparison(ctx context.Context, eval *suite.Eval, suiteCmp *suite.Compar
 			Reason:  s.Reason,
 		})
 	}
-	er.Comparison = comp
+	return comp
 }
 
 // comparisonCandidate is a variant eligible for comparison: it passed and has a

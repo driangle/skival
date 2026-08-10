@@ -44,35 +44,40 @@ func writeComparisonSection(w io.Writer, sr *result.SuiteResult) {
 
 	fmt.Fprintf(w, "## Comparative Quality\n\n")
 	for _, eval := range sr.Evals {
-		c := eval.Comparison
-		if c == nil {
-			continue
+		if eval.Comparison != nil {
+			writeComparisonEval(w, eval)
 		}
-		name := evalDisplayName(eval)
-		if len(c.Scores) == 0 {
-			reason := c.Skipped
-			if reason == "" {
-				reason = "no scores produced"
-			}
-			fmt.Fprintf(w, "**%s** — %s\n\n", name, reason)
-			continue
-		}
-
-		model := c.Model
-		if model != "" {
-			model = fmt.Sprintf(" (judge: %s)", model)
-		}
-		fmt.Fprintf(w, "**%s**%s\n\n", name, model)
-
-		tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-		fmt.Fprintf(tw, "VARIANT\tRATING\tSCORE\tREASON\n")
-		fmt.Fprintf(tw, "---------\t------\t-----\t------\n")
-		for _, s := range c.Scores {
-			fmt.Fprintf(tw, "%s\t%d/5\t%.2f\t%s\n", s.Variant, s.Rating, s.Score, s.Reason)
-		}
-		tw.Flush()
-		fmt.Fprintln(w)
 	}
+}
+
+// writeComparisonEval renders a single eval's comparative quality block: either
+// the score table, or a note when no scores were produced.
+func writeComparisonEval(w io.Writer, eval result.EvalResult) {
+	c := eval.Comparison
+	name := evalDisplayName(eval)
+	if len(c.Scores) == 0 {
+		reason := c.Skipped
+		if reason == "" {
+			reason = "no scores produced"
+		}
+		fmt.Fprintf(w, "**%s** — %s\n\n", name, reason)
+		return
+	}
+
+	model := c.Model
+	if model != "" {
+		model = fmt.Sprintf(" (judge: %s)", model)
+	}
+	fmt.Fprintf(w, "**%s**%s\n\n", name, model)
+
+	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	fmt.Fprintf(tw, "VARIANT\tRATING\tSCORE\tREASON\n")
+	fmt.Fprintf(tw, "---------\t------\t-----\t------\n")
+	for _, s := range c.Scores {
+		fmt.Fprintf(tw, "%s\t%d/5\t%.2f\t%s\n", s.Variant, s.Rating, s.Score, s.Reason)
+	}
+	tw.Flush()
+	fmt.Fprintln(w)
 }
 
 // hasMultipleRunners returns true when the suite contains more than one distinct runner name.
@@ -154,10 +159,10 @@ func variantLabel(t result.VariantResult, multiRunner, multiModel bool) string {
 }
 
 func writeAggregateRow(tw *tabwriter.Writer, evalName, variantName string, agg *result.Aggregate) {
-	costRange := fmt.Sprintf("$%.4f [$%.4f\u2013$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
-	durationRange := fmt.Sprintf("%s [%s\u2013%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs))
+	costRange := fmt.Sprintf("$%.4f [$%.4f–$%.4f]", agg.MedianCostUSD, agg.MinCostUSD, agg.MaxCostUSD)
+	durationRange := fmt.Sprintf("%s [%s–%s]", formatDuration(agg.MedianDurationMs), formatDuration(agg.MinDurationMs), formatDuration(agg.MaxDurationMs))
 
-	passStr := "\u2014"
+	passStr := "—"
 	if agg.Pass != nil {
 		if *agg.Pass {
 			passStr = "PASS"
@@ -180,164 +185,4 @@ func writeAggregateRow(tw *tabwriter.Writer, evalName, variantName string, agg *
 
 	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\n",
 		evalName, variantName, passStr, costRange, durationRange, cvInfo)
-}
-
-func writeWorkdirsSection(w io.Writer, sr *result.SuiteResult) {
-	var hasWorkdir bool
-	for _, eval := range sr.Evals {
-		for _, v := range eval.Variants {
-			for _, run := range v.Runs {
-				if run.WorkDir != "" {
-					hasWorkdir = true
-					break
-				}
-			}
-		}
-	}
-	if !hasWorkdir {
-		return
-	}
-
-	fmt.Fprintf(w, "## Workdirs\n\n")
-	for _, eval := range sr.Evals {
-		name := evalDisplayName(eval)
-		for _, v := range eval.Variants {
-			for _, run := range v.Runs {
-				if run.WorkDir != "" {
-					fmt.Fprintf(w, "- **%s** > %s > sample %d: `%s`\n",
-						name, v.Name, run.Sample, run.WorkDir)
-				}
-			}
-		}
-	}
-	fmt.Fprintln(w)
-}
-
-func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
-	var errors []result.EvalResult
-	for _, eval := range sr.Evals {
-		if eval.Err != nil {
-			errors = append(errors, eval)
-		}
-	}
-	if len(errors) == 0 {
-		return
-	}
-
-	fmt.Fprintf(w, "## Errors\n\n")
-	for _, eval := range errors {
-		fmt.Fprintf(w, "- **%s** (`%s`): %v\n", eval.EvalName, eval.EvalID, eval.Err)
-	}
-	fmt.Fprintln(w)
-}
-
-func writeSkippedSection(w io.Writer, sr *result.SuiteResult) {
-	var hasSkipped bool
-	for _, eval := range sr.Evals {
-		if len(eval.Skipped) > 0 {
-			hasSkipped = true
-			break
-		}
-	}
-	if !hasSkipped {
-		return
-	}
-
-	fmt.Fprintf(w, "## Skipped Variants\n\n")
-	for _, eval := range sr.Evals {
-		if len(eval.Skipped) == 0 {
-			continue
-		}
-		fmt.Fprintf(w, "**%s** (`%s`):\n", eval.EvalName, eval.EvalID)
-		for _, s := range eval.Skipped {
-			fmt.Fprintf(w, "- %s — %s\n", s.Name, s.Reason)
-		}
-	}
-	fmt.Fprintln(w)
-}
-
-func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiModel bool, weights Weights) {
-	ranks := RankVariants(sr, weights)
-	if len(ranks) < 2 {
-		return
-	}
-
-	fmt.Fprintf(w, "## Rankings\n\n")
-
-	showQuality := hasComparison(sr)
-
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-
-	// Build header dynamically based on which extra columns are needed.
-	header := "RANK\tVARIANT"
-	sep := "----\t---------"
-	if multiRunner {
-		header += "\tRUNNER"
-		sep += "\t------"
-	}
-	if multiModel {
-		header += "\tMODEL"
-		sep += "\t-----"
-	}
-	header += "\tSCORE\tPASS RATE"
-	sep += "\t-----\t---------"
-	if showQuality {
-		header += "\tQUALITY"
-		sep += "\t-------"
-	}
-	header += "\tMEDIAN COST\tMEDIAN DURATION\n"
-	sep += "\t-----------\t---------------\n"
-	fmt.Fprint(tw, header)
-	fmt.Fprint(tw, sep)
-
-	for _, r := range ranks {
-		fmt.Fprintf(tw, "#%d\t%s", r.Rank, r.Name)
-		if multiRunner {
-			fmt.Fprintf(tw, "\t%s", r.Runner)
-		}
-		if multiModel {
-			fmt.Fprintf(tw, "\t%s", r.Model)
-		}
-		fmt.Fprintf(tw, "\t%.3f\t%.0f%%", r.CompositeScore, r.PassRate*100)
-		if showQuality {
-			fmt.Fprintf(tw, "\t%.2f", r.QualityScore)
-		}
-		fmt.Fprintf(tw, "\t$%.4f\t%s\n",
-			r.MedianCostUSD,
-			formatDuration(r.MedianDuration))
-	}
-
-	tw.Flush()
-	fmt.Fprintln(w)
-}
-
-// evalDisplayName returns the eval name, falling back to ID.
-func evalDisplayName(eval result.EvalResult) string {
-	if eval.EvalName != "" {
-		return eval.EvalName
-	}
-	return eval.EvalID
-}
-
-func runStatus(run result.RunResult) string {
-	if run.Err != nil {
-		return "error"
-	}
-	if run.Pass != nil {
-		if *run.Pass {
-			return "pass"
-		}
-		return "fail"
-	}
-	if run.IsError {
-		return "failed"
-	}
-	return "ok"
-}
-
-func formatDuration(ms int64) string {
-	if ms < 1000 {
-		return fmt.Sprintf("%dms", ms)
-	}
-	return fmt.Sprintf("%.1fs", float64(ms)/1000)
 }

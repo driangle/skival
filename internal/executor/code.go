@@ -81,17 +81,34 @@ func ExecuteCode(ctx context.Context, output string, lang string, timeout time.D
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	tmpDir, err := os.MkdirTemp("", "skival-exec-*")
+	tmpDir, tmpFile, err := writeCodeFile(code, rt)
 	if err != nil {
-		return ExecutionResult{Err: fmt.Errorf("creating temp dir: %w", err)}
+		return ExecutionResult{Err: err}
 	}
 	defer os.RemoveAll(tmpDir)
 
-	tmpFile := filepath.Join(tmpDir, "main"+rt.Ext)
-	if err := os.WriteFile(tmpFile, []byte(code), 0o600); err != nil {
-		return ExecutionResult{Err: fmt.Errorf("writing temp file: %w", err)}
+	return runCode(ctx, rt, tmpDir, tmpFile, timeout)
+}
+
+// writeCodeFile creates a temp directory and writes the code to a runtime-appropriate
+// file, returning the directory and file paths. The directory is removed on write failure.
+func writeCodeFile(code string, rt runtime) (tmpDir, tmpFile string, err error) {
+	tmpDir, err = os.MkdirTemp("", "skival-exec-*")
+	if err != nil {
+		return "", "", fmt.Errorf("creating temp dir: %w", err)
 	}
 
+	tmpFile = filepath.Join(tmpDir, "main"+rt.Ext)
+	if err := os.WriteFile(tmpFile, []byte(code), 0o600); err != nil {
+		os.RemoveAll(tmpDir)
+		return "", "", fmt.Errorf("writing temp file: %w", err)
+	}
+
+	return tmpDir, tmpFile, nil
+}
+
+// runCode runs the prepared code file with the runtime's command and captures output.
+func runCode(ctx context.Context, rt runtime, tmpDir, tmpFile string, timeout time.Duration) ExecutionResult {
 	args := append(rt.Cmd[1:], tmpFile)
 	cmd := exec.CommandContext(ctx, rt.Cmd[0], args...)
 	cmd.Dir = tmpDir

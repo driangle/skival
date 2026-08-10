@@ -90,7 +90,26 @@ func (j *ComparativeJudge) Compare(ctx context.Context, in ComparativeInput) Com
 		return ComparativeResult{Err: fmt.Errorf("comparative judge needs at least 2 variants, got %d", len(in.Variants))}
 	}
 
-	// Shuffle the display order so position does not bias the judge.
+	prompt, labels := j.buildPrompt(in)
+
+	text, conversation, err := j.runJudge(ctx, prompt)
+	if err != nil {
+		return ComparativeResult{Conversation: conversation, Err: err}
+	}
+
+	scores, err := parseComparativeResponse(text, labels, in.Variants)
+	return ComparativeResult{
+		Scores:       scores,
+		Conversation: conversation,
+		RawText:      text,
+		Err:          err,
+	}
+}
+
+// buildPrompt renders the comparative judge prompt, shuffling the display order
+// so position does not bias the judge. It returns the prompt and the anonymous
+// label assigned to each variant in the caller's original order.
+func (j *ComparativeJudge) buildPrompt(in ComparativeInput) (string, []string) {
 	perm := j.perm(len(in.Variants))
 	labels := make([]string, len(in.Variants))
 	var outputs strings.Builder
@@ -109,7 +128,12 @@ func (j *ComparativeJudge) Compare(ctx context.Context, in ComparativeInput) Com
 
 	criteria := "- " + strings.Join(in.Criteria, "\n- ")
 	prompt := fmt.Sprintf(comparativePromptTemplate, in.EvalPrompt, criteria, strings.TrimRight(outputs.String(), "\n"))
+	return prompt, labels
+}
 
+// runJudge invokes the runner and returns the judge's final text along with the
+// captured conversation. Errors are wrapped with a consistent message.
+func (j *ComparativeJudge) runJudge(ctx context.Context, prompt string) (string, []json.RawMessage, error) {
 	model := j.Model
 	if model == "" {
 		model = DefaultJudgeModel
@@ -120,7 +144,7 @@ func (j *ComparativeJudge) Compare(ctx context.Context, in ComparativeInput) Com
 		agentrunner.WithSkipPermissions(),
 	)
 	if err != nil {
-		return ComparativeResult{Err: fmt.Errorf("comparative judge invocation failed: %w", err)}
+		return "", nil, fmt.Errorf("comparative judge invocation failed: %w", err)
 	}
 
 	var conversation []json.RawMessage
@@ -132,16 +156,9 @@ func (j *ComparativeJudge) Compare(ctx context.Context, in ComparativeInput) Com
 
 	res, err := session.Result()
 	if err != nil {
-		return ComparativeResult{Conversation: conversation, Err: fmt.Errorf("comparative judge invocation failed: %w", err)}
+		return "", conversation, fmt.Errorf("comparative judge invocation failed: %w", err)
 	}
-
-	scores, err := parseComparativeResponse(res.Text, labels, in.Variants)
-	return ComparativeResult{
-		Scores:       scores,
-		Conversation: conversation,
-		RawText:      res.Text,
-		Err:          err,
-	}
+	return res.Text, conversation, nil
 }
 
 // perm returns a permutation of [0,n) using the judge's Rand if set, else the
