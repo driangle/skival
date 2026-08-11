@@ -133,11 +133,11 @@ func TestHTML_RendersComparison(t *testing.T) {
 		t.Fatalf("WriteHTML: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "Comparative Quality") {
-		t.Error("html missing comparative quality section")
+	if !strings.Contains(out, "Judge verdict") {
+		t.Error("html missing judge verdict section")
 	}
-	if !strings.Contains(out, ">Quality<") {
-		t.Error("html rankings missing Quality column header")
+	if !strings.Contains(out, "quality ·") {
+		t.Error("html rankings missing quality metric label")
 	}
 	if !strings.Contains(out, "great") {
 		t.Error("html missing score reason")

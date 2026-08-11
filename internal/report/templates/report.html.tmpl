@@ -3,116 +3,189 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eval Report</title>
+<title>Eval Report{{if .Description}} — {{.Description}}{{end}}</title>
 <style>{{.CSS}}</style>
 </head>
 <body>
+<div class="wrap">
 
-<h1>Eval Report</h1>
-{{if .Description}}<p class="description">{{.Description}}</p>{{end}}
-<p class="meta"><strong>Started:</strong> {{.StartedAt}} &nbsp; <strong>Finished:</strong> {{.FinishedAt}}</p>
+<header>
+  <div class="head-left">
+    <div class="brand"><span class="dot"></span><span class="kicker">skival eval report</span></div>
+    <h1>{{if .Description}}{{.Description}}{{else}}Eval Report{{end}}</h1>
+    <div class="runmeta">
+      <span>{{.StartedAt}}</span>
+      <span class="sep">·</span><span>{{.WallDuration}} wall</span>
+      <span class="sep">·</span><span>{{.Counts}}</span>
+    </div>
+  </div>
+  <div class="actions no-print">
+    <button id="theme-toggle" onclick="toggleTheme()">Dark</button>
+    <button onclick="printReport()">Print</button>
+  </div>
+</header>
 
-<h2>Results</h2>
-<table>
-<thead>
-<tr>
-  <th onclick="sortTable(this)">Eval</th>
-  <th onclick="sortTable(this)">Variant</th>
-  <th onclick="sortTable(this)">Sample</th>
-  <th onclick="sortTable(this)">Status</th>
-  <th onclick="sortTable(this)">Cost</th>
-  <th onclick="sortTable(this)">Duration</th>
-</tr>
-</thead>
-<tbody>
-{{range .Results}}<tr{{if .IsAgg}} class="agg"{{end}}>
-  <td>{{.Eval}}</td>
-  <td>{{.Variant}}</td>
-  <td>{{.Sample}}</td>
-  <td><span class="status-{{.Status}}">{{.Status}}</span></td>
-  <td>{{.Cost}}</td>
-  <td>{{.Duration}}{{if .CVInfo}}<span class="cv-info">{{.CVInfo}}</span>{{end}}</td>
-</tr>
-{{end}}</tbody>
-</table>
-
-{{if .Errors}}
-<h2>Errors</h2>
-<ul class="errors-list">
-{{range .Errors}}<li><span class="eval-name">{{.Name}}</span> <span class="eval-id">({{.ID}})</span>: {{.Message}}</li>
-{{end}}</ul>
-{{end}}
-
-{{if .Skipped}}
-<h2>Skipped Variants</h2>
-{{range .Skipped}}<div class="skipped-group">
-<h3>{{.Name}} <span class="eval-id">({{.ID}})</span></h3>
-<ul>
-{{range .Entries}}<li>{{.Name}} — {{.Reason}}</li>
-{{end}}</ul>
+<div class="card summary">
+  <div class="verdict">
+    <span class="kicker">Verdict</span>
+    {{if .Verdict.Winner}}
+    <div class="big"><b>{{.Verdict.Winner}}</b> <span>wins on composite score</span></div>
+    <p class="lede">{{.Verdict.Summary}}</p>
+    <div class="stats">
+      <div class="stat"><span class="stat-num">{{.Verdict.ScoreMargin}}</span><span class="stat-label">score margin</span></div>
+      <div class="stat"><span class="stat-num">{{.Verdict.CostDelta}}</span><span class="stat-label">median cost</span></div>
+      <div class="stat"><span class="stat-num">{{.Verdict.SpeedDelta}}</span><span class="stat-label">vs runner-up</span></div>
+    </div>
+    {{else}}
+    <p class="lede">Only one variant ran, so there is nothing to compare. The sample results below stand on their own.</p>
+    {{end}}
+  </div>
+  <div class="health">
+    <span class="kicker">Run health</span>
+    <div class="big"><b>{{.Health.PassSummary}}</b> <span>samples passed</span></div>
+    <div class="health-strip">
+      {{range .Health.Cells}}<div class="health-cell{{if not .Pass}} fail{{end}}" title="{{.Title}}"></div>
+      {{end}}
+    </div>
+    <div class="kv">
+      <div><span>Total spend</span><b>{{.Health.TotalSpend}}</b></div>
+      <div><span>Runner</span><b>{{.Health.Runners}}</b></div>
+      {{if .Health.Judge}}<div><span>Judge</span><b>{{.Health.Judge}}</b></div>{{end}}
+    </div>
+  </div>
 </div>
-{{end}}
-{{end}}
-
-{{if .Comparisons}}
-<h2>Comparative Quality</h2>
-{{range .Comparisons}}<div class="comparison-group">
-<h3>{{.Name}} <span class="eval-id">({{.ID}})</span>{{if .Model}} <span class="judge-model">judge: {{.Model}}</span>{{end}}</h3>
-{{if .Scores}}<table>
-<thead>
-<tr>
-  <th onclick="sortTable(this)">Variant</th>
-  <th onclick="sortTable(this)">Rating</th>
-  <th onclick="sortTable(this)">Score</th>
-  <th onclick="sortTable(this)">Reason</th>
-</tr>
-</thead>
-<tbody>
-{{range .Scores}}<tr>
-  <td>{{.Variant}}</td>
-  <td>{{.Rating}}</td>
-  <td>{{.Score}}</td>
-  <td>{{.Reason}}</td>
-</tr>
-{{end}}</tbody>
-</table>
-{{else}}<p class="comparison-skipped">{{if .Skipped}}{{.Skipped}}{{else}}no scores produced{{end}}</p>
-{{end}}</div>
-{{end}}
-{{end}}
 
 {{if .ShowRankings}}
-<h2>Rankings</h2>
-<table>
-<thead>
-<tr>
-  <th onclick="sortTable(this)">Rank</th>
-  <th onclick="sortTable(this)">Variant</th>
-  {{if .MultiRunner}}<th onclick="sortTable(this)">Runner</th>{{end}}
-  {{if .MultiModel}}<th onclick="sortTable(this)">Model</th>{{end}}
-  <th onclick="sortTable(this)">Score</th>
-  <th onclick="sortTable(this)">Pass Rate</th>
-  <th onclick="sortTable(this)">Median Cost</th>
-  <th onclick="sortTable(this)">Median Duration</th>
-  {{if .ShowQuality}}<th onclick="sortTable(this)">Quality</th>{{end}}
-</tr>
-</thead>
-<tbody>
-{{range .Rankings}}<tr>
-  <td>#{{.Rank}}</td>
-  <td>{{.Name}}</td>
-  {{if $.MultiRunner}}<td>{{.Runner}}</td>{{end}}
-  {{if $.MultiModel}}<td>{{.Model}}</td>{{end}}
-  <td>{{.CompositeScore}}</td>
-  <td>{{.PassRate}}</td>
-  <td>{{.MedianCost}}</td>
-  <td>{{.MedianDuration}}</td>
-  {{if $.ShowQuality}}<td>{{.QualityScore}}</td>{{end}}
-</tr>
-{{end}}</tbody>
-</table>
+<section>
+  <div class="sec-head">
+    <h2>Rankings</h2>
+    <span class="sec-note">{{.WeightsNote}}</span>
+  </div>
+  <div class="card">
+    {{range .Rankings}}<div class="rank-row{{if eq .Rank 1}} top{{end}}">
+      <span class="rank-num">#{{.Rank}}</span>
+      <div class="rank-id">
+        <span class="rank-name">{{.Name}}</span>
+        <span class="rank-model">{{.Attribution}}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-val">{{.CompositeScore}}</span>
+        <div class="bar"><i class="{{if eq .Rank 1}}lead{{else}}rest{{end}}" style="{{.CompositeWidth}}"></i></div>
+        <span class="metric-label">composite</span>
+      </div>
+      <div class="metric">
+        <span class="metric-val">{{if $.ShowQuality}}{{.QualityScore}}{{else}}{{.PassRate}}{{end}}</span>
+        <div class="bar"><i style="{{.QualityWidth}}"></i></div>
+        <span class="metric-label">{{if $.ShowQuality}}quality · {{.PassRate}} pass{{else}}pass rate{{end}}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-val">{{.MedianCost}}</span>
+        <div class="bar"><i style="{{.CostWidth}}"></i></div>
+        <span class="metric-label">median cost</span>
+      </div>
+      <div class="metric">
+        <span class="metric-val">{{.MedianDuration}}</span>
+        <div class="bar"><i style="{{.DurationWidth}}"></i></div>
+        <span class="metric-label">median duration</span>
+      </div>
+    </div>
+    {{end}}
+  </div>
+</section>
 {{end}}
 
+<section>
+  <div class="sec-head">
+    <h2>Samples</h2>
+    {{if .VariantNames}}<div class="filters no-print">
+      <span class="label">filter</span>
+      <button class="chip active" data-variant="" onclick="filterVariant(this)">all</button>
+      {{range .VariantNames}}<button class="chip" data-variant="{{.}}" onclick="filterVariant(this)">{{.}}</button>
+      {{end}}
+    </div>{{end}}
+  </div>
+
+  {{range .Evals}}<div class="card">
+    <button class="eval-head" onclick="toggleEval(this)">
+      <span class="caret">{{if .Open}}▾{{else}}▸{{end}}</span>
+      <span class="name">{{.Name}}</span>
+      <span class="id">{{.ID}}</span>
+      <span class="count">{{.Summary}}</span>
+    </button>
+    <div class="eval-body"{{if not .Open}} hidden{{end}}>
+      {{if .Rows}}<table>
+        <thead>
+        <tr>
+          <th onclick="sortTable(this)">Variant</th>
+          <th onclick="sortTable(this)">Sample</th>
+          <th onclick="sortTable(this)">Status</th>
+          <th class="num" onclick="sortTable(this)">Cost</th>
+          <th class="num" onclick="sortTable(this)">Duration</th>
+          <th onclick="sortTable(this)">Spread</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .Rows}}<tr data-variant="{{.Variant}}"{{if .IsAgg}} class="agg"{{end}}>
+          <td>{{.Variant}}</td>
+          <td class="mono">{{.Sample}}</td>
+          <td><span class="status {{.StatusClass}}">{{.Status}}</span></td>
+          <td class="num">{{.Cost}}</td>
+          <td class="num">{{.Duration}}</td>
+          <td class="spread"><div class="spread-inner">
+            <div class="spread-track"><i style="{{.SpanStyle}}"></i></div>
+            <span class="cv">{{.CVInfo}}</span>
+          </div></td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>{{end}}
+
+      {{if .Verdicts}}<div class="judge">
+        <div class="judge-head">
+          <span class="kicker">Judge verdict</span>
+          {{if .Judge}}<span class="model">{{.Judge}}</span>{{end}}
+        </div>
+        {{range .Verdicts}}<div class="verdict-item">
+          <button class="verdict-head" onclick="toggleVerdict(this)">
+            <span class="who">{{.Variant}}</span>
+            <span class="pips">{{range .Pips}}<i class="{{if .}}on{{end}}"></i>{{end}}</span>
+            <span class="rating">{{.Rating}} · {{.Score}}</span>
+            <span class="teaser">{{.Teaser}}</span>
+            <span class="caret">▸</span>
+          </button>
+          <p class="reason" hidden>{{.Reason}}</p>
+        </div>
+        {{end}}
+      </div>{{end}}
+
+      {{if .Note}}<p class="note">{{.Note}}</p>{{end}}
+      {{if .Skipped}}<ul class="list">
+        {{range .Skipped}}<li><span class="who">{{.Name}}</span> — {{.Reason}}</li>
+        {{end}}
+      </ul>{{end}}
+    </div>
+  </div>
+  {{end}}
+</section>
+
+{{if .Errors}}
+<section>
+  <div class="sec-head"><h2>Errors</h2></div>
+  <div class="card">
+    <ul class="list">
+      {{range .Errors}}<li><span class="who">{{.Name}}</span> <span class="id">{{.ID}}</span> — {{.Message}}</li>
+      {{end}}
+    </ul>
+  </div>
+</section>
+{{end}}
+
+<footer>
+  <span>skival · self-contained report · no network required</span>
+  <span>{{.StartedAt}} → {{.FinishedAt}}</span>
+</footer>
+
+</div>
 <script>{{.JS}}</script>
 </body>
 </html>

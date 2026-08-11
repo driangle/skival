@@ -10,22 +10,28 @@ import (
 	"github.com/driangle/skival/internal/result"
 )
 
-func TestWriteHTML_ValidDocument(t *testing.T) {
-	sr := &result.SuiteResult{
-		StartedAt:  time.Now(),
-		FinishedAt: time.Now(),
-	}
+// renderHTML renders a suite to HTML, failing the test on any error.
+func renderHTML(t *testing.T, sr *result.SuiteResult) string {
+	t.Helper()
 	var buf bytes.Buffer
 	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	out := buf.String()
+	return buf.String()
+}
 
-	for _, want := range []string{"<!DOCTYPE html>", "<table>", "</html>", "Eval Report"} {
+func wantAll(t *testing.T, out string, wants ...string) {
+	t.Helper()
+	for _, want := range wants {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in output", want)
 		}
 	}
+}
+
+func TestWriteHTML_ValidDocument(t *testing.T) {
+	sr := &result.SuiteResult{StartedAt: time.Now(), FinishedAt: time.Now()}
+	wantAll(t, renderHTML(t, sr), "<!DOCTYPE html>", "</html>", "Eval Report", "skival eval report", "Run health")
 }
 
 func TestWriteHTML_Header(t *testing.T) {
@@ -34,18 +40,7 @@ func TestWriteHTML_Header(t *testing.T) {
 		StartedAt:   time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC),
 		FinishedAt:  time.Date(2026, 3, 19, 10, 5, 0, 0, time.UTC),
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-
-	if !strings.Contains(out, "My test suite") {
-		t.Error("missing description")
-	}
-	if !strings.Contains(out, "2026-03-19") {
-		t.Error("missing date")
-	}
+	wantAll(t, renderHTML(t, sr), "My test suite", "2026-03-19", "300.0s wall")
 }
 
 func TestWriteHTML_ResultsTable(t *testing.T) {
@@ -62,42 +57,36 @@ func TestWriteHTML_ResultsTable(t *testing.T) {
 			}},
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-
-	for _, want := range []string{"fizzbuzz", "control", "$0.1234", "2.5s", "pass"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("missing %q in results table", want)
-		}
-	}
+	wantAll(t, renderHTML(t, sr), "fizzbuzz", "control", "$0.1234", "2.5s", "pass", `data-variant="control"`)
 }
 
 func TestWriteHTML_RankingTable(t *testing.T) {
-	sr := &result.SuiteResult{
-		StartedAt:  time.Now(),
-		FinishedAt: time.Now(),
-		Evals: []result.EvalResult{{
-			Variants: []result.VariantResult{
-				{Name: "a", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
-				{Name: "b", Runs: []result.RunResult{{CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
-			},
-		}},
-	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
+	out := renderHTML(t, twoVariantSuite())
+	wantAll(t, out, "Rankings", "#1", "composite", "Verdict", "wins on composite score")
+}
 
-	if !strings.Contains(out, "Rankings") {
-		t.Error("missing rankings section")
+// The verdict block must be derivable from the rankings it sits above: the
+// winner is rank #1 and the margin is signed against the runner-up.
+func TestWriteHTML_VerdictMatchesRankings(t *testing.T) {
+	out := renderHTML(t, twoVariantSuite())
+	if !strings.Contains(out, "<b>a</b>") {
+		t.Error("winner should be variant a")
 	}
-	if !strings.Contains(out, "#1") {
-		t.Error("missing rank #1")
+	// The "+" of the signed margin is emitted as the HTML entity &#43; by
+	// html/template's text escaper; browsers render it back to "+".
+	if !strings.Contains(out, "&#43;0.") {
+		t.Error("missing positive score margin against runner-up")
 	}
+	if !strings.Contains(out, "× faster") && !strings.Contains(out, "× slower") {
+		t.Error("missing speed ratio against runner-up")
+	}
+}
+
+// Run health counts every sample run, so the headline can never disagree with
+// the strip of per-sample cells beneath it.
+func TestWriteHTML_RunHealth(t *testing.T) {
+	out := renderHTML(t, twoVariantSuite())
+	wantAll(t, out, "1/2", "samples passed", `class="health-cell`, `class="health-cell fail"`, "$3.0000")
 }
 
 func TestWriteHTML_NoRankingForSingleVariant(t *testing.T) {
@@ -110,13 +99,12 @@ func TestWriteHTML_NoRankingForSingleVariant(t *testing.T) {
 			},
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if strings.Contains(buf.String(), "Rankings") {
+	out := renderHTML(t, sr)
+	if strings.Contains(out, "Rankings") {
 		t.Error("should not show rankings for single variant")
+	}
+	if !strings.Contains(out, "nothing to compare") {
+		t.Error("should explain why there is no verdict")
 	}
 }
 
@@ -130,21 +118,7 @@ func TestWriteHTML_Errors(t *testing.T) {
 			Err:      fmt.Errorf("setup.before: hook failed"),
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-
-	if !strings.Contains(out, "Errors") {
-		t.Error("missing errors section")
-	}
-	if !strings.Contains(out, "broken eval") {
-		t.Error("missing eval name in errors")
-	}
-	if !strings.Contains(out, "hook failed") {
-		t.Error("missing error message")
-	}
+	wantAll(t, renderHTML(t, sr), "Errors", "broken eval", "hook failed")
 }
 
 func TestWriteHTML_SkippedVariants(t *testing.T) {
@@ -160,24 +134,10 @@ func TestWriteHTML_SkippedVariants(t *testing.T) {
 			},
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-
-	if !strings.Contains(out, "Skipped Variants") {
-		t.Error("missing skipped variants section")
-	}
-	if !strings.Contains(out, "ctrl") {
-		t.Error("missing skipped variant name")
-	}
-	if !strings.Contains(out, "before hook failed") {
-		t.Error("missing skip reason")
-	}
+	wantAll(t, renderHTML(t, sr), "my-eval", "ctrl", "before hook failed")
 }
 
-func TestWriteHTML_StatusColors(t *testing.T) {
+func TestWriteHTML_StatusClasses(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
@@ -192,37 +152,17 @@ func TestWriteHTML_StatusColors(t *testing.T) {
 			}},
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-
-	if !strings.Contains(out, `class="status-pass"`) {
-		t.Error("missing pass status class")
-	}
-	if !strings.Contains(out, `class="status-fail"`) {
-		t.Error("missing fail status class")
-	}
+	wantAll(t, renderHTML(t, sr), `class="status pass"`, `class="status fail"`)
 }
 
 func TestWriteHTML_InlinesEmbeddedAssets(t *testing.T) {
-	sr := &result.SuiteResult{
-		StartedAt:  time.Now(),
-		FinishedAt: time.Now(),
-	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
+	sr := &result.SuiteResult{StartedAt: time.Now(), FinishedAt: time.Now()}
+	out := renderHTML(t, sr)
 
-	// CSS is inlined verbatim inside <style> (a distinctive rule, not escaped).
-	if !strings.Contains(out, ".status-pass { color: #16a34a") {
+	if !strings.Contains(out, ".status.pass { color: var(--pass)") {
 		t.Error("embedded CSS not inlined into <style>")
 	}
-	// JS is inlined verbatim inside <script> and not HTML-escaped.
-	if !strings.Contains(out, "function sortTable(th)") {
+	if !strings.Contains(out, "window.sortTable = function") {
 		t.Error("embedded JS not inlined into <script>")
 	}
 	if strings.Contains(out, "&lt;") || strings.Contains(out, "\\u003c") {
@@ -230,23 +170,9 @@ func TestWriteHTML_InlinesEmbeddedAssets(t *testing.T) {
 	}
 }
 
-func TestWriteHTML_SortableHeaders(t *testing.T) {
-	sr := &result.SuiteResult{
-		StartedAt:  time.Now(),
-		FinishedAt: time.Now(),
-	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-
-	if !strings.Contains(out, "onclick=") {
-		t.Error("missing sortable onclick handlers on table headers")
-	}
-	if !strings.Contains(out, "sortTable") {
-		t.Error("missing sortTable function")
-	}
+func TestWriteHTML_Interactions(t *testing.T) {
+	out := renderHTML(t, twoVariantSuite())
+	wantAll(t, out, "sortTable(this)", "toggleEval(this)", "filterVariant(this)", "toggleTheme()")
 }
 
 func TestWriteHTML_AggregateRow(t *testing.T) {
@@ -270,21 +196,16 @@ func TestWriteHTML_AggregateRow(t *testing.T) {
 			}},
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
+	out := renderHTML(t, sr)
+	wantAll(t, out, `class="agg"`, "cost cv 15%", "median")
 
-	if !strings.Contains(out, `class="agg"`) {
-		t.Error("missing aggregate row class")
-	}
-	if !strings.Contains(out, "cost_cv=15.0%") {
-		t.Error("missing CV info")
+	// The spread bar spans min→max within the eval's slowest run.
+	if !strings.Contains(out, "left:50.0%;width:50.0%") {
+		t.Error("missing min-max spread band on aggregate row")
 	}
 }
 
-func TestWriteHTML_MultiRunnerColumns(t *testing.T) {
+func TestWriteHTML_MultiRunnerAttribution(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),
 		FinishedAt: time.Now(),
@@ -295,13 +216,55 @@ func TestWriteHTML_MultiRunnerColumns(t *testing.T) {
 			},
 		}},
 	}
-	var buf bytes.Buffer
-	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
+	wantAll(t, renderHTML(t, sr), "claude-code", "ollama", `class="rank-model"`)
+}
 
-	if !strings.Contains(out, ">Runner<") {
-		t.Error("missing Runner column header in rankings")
+func TestWriteHTML_JudgeVerdicts(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "explain",
+			Variants: []result.VariantResult{
+				{Name: "a", Runs: []result.RunResult{{CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+			},
+			Comparison: &result.Comparison{
+				Model: "claude-haiku-4-5",
+				Scores: []result.ComparativeScore{
+					{Variant: "a", Rating: 4, Score: 0.8, Reason: "Covers the trade-offs. Also concise."},
+				},
+			},
+		}},
+	}
+	out := renderHTML(t, sr)
+	wantAll(t, out, "Judge verdict", "claude-haiku-4-5", "4/5", "0.80", "Covers the trade-offs.", `<i class="on">`)
+}
+
+func TestWriteHTML_ComparisonSkipped(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName:   "explain",
+			Variants:   []result.VariantResult{{Name: "a", Runs: []result.RunResult{{CostUSD: 1, DurationMs: 100}}}},
+			Comparison: &result.Comparison{Skipped: "fewer than two passing variants"},
+		}},
+	}
+	wantAll(t, renderHTML(t, sr), "Comparative judging skipped", "fewer than two passing variants")
+}
+
+// twoVariantSuite is the smallest suite that exercises the verdict, rankings,
+// and health blocks: one passing variant and one failing variant.
+func twoVariantSuite() *result.SuiteResult {
+	return &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "eval-one",
+			Variants: []result.VariantResult{
+				{Name: "a", Runs: []result.RunResult{{Sample: 1, CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "b", Runs: []result.RunResult{{Sample: 1, CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
+			},
+		}},
 	}
 }
