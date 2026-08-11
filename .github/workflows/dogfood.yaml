@@ -1,0 +1,69 @@
+name: Dogfood (skill eval)
+
+# Opt-in only. This runs the REAL agent evaluation of skival's own skill:
+# it invokes the claude-code runner (live LLM calls), so it is slow, costs
+# money, and is non-deterministic. It therefore never runs on push / pull_request
+# and never gates a merge. Trigger it by hand from the Actions tab.
+#
+# The deterministic half of the dogfood harness — which guarantees the skill
+# file and the canonical evals/suite.yaml stay valid — runs for free on every
+# PR as part of `go test ./...` (see internal/dogfood and internal/suite).
+#
+# Requires an ANTHROPIC_API_KEY repository secret.
+#
+# To run it nightly, uncomment the `schedule` block below (be aware it will
+# spend API credits on every run).
+
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: "Samples per variant"
+        required: false
+        default: "3"
+  # schedule:
+  #   - cron: "0 7 * * *" # 07:00 UTC nightly
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install skival
+        run: |
+          make install
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run dogfood suite
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          skival run evals/suite.yaml \
+            --samples "${{ github.event.inputs.samples || '3' }}" \
+            --results-dir results/dogfood \
+            --format markdown | tee dogfood-report.md
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogfood-results
+          path: |
+            results/dogfood
+            dogfood-report.md
+          if-no-files-found: warn

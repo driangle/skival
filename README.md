@@ -107,6 +107,13 @@ make install-hooks
 
 This points `core.hooksPath` at the tracked `.githooks/` directory.
 
+### Dogfooding the skill
+
+skival evaluates its own [Claude Code skill](claude-code-plugin/skills/skival/SKILL.md)
+using skival itself. A deterministic layer runs on every PR (via `go test ./...`)
+to keep the skill file and the canonical suite valid; a separate opt-in workflow
+runs the real agent evaluation on demand. See [`evals/README.md`](evals/README.md).
+
 ## License
 
 MIT

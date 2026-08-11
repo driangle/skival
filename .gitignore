@@ -7,3 +7,8 @@ settings.local.json
 # Example workdirs (agent output)
 examples/*/workdir*/*
 !examples/*/workdir*/.gitkeep
+
+# Dogfood workdirs (agent output) and eval results
+evals/workdir/*/*
+!evals/workdir/*/.gitkeep
+results/

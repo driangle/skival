@@ -1,0 +1,65 @@
+version: 1
+description: >-
+  Dogfood suite: does injecting the real skival skill improve an agent's ability
+  to author a valid skival suite.yaml? Each eval asks the agent to produce a
+  suite.yaml for a task described WITHOUT the schema; correctness is measured by
+  running `skival validate` on the agent's output. The `with-skill` variant
+  injects the real skill so it is the only source of schema knowledge.
+
+defaults:
+  runner: claude-code
+  model: "claude-sonnet-4-6"
+  samples: 3
+  timeout: 180
+
+# Judge which variant produced the better suite, on top of correctness/cost/speed.
+compare:
+  criteria:
+    - "The suite.yaml is a more complete and idiomatic skival configuration"
+    - "The suite.yaml correctly models the requested comparison"
+
+evals:
+  - id: model-comparison
+    name: "Author a model-comparison suite"
+    dir: "./workdir/model-comparison"
+    prompt_file: "./prompts/model-comparison.md"
+    setup:
+      reset: "rm -f suite.yaml"
+    verify:
+      - type: agent_exits_ok
+      - type: check_output
+        run: "./verify.sh"
+    variants:
+      - name: "baseline"
+      - name: "with-skill"
+        skill: "../claude-code-plugin/skills/skival/SKILL.md"
+
+  - id: skill-ab
+    name: "Author a skill A/B suite"
+    dir: "./workdir/skill-ab"
+    prompt_file: "./prompts/skill-ab.md"
+    setup:
+      reset: "rm -f suite.yaml"
+    verify:
+      - type: agent_exits_ok
+      - type: check_output
+        run: "./verify.sh"
+    variants:
+      - name: "baseline"
+      - name: "with-skill"
+        skill: "../claude-code-plugin/skills/skival/SKILL.md"
+
+  - id: tool-access
+    name: "Author a tool-access suite"
+    dir: "./workdir/tool-access"
+    prompt_file: "./prompts/tool-access.md"
+    setup:
+      reset: "rm -f suite.yaml"
+    verify:
+      - type: agent_exits_ok
+      - type: check_output
+        run: "./verify.sh"
+    variants:
+      - name: "baseline"
+      - name: "with-skill"
+        skill: "../claude-code-plugin/skills/skival/SKILL.md"
