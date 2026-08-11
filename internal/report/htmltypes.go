@@ -78,6 +78,9 @@ type htmlResultRow struct {
 	CVInfo      string
 	SpanStyle   template.CSS
 	IsAgg       bool
+	// Detail is the failure reason for an errored run, revealed by expanding the
+	// row. Empty for runs that completed.
+	Detail string
 }
 
 // htmlJudgeVerdict is one comparative-judge score. Pips renders the 1-5 rating

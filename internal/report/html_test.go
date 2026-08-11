@@ -240,6 +240,47 @@ func TestWriteHTML_JudgeVerdicts(t *testing.T) {
 	wantAll(t, out, "Judge verdict", "claude-haiku-4-5", "4/5", "0.80", "Covers the trade-offs.", `<i class="on">`)
 }
 
+// A sample run that errors must surface its reason, not just a red status pill,
+// so a reader can tell why it failed (e.g. an unknown-runner misconfiguration).
+func TestWriteHTML_RunErrorDetail(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "matrix",
+			Variants: []result.VariantResult{
+				{Name: "ok", Runs: []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 100, Pass: boolPtr(true)}}},
+				{Name: "codex", Runs: []result.RunResult{{Sample: 1, Err: fmt.Errorf(`creating runner "codex": unknown runner`)}}},
+			},
+		}},
+	}
+	out := renderHTML(t, sr)
+	wantAll(t, out, `class="status error"`, `class="err-row"`, `class="err-detail"`,
+		"toggleRow(this)", `colspan="6"`, "unknown runner")
+}
+
+// An IsError run with no error value still gets an expandable marker rather than
+// a bare pill.
+func TestWriteHTML_RunErrorWithoutMessage(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "e",
+			Variants: []result.VariantResult{{Name: "a", Runs: []result.RunResult{{Sample: 2, IsError: true}}}},
+		}},
+	}
+	wantAll(t, renderHTML(t, sr), `class="err-detail"`, "run errored without a message")
+}
+
+// A completed (non-errored) run must not become an expandable error row.
+func TestWriteHTML_NoErrorRowForPassingRun(t *testing.T) {
+	out := renderHTML(t, twoVariantSuite())
+	if strings.Contains(out, `class="err-detail"`) {
+		t.Error("passing/failing runs should not render error-detail rows")
+	}
+}
+
 func TestWriteHTML_ComparisonSkipped(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),

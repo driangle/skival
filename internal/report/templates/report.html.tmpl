@@ -125,18 +125,20 @@
         </tr>
         </thead>
         <tbody>
-        {{range .Rows}}<tr data-variant="{{.Variant}}"{{if .IsAgg}} class="agg"{{end}}>
+        {{range .Rows}}<tr data-variant="{{.Variant}}"{{if .IsAgg}} class="agg"{{else if .Detail}} class="err-row" onclick="toggleRow(this)"{{end}}>
           <td>{{.Variant}}</td>
           <td class="mono">{{.Sample}}</td>
           <td><span class="status {{.StatusClass}}">{{.Status}}</span></td>
           <td class="num">{{.Cost}}</td>
           <td class="num">{{.Duration}}</td>
-          <td class="spread"><div class="spread-inner">
+          {{if .Detail}}<td class="spread"><span class="rowcaret">▸</span></td>
+          {{else}}<td class="spread"><div class="spread-inner">
             <div class="spread-track"><i style="{{.SpanStyle}}"></i></div>
             <span class="cv">{{.CVInfo}}</span>
-          </div></td>
+          </div></td>{{end}}
         </tr>
-        {{end}}
+        {{if .Detail}}<tr class="err-detail" data-variant="{{.Variant}}" hidden><td colspan="6"><span class="msg">{{.Detail}}</span></td></tr>
+        {{end}}{{end}}
         </tbody>
       </table>{{end}}
 

@@ -79,6 +79,7 @@ func buildHTMLRows(eval result.EvalResult, multi, multiModel bool) []htmlResultR
 				Cost:        fmt.Sprintf("$%.4f", run.CostUSD),
 				Duration:    formatDuration(run.DurationMs),
 				SpanStyle:   spanCSS(0, run.DurationMs, slowest),
+				Detail:      runErrorMessage(run),
 			})
 		}
 		if agg := v.Aggregate; agg != nil && len(v.Runs) >= 2 {
@@ -194,6 +195,17 @@ func firstSentence(reason string) string {
 		return reason[:i+1]
 	}
 	return reason
+}
+
+// runErrorMessage is the reason a run errored, or "" if it did not error.
+func runErrorMessage(run result.RunResult) string {
+	if run.Err != nil {
+		return run.Err.Error()
+	}
+	if run.IsError {
+		return "run errored without a message"
+	}
+	return ""
 }
 
 func buildHTMLSkipped(eval result.EvalResult) []htmlSkippedEntry {

@@ -157,6 +157,13 @@ tr.agg .spread-track > i { background: var(--teal); }
 .list .who { font-weight: 600; color: var(--ink); }
 .list .id { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
 
+.err-row { cursor: pointer; }
+.err-row:hover { background: var(--fail-bg); }
+.err-row .rowcaret { font-family: var(--mono); font-size: 11px; color: var(--fail); }
+.err-detail[hidden] { display: none; }
+.err-detail td { padding: 0 22px 12px; border-bottom: 1px solid var(--line-soft); }
+.err-detail .msg { font-family: var(--mono); font-size: 12px; color: var(--fail); word-break: break-word; }
+
 footer {
   display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 18px;
   border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-3);
@@ -172,5 +179,6 @@ footer {
   .no-print { display: none !important; }
   .card { box-shadow: none; break-inside: avoid; }
   .eval-body, .reason { display: block !important; }
+  .err-detail[hidden] { display: table-row !important; }
   section, .rank-row, .verdict-item { break-inside: avoid; }
 }
