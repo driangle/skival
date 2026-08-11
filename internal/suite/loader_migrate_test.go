@@ -6,178 +6,6 @@ import (
 	"testing"
 )
 
-func TestLoad_MigrateAllowedToolsToRunnerConfig(t *testing.T) {
-	dir := t.TempDir()
-	writeSuiteFile(t, dir, "suite.yaml", `
-version: 1
-defaults:
-  runner: claude-code
-evals:
-  - id: eval-1
-    prompt: "task"
-    model: "claude-sonnet-4-6"
-    verify:
-      - type: agent_exits_ok
-    variants:
-      - name: baseline
-        allowed_tools:
-          - Read
-          - Write
-`)
-
-	s, err := Load(filepath.Join(dir, "suite.yaml"))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	ctrl := s.Evals[0].Variants[0]
-	if ctrl.AllowedTools != nil {
-		t.Error("expected AllowedTools to be nil after migration")
-	}
-	if ctrl.RunnerConfig == nil {
-		t.Fatal("expected RunnerConfig to be populated after migration")
-	}
-	tools, ok := ctrl.RunnerConfig["allowed_tools"]
-	if !ok {
-		t.Fatal("expected runner_config.allowed_tools to be set")
-	}
-	toolSlice, ok := tools.([]string)
-	if !ok {
-		t.Fatalf("expected []string, got %T", tools)
-	}
-	if len(toolSlice) != 2 || toolSlice[0] != "Read" || toolSlice[1] != "Write" {
-		t.Errorf("expected [Read Write], got %v", toolSlice)
-	}
-}
-
-func TestLoad_MigrateAllowedToolsDoesNotOverrideExisting(t *testing.T) {
-	dir := t.TempDir()
-	writeSuiteFile(t, dir, "suite.yaml", `
-version: 1
-defaults:
-  runner: claude-code
-evals:
-  - id: eval-1
-    prompt: "task"
-    model: "claude-sonnet-4-6"
-    verify:
-      - type: agent_exits_ok
-    variants:
-      - name: baseline
-        allowed_tools:
-          - Read
-        runner_config:
-          allowed_tools:
-            - Write
-            - Edit
-`)
-
-	s, err := Load(filepath.Join(dir, "suite.yaml"))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	ctrl := s.Evals[0].Variants[0]
-	tools := ctrl.RunnerConfig["allowed_tools"]
-	// The explicit runner_config value should win over the deprecated field.
-	toolSlice, ok := tools.([]any)
-	if !ok {
-		t.Fatalf("expected []any, got %T", tools)
-	}
-	if len(toolSlice) != 2 {
-		t.Errorf("expected 2 tools from runner_config, got %v", toolSlice)
-	}
-}
-
-func TestLoad_MigrateStateToVerifySteps(t *testing.T) {
-	dir := t.TempDir()
-	writeSuiteFile(t, dir, "suite.yaml", `
-version: 1
-evals:
-  - id: state-test
-    prompt: "test"
-    model: "claude-sonnet-4-6"
-    correctness:
-      state:
-        - url: "http://localhost:8080/health"
-          method: GET
-          expect: "ok"
-        - url: "http://localhost:8080/ready"
-          method: POST
-          expect: "ready"
-    variants:
-      - name: baseline
-        runner: claude-code
-`)
-
-	s, err := Load(filepath.Join(dir, "suite.yaml"))
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	v := s.Evals[0].Verify
-	if len(v) != 2 {
-		t.Fatalf("expected 2 verify steps from migration, got %d", len(v))
-	}
-
-	if v[0].Type != "http_check" {
-		t.Errorf("step[0] type = %q, want http_check", v[0].Type)
-	}
-	if v[0].URL != "http://localhost:8080/health" {
-		t.Errorf("step[0] URL = %q, want http://localhost:8080/health", v[0].URL)
-	}
-	if v[0].Method != "GET" {
-		t.Errorf("step[0] Method = %q, want GET", v[0].Method)
-	}
-	if v[0].BodyContains != "ok" {
-		t.Errorf("step[0] BodyContains = %q, want ok", v[0].BodyContains)
-	}
-
-	if v[1].Type != "http_check" {
-		t.Errorf("step[1] type = %q, want http_check", v[1].Type)
-	}
-	if v[1].Method != "POST" {
-		t.Errorf("step[1] Method = %q, want POST", v[1].Method)
-	}
-	if v[1].BodyContains != "ready" {
-		t.Errorf("step[1] BodyContains = %q, want ready", v[1].BodyContains)
-	}
-}
-
-func TestLoad_FileContainsPathKeptRelative(t *testing.T) {
-	dir := t.TempDir()
-	writeSuiteFile(t, dir, "suite.yaml", `
-version: 1
-evals:
-  - id: file-contains-test
-    prompt: "test"
-    model: "claude-sonnet-4-6"
-    correctness:
-      probes:
-        - file:
-            path: "output.txt"
-            assert:
-              exists: true
-    variants:
-      - name: baseline
-        runner: claude-code
-`)
-
-	s, err := Load(filepath.Join(dir, "suite.yaml"))
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	step := findVerifyStep(s.Evals[0].Verify, "file_contains")
-	if step == nil {
-		t.Fatal("expected file_contains verify step")
-	}
-	// file_contains paths stay relative — resolved at runtime against the workdir.
-	if step.Path != "output.txt" {
-		t.Errorf("file_contains path = %q, want %q", step.Path, "output.txt")
-	}
-}
-
 func TestLoad_VerifyFileContainsPathKeptRelative(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `
@@ -206,54 +34,6 @@ evals:
 	// file_contains paths stay relative — resolved at runtime against the workdir.
 	if step.Path != "output.txt" {
 		t.Errorf("file_contains path = %q, want %q", step.Path, "output.txt")
-	}
-}
-
-func TestLoad_MigrateCorrectnessToVerify(t *testing.T) {
-	dir := t.TempDir()
-	writeSuiteFile(t, dir, "suite.yaml", `
-version: 1
-defaults:
-  runner: claude-code
-evals:
-  - id: migrate-test
-    prompt: "test"
-    model: "claude-sonnet-4-6"
-    correctness:
-      agent_exits_ok: true
-      check: "go build ./..."
-      output:
-        contains: ["hello"]
-      check_output: "./verify.sh"
-      judge: ["is correct"]
-      judge_model: "claude-opus-4-6"
-    variants:
-      - name: baseline
-`)
-
-	s, err := Load(filepath.Join(dir, "suite.yaml"))
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	e := s.Evals[0]
-	if len(e.Verify) != 5 {
-		t.Fatalf("expected 5 verify steps, got %d", len(e.Verify))
-	}
-
-	expected := []string{"agent_exits_ok", "check", "output_contains", "check_output", "judge"}
-	for i, typ := range expected {
-		if e.Verify[i].Type != typ {
-			t.Errorf("step[%d] type = %q, want %q", i, e.Verify[i].Type, typ)
-		}
-	}
-
-	judgeStep := findJudgeStep(e.Verify)
-	if judgeStep == nil {
-		t.Fatal("expected judge step in verify")
-	}
-	if judgeStep.Model != "claude-opus-4-6" {
-		t.Errorf("judge step model = %q, want %q", judgeStep.Model, "claude-opus-4-6")
 	}
 }
 
@@ -440,11 +220,17 @@ evals:
 	}
 }
 
-func TestLoad_StrictAllowsDeprecatedFields(t *testing.T) {
-	// The still-supported deprecated fields must remain known so strict
-	// decoding does not break back-compat.
-	dir := t.TempDir()
-	writeSuiteFile(t, dir, "suite.yaml", `
+func TestLoad_StrictRejectsRemovedFields(t *testing.T) {
+	// The removed deprecated fields must surface a loud, field-naming error at
+	// load time rather than being silently dropped.
+	cases := []struct {
+		name       string
+		suite      string
+		wantSubstr string
+	}{
+		{
+			name: "eval correctness block",
+			suite: `
 version: 1
 defaults:
   runner: claude-code
@@ -454,17 +240,44 @@ evals:
     model: "claude-sonnet-4-6"
     correctness:
       agent_exits_ok: true
-      state:
-        - url: "http://localhost:8080/health"
-          method: GET
-          expect: "ok"
+    variants:
+      - name: baseline
+`,
+			wantSubstr: "correctness",
+		},
+		{
+			name: "variant allowed_tools",
+			suite: `
+version: 1
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
     variants:
       - name: baseline
         allowed_tools:
           - Read
-`)
+`,
+			wantSubstr: "allowed_tools",
+		},
+	}
 
-	if _, err := Load(filepath.Join(dir, "suite.yaml")); err != nil {
-		t.Fatalf("expected deprecated fields to remain valid under strict decoding, got: %v", err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeSuiteFile(t, dir, "suite.yaml", tc.suite)
+
+			_, err := Load(filepath.Join(dir, "suite.yaml"))
+			if err == nil {
+				t.Fatalf("expected error for removed field %q", tc.wantSubstr)
+			}
+			if !contains(err.Error(), tc.wantSubstr) {
+				t.Errorf("expected error to name the removed key %q, got: %v", tc.wantSubstr, err)
+			}
+		})
 	}
 }

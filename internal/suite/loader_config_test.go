@@ -278,9 +278,10 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    correctness:
-      judge: ["output is correct"]
-      judge_model: "claude-opus-4-6"
+    verify:
+      - type: judge
+        criteria: ["output is correct"]
+        model: "claude-opus-4-6"
     variants:
       - name: baseline
 `)
@@ -310,8 +311,9 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
-    correctness:
-      judge: ["output is correct"]
+    verify:
+      - type: judge
+        criteria: ["output is correct"]
     variants:
       - name: baseline
 `)
@@ -341,9 +343,10 @@ defaults:
 evals:
   - id: eval-1
     prompt: "task"
-    correctness:
-      judge: ["output is correct"]
-      judge_model: "claude-opus-4-6"
+    verify:
+      - type: judge
+        criteria: ["output is correct"]
+        model: "claude-opus-4-6"
     variants:
       - name: baseline
 `)
@@ -372,8 +375,9 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    correctness:
-      judge: ["output is correct"]
+    verify:
+      - type: judge
+        criteria: ["output is correct"]
     variants:
       - name: baseline
 `)

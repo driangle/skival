@@ -65,9 +65,6 @@ func transform(s *Suite, suiteDir string) error {
 		return err
 	}
 	resolvePaths(s, suiteDir)
-	migrateStateToProbes(s)
-	migrateCorrectnessToVerify(s)
-	migrateAllowedTools(s)
 	mergeDefaults(s)
 	resolveRunnerConfig(s)
 	return nil
@@ -118,13 +115,6 @@ func resolvePaths(s *Suite, suiteDir string) {
 		} else if !filepath.IsAbs(e.Dir) {
 			e.Dir = filepath.Join(suiteDir, e.Dir)
 		}
-
-		if e.Correctness.CheckOutput != "" && !filepath.IsAbs(e.Correctness.CheckOutput) {
-			e.Correctness.CheckOutput = filepath.Join(suiteDir, e.Correctness.CheckOutput)
-		}
-
-		// file_contains paths in probes are resolved at runtime against the workdir,
-		// not at load time against the suite dir.
 
 		for j := range e.Verify {
 			step := &e.Verify[j]

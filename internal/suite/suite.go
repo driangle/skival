@@ -62,7 +62,6 @@ type Eval struct {
 	RunnerConfig map[string]any    `yaml:"runner_config"`
 	Setup        Setup             `yaml:"setup"`
 	Verify       []VerifyStep      `yaml:"verify,omitempty"`
-	Correctness  Correctness       `yaml:"correctness"` // Deprecated: use Verify
 	Retry        *Retry            `yaml:"retry"`
 	Matrix       *Matrix           `yaml:"matrix,omitempty"`
 	Compare      *Compare          `yaml:"compare,omitempty"`
@@ -112,39 +111,6 @@ type Setup struct {
 	Before string `yaml:"before"`
 	After  string `yaml:"after"`
 	Reset  string `yaml:"reset"`
-}
-
-// Correctness defines how to verify an eval's output.
-type Correctness struct {
-	Check        string           `yaml:"check"`
-	AgentExitsOK *bool            `yaml:"agent_exits_ok"`
-	Output       Output           `yaml:"output"`
-	CheckOutput  string           `yaml:"check_output"`
-	State        []StateAssertion `yaml:"state"`
-	Probes       []Probe          `yaml:"probes"`
-	Judge        []string         `yaml:"judge"`
-	JudgeModel   string           `yaml:"judge_model"`
-}
-
-// Output defines structured output matching criteria.
-type Output struct {
-	Contains []string `yaml:"contains"`
-}
-
-// StateAssertion defines an HTTP assertion to check after execution.
-// Deprecated: use Probe with HTTPProbe instead.
-type StateAssertion struct {
-	URL    string `yaml:"url"`
-	Method string `yaml:"method"`
-	Expect string `yaml:"expect"`
-}
-
-// Probe defines a single typed probe. Exactly one type key must be set.
-type Probe struct {
-	HTTP    *HTTPProbe    `yaml:"http,omitempty"`
-	File    *FileProbe    `yaml:"file,omitempty"`
-	Command *CommandProbe `yaml:"command,omitempty"`
-	TCP     *TCPProbe     `yaml:"tcp,omitempty"`
 }
 
 // HTTPProbe checks an HTTP endpoint.
@@ -237,7 +203,6 @@ type Variant struct {
 	RunnerConfig    map[string]any    `yaml:"runner_config"`
 	Skill           string            `yaml:"skill"`
 	Skills          []string          `yaml:"skills"`
-	AllowedTools    []string          `yaml:"allowed_tools,omitempty"` // Deprecated: use runner_config.allowed_tools
 	Env             map[string]string `yaml:"env"`
 	Retry           *Retry            `yaml:"retry"`
 	DimensionValues map[string]string `yaml:"-"` // populated by matrix expansion, not parsed from YAML

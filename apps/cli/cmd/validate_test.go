@@ -89,12 +89,13 @@ evals:
   - id: eval-1
     prompt: "do something"
     model: "claude-sonnet-4-6"
-    correctness:
-      agent_exits_ok: true
-      output:
-        contains:
+    verify:
+      - type: agent_exits_ok
+      - type: output_contains
+        values:
           - "hello"
-      check_output: "./verify.sh"
+      - type: check_output
+        run: "./verify.sh"
     variants:
       - name: "baseline"
 `

@@ -337,8 +337,9 @@ evals:
   - id: eval-1
     prompt: "task"
     model: "claude-sonnet-4-6"
-    correctness:
-      check_output: "./verify.sh"
+    verify:
+      - type: check_output
+        run: "./verify.sh"
     variants:
       - name: baseline
       - name: with-skill
@@ -387,8 +388,9 @@ evals:
     prompt: "task"
     model: "claude-sonnet-4-6"
     dir: "%s"
-    correctness:
-      check_output: "%s"
+    verify:
+      - type: check_output
+        run: "%s"
     variants:
       - name: baseline
       - name: v1
