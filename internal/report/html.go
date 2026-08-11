@@ -2,7 +2,6 @@ package report
 
 import (
 	"fmt"
-	"html/template"
 	"io"
 	"strings"
 
@@ -11,11 +10,7 @@ import (
 
 // WriteHTML writes a self-contained HTML report to w.
 func WriteHTML(w io.Writer, sr *result.SuiteResult, weights Weights) error {
-	tmpl, err := template.New("report").Parse(htmlTemplate)
-	if err != nil {
-		return fmt.Errorf("parsing HTML template: %w", err)
-	}
-	if err := tmpl.Execute(w, buildHTMLData(sr, weights)); err != nil {
+	if err := reportTmpl.Execute(w, buildHTMLData(sr, weights)); err != nil {
 		return fmt.Errorf("executing HTML template: %w", err)
 	}
 	return nil
@@ -38,7 +33,6 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 	}
 
 	ranks := RankVariants(sr, weights)
-	d.ShowRankings = len(ranks) >= 2
 	d.Rankings = buildHTMLRankings(ranks, d.ShowQuality)
 	d.Verdict = buildHTMLVerdict(ranks, d.ShowQuality)
 	d.Health = buildHTMLHealth(sr)

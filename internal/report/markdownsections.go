@@ -176,3 +176,7 @@ func formatDuration(ms int64) string {
 	}
 	return fmt.Sprintf("%.1fs", float64(ms)/1000)
 }
+
+func formatCost(usd float64) string {
+	return fmt.Sprintf("$%.4f", usd)
+}

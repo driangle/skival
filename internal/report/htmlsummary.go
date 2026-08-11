@@ -3,7 +3,6 @@ package report
 import (
 	"fmt"
 	"html/template"
-	"math"
 	"strings"
 
 	"github.com/driangle/skival/internal/result"
@@ -112,7 +111,7 @@ func buildHTMLHealth(sr *result.SuiteResult) htmlHealth {
 
 	total := len(h.Cells)
 	h.PassSummary = fmt.Sprintf("%d/%d", total-failures, total)
-	h.TotalSpend = fmt.Sprintf("$%.4f", spend)
+	h.TotalSpend = formatCost(spend)
 	h.Runners = orDash(strings.Join(runnerList, ", "))
 	h.Judge = judgeModel(sr)
 	return h
@@ -156,10 +155,10 @@ func buildHTMLRankings(ranks []VariantRank, showQuality bool) []htmlRanking {
 	var maxScore, maxQual, maxCost float64
 	var maxDur int64
 	for _, r := range ranks {
-		maxScore = math.Max(maxScore, r.CompositeScore)
-		maxQual = math.Max(maxQual, qualityOrPass(r, showQuality))
-		maxCost = math.Max(maxCost, r.MedianCostUSD)
-		maxDur = maxInt64(maxDur, r.MedianDuration)
+		maxScore = max(maxScore, r.CompositeScore)
+		maxQual = max(maxQual, qualityOrPass(r, showQuality))
+		maxCost = max(maxCost, r.MedianCostUSD)
+		maxDur = max(maxDur, r.MedianDuration)
 	}
 
 	rows := make([]htmlRanking, 0, len(ranks))
@@ -171,7 +170,7 @@ func buildHTMLRankings(ranks []VariantRank, showQuality bool) []htmlRanking {
 			CompositeScore: fmt.Sprintf("%.3f", r.CompositeScore),
 			PassRate:       fmt.Sprintf("%.0f%%", r.PassRate*100),
 			QualityScore:   fmt.Sprintf("%.2f", r.QualityScore),
-			MedianCost:     fmt.Sprintf("$%.4f", r.MedianCostUSD),
+			MedianCost:     formatCost(r.MedianCostUSD),
 			MedianDuration: formatDuration(r.MedianDuration),
 			CompositeWidth: widthCSS(r.CompositeScore, maxScore),
 			QualityWidth:   widthCSS(qualityOrPass(r, showQuality), maxQual),
@@ -189,18 +188,11 @@ func qualityOrPass(r VariantRank, showQuality bool) float64 {
 	return r.PassRate
 }
 
-func maxInt64(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // widthCSS is a bar width as a percentage of the column's largest value.
-func widthCSS(val, max float64) template.CSS {
-	if max <= 0 {
+func widthCSS(val, maxVal float64) template.CSS {
+	if maxVal <= 0 {
 		return template.CSS("width:0%")
 	}
-	pct := math.Max(0, math.Min(100, val/max*100))
+	pct := max(0, min(100, val/maxVal*100))
 	return template.CSS(fmt.Sprintf("width:%.1f%%", pct))
 }

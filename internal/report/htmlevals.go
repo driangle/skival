@@ -76,7 +76,7 @@ func buildHTMLRows(eval result.EvalResult, multi, multiModel bool) []htmlResultR
 				Sample:      fmt.Sprintf("%d", run.Sample),
 				Status:      status,
 				StatusClass: statusClass(status),
-				Cost:        fmt.Sprintf("$%.4f", run.CostUSD),
+				Cost:        formatCost(run.CostUSD),
 				Duration:    formatDuration(run.DurationMs),
 				SpanStyle:   spanCSS(0, run.DurationMs, slowest),
 				Detail:      runErrorMessage(run),
@@ -106,7 +106,7 @@ func buildHTMLAggRow(variant string, agg *result.Aggregate, slowest int64) htmlR
 		Sample:      "median",
 		Status:      status,
 		StatusClass: class,
-		Cost:        fmt.Sprintf("$%.4f", agg.MedianCostUSD),
+		Cost:        formatCost(agg.MedianCostUSD),
 		Duration:    formatDuration(agg.MedianDurationMs),
 		CVInfo:      cvInfo(agg),
 		SpanStyle:   spanCSS(agg.MinDurationMs, agg.MaxDurationMs, slowest),
@@ -128,13 +128,13 @@ func cvInfo(agg *result.Aggregate) string {
 // slowestRun is the eval's longest single run, the scale every duration bar in
 // this eval is drawn against.
 func slowestRun(eval result.EvalResult) int64 {
-	var max int64
+	var slowest int64
 	for _, v := range eval.Variants {
 		for _, run := range v.Runs {
-			max = maxInt64(max, run.DurationMs)
+			slowest = max(slowest, run.DurationMs)
 		}
 	}
-	return max
+	return slowest
 }
 
 // spanCSS positions a duration band inside the eval's slowest run. A zero-width

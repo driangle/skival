@@ -25,3 +25,7 @@ var (
 	reportCSS = template.CSS(htmlCSS)
 	reportJS  = template.JS(htmlJS)
 )
+
+// reportTmpl is parsed once at init; the embedded markup never changes at
+// runtime, so there is no reason to recompile it on every report.
+var reportTmpl = template.Must(template.New("report").Parse(htmlTemplate))

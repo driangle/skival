@@ -24,8 +24,7 @@ type htmlData struct {
 	Evals        []htmlEval
 	Errors       []htmlError
 
-	ShowRankings bool
-	ShowQuality  bool
+	ShowQuality bool
 }
 
 // htmlVerdict is the headline answer: which variant won, and by how much
