@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eval Report</title>
+<style>{{.CSS}}</style>
+</head>
+<body>
+
+<h1>Eval Report</h1>
+{{if .Description}}<p class="description">{{.Description}}</p>{{end}}
+<p class="meta"><strong>Started:</strong> {{.StartedAt}} &nbsp; <strong>Finished:</strong> {{.FinishedAt}}</p>
+
+<h2>Results</h2>
+<table>
+<thead>
+<tr>
+  <th onclick="sortTable(this)">Eval</th>
+  <th onclick="sortTable(this)">Variant</th>
+  <th onclick="sortTable(this)">Sample</th>
+  <th onclick="sortTable(this)">Status</th>
+  <th onclick="sortTable(this)">Cost</th>
+  <th onclick="sortTable(this)">Duration</th>
+</tr>
+</thead>
+<tbody>
+{{range .Results}}<tr{{if .IsAgg}} class="agg"{{end}}>
+  <td>{{.Eval}}</td>
+  <td>{{.Variant}}</td>
+  <td>{{.Sample}}</td>
+  <td><span class="status-{{.Status}}">{{.Status}}</span></td>
+  <td>{{.Cost}}</td>
+  <td>{{.Duration}}{{if .CVInfo}}<span class="cv-info">{{.CVInfo}}</span>{{end}}</td>
+</tr>
+{{end}}</tbody>
+</table>
+
+{{if .Errors}}
+<h2>Errors</h2>
+<ul class="errors-list">
+{{range .Errors}}<li><span class="eval-name">{{.Name}}</span> <span class="eval-id">({{.ID}})</span>: {{.Message}}</li>
+{{end}}</ul>
+{{end}}
+
+{{if .Skipped}}
+<h2>Skipped Variants</h2>
+{{range .Skipped}}<div class="skipped-group">
+<h3>{{.Name}} <span class="eval-id">({{.ID}})</span></h3>
+<ul>
+{{range .Entries}}<li>{{.Name}} — {{.Reason}}</li>
+{{end}}</ul>
+</div>
+{{end}}
+{{end}}
+
+{{if .Comparisons}}
+<h2>Comparative Quality</h2>
+{{range .Comparisons}}<div class="comparison-group">
+<h3>{{.Name}} <span class="eval-id">({{.ID}})</span>{{if .Model}} <span class="judge-model">judge: {{.Model}}</span>{{end}}</h3>
+{{if .Scores}}<table>
+<thead>
+<tr>
+  <th onclick="sortTable(this)">Variant</th>
+  <th onclick="sortTable(this)">Rating</th>
+  <th onclick="sortTable(this)">Score</th>
+  <th onclick="sortTable(this)">Reason</th>
+</tr>
+</thead>
+<tbody>
+{{range .Scores}}<tr>
+  <td>{{.Variant}}</td>
+  <td>{{.Rating}}</td>
+  <td>{{.Score}}</td>
+  <td>{{.Reason}}</td>
+</tr>
+{{end}}</tbody>
+</table>
+{{else}}<p class="comparison-skipped">{{if .Skipped}}{{.Skipped}}{{else}}no scores produced{{end}}</p>
+{{end}}</div>
+{{end}}
+{{end}}
+
+{{if .ShowRankings}}
+<h2>Rankings</h2>
+<table>
+<thead>
+<tr>
+  <th onclick="sortTable(this)">Rank</th>
+  <th onclick="sortTable(this)">Variant</th>
+  {{if .MultiRunner}}<th onclick="sortTable(this)">Runner</th>{{end}}
+  {{if .MultiModel}}<th onclick="sortTable(this)">Model</th>{{end}}
+  <th onclick="sortTable(this)">Score</th>
+  <th onclick="sortTable(this)">Pass Rate</th>
+  <th onclick="sortTable(this)">Median Cost</th>
+  <th onclick="sortTable(this)">Median Duration</th>
+  {{if .ShowQuality}}<th onclick="sortTable(this)">Quality</th>{{end}}
+</tr>
+</thead>
+<tbody>
+{{range .Rankings}}<tr>
+  <td>#{{.Rank}}</td>
+  <td>{{.Name}}</td>
+  {{if $.MultiRunner}}<td>{{.Runner}}</td>{{end}}
+  {{if $.MultiModel}}<td>{{.Model}}</td>{{end}}
+  <td>{{.CompositeScore}}</td>
+  <td>{{.PassRate}}</td>
+  <td>{{.MedianCost}}</td>
+  <td>{{.MedianDuration}}</td>
+  {{if $.ShowQuality}}<td>{{.QualityScore}}</td>{{end}}
+</tr>
+{{end}}</tbody>
+</table>
+{{end}}
+
+<script>{{.JS}}</script>
+</body>
+</html>

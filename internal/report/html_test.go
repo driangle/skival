@@ -206,6 +206,30 @@ func TestWriteHTML_StatusColors(t *testing.T) {
 	}
 }
 
+func TestWriteHTML_InlinesEmbeddedAssets(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+	}
+	var buf bytes.Buffer
+	if err := WriteHTML(&buf, sr, DefaultWeights()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := buf.String()
+
+	// CSS is inlined verbatim inside <style> (a distinctive rule, not escaped).
+	if !strings.Contains(out, ".status-pass { color: #16a34a") {
+		t.Error("embedded CSS not inlined into <style>")
+	}
+	// JS is inlined verbatim inside <script> and not HTML-escaped.
+	if !strings.Contains(out, "function sortTable(th)") {
+		t.Error("embedded JS not inlined into <script>")
+	}
+	if strings.Contains(out, "&lt;") || strings.Contains(out, "\\u003c") {
+		t.Error("inlined assets appear HTML/JS-escaped; template.CSS/template.JS not honored")
+	}
+}
+
 func TestWriteHTML_SortableHeaders(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),

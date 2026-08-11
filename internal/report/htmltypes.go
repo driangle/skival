@@ -1,7 +1,11 @@
 package report
 
+import "html/template"
+
 // htmlData is the template data for the HTML report.
 type htmlData struct {
+	CSS          template.CSS
+	JS           template.JS
 	Description  string
 	StartedAt    string
 	FinishedAt   string
