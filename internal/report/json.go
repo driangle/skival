@@ -54,12 +54,14 @@ type jsonVariant struct {
 }
 
 type jsonRun struct {
-	Sample     int     `json:"sample"`
-	Status     string  `json:"status"`
-	CostUSD    float64 `json:"cost_usd"`
-	DurationMs int64   `json:"duration_ms"`
-	Pass       *bool   `json:"pass"`
-	Error      string  `json:"error,omitempty"`
+	Sample      int     `json:"sample"`
+	Status      string  `json:"status"`
+	CostUSD     float64 `json:"cost_usd"`
+	DurationMs  int64   `json:"duration_ms"`
+	Pass        *bool   `json:"pass"`
+	Error       string  `json:"error,omitempty"`
+	SessionID   string  `json:"session_id,omitempty"`
+	SessionPage string  `json:"session_page,omitempty"`
 }
 
 type jsonAggregate struct {
@@ -148,11 +150,13 @@ func buildJSONVariant(v result.VariantResult) jsonVariant {
 	}
 	for _, run := range v.Runs {
 		jr := jsonRun{
-			Sample:     run.Sample,
-			Status:     runStatus(run),
-			CostUSD:    run.CostUSD,
-			DurationMs: run.DurationMs,
-			Pass:       run.Pass,
+			Sample:      run.Sample,
+			Status:      runStatus(run),
+			CostUSD:     run.CostUSD,
+			DurationMs:  run.DurationMs,
+			Pass:        run.Pass,
+			SessionID:   run.SessionID,
+			SessionPage: run.SessionPage,
 		}
 		if run.Err != nil {
 			jr.Error = run.Err.Error()

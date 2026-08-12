@@ -182,3 +182,8 @@ footer {
   .err-detail[hidden] { display: table-row !important; }
   section, .rank-row, .verdict-item { break-inside: avoid; }
 }
+
+td.session { font-size: 12px; white-space: nowrap; }
+td.session a { color: var(--teal); text-decoration: none; }
+td.session a:hover { text-decoration: underline; }
+td.session .mono { font-family: var(--mono); color: var(--ink-3); cursor: help; }

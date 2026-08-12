@@ -39,8 +39,24 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 	d.VariantNames = htmlVariantNames(sr)
 	d.Evals = buildHTMLEvals(sr, multi, multiModel)
 	d.Errors = buildHTMLErrors(sr)
+	d.HasSessions = anySession(sr)
 
 	return d
+}
+
+// anySession reports whether any run carries a session id, gating the "Session"
+// column so suites without session data (e.g. exec-runner) look unchanged.
+func anySession(sr *result.SuiteResult) bool {
+	for _, eval := range sr.Evals {
+		for _, v := range eval.Variants {
+			for _, run := range v.Runs {
+				if run.SessionID != "" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // buildHTMLCounts renders the header's scope line: how much work this run

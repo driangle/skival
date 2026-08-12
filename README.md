@@ -67,8 +67,27 @@ skival report <results-dir>    Generate reports from saved results
 | `--results-dir` | Directory for results output |
 | `--variants` | Filter to specific variants |
 | `--evals` | Filter to specific eval IDs |
-| `--format` | Output format: `markdown`, `json` (default: `markdown`) |
+| `--format` | Output format: `markdown`, `json`, `html` (default: `markdown`) |
+| `--link-sessions` | Render a static [vibeview](https://github.com/driangle/vibeview) session page per run and link it from the report (requires `--results-dir`; needs `vibeview` on `PATH`) |
 | `-v, --verbose` | Enable debug-level logging |
+
+### Linking agent sessions
+
+With `--link-sessions`, skival renders each run's transcript into a static,
+self-contained HTML page using the [vibeview](https://github.com/driangle/vibeview)
+CLI and links it from the report, so you can jump from a result straight into what
+the agent did — offline, no server. The reports (`markdown`, `json`, `html`) carry
+the link, and with `--format html` an anchored `report.html` is written into the
+results dir (next to the per-run session pages) so the links resolve:
+
+```bash
+skival run suite.yaml --results-dir ./results --format html --link-sessions
+open ./results/<run>/report.html
+```
+
+If `vibeview` isn't installed the run still succeeds — the report falls back to
+each run's `session_id` and a copy-pasteable `vibeview show <id>` hint. (Session
+pages are only produced when `--results-dir` is set.)
 
 ## Configuration
 

@@ -142,6 +142,7 @@ func loadRun(varDir, fileName string) (result.RunResult, error) {
 		CostUSD:       rj.CostUSD,
 		DurationMs:    rj.DurationMs,
 		SessionID:     rj.SessionID,
+		SessionPage:   rj.SessionPage,
 		Pass:          rj.Pass,
 		Attempt:       rj.Attempt,
 		TotalAttempts: rj.TotalAttempts,

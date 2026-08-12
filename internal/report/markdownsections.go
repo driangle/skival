@@ -39,6 +39,49 @@ func writeWorkdirsSection(w io.Writer, sr *result.SuiteResult) {
 	fmt.Fprintln(w)
 }
 
+// writeSessionsSection lists each run's agent session: a link to its static
+// vibeview page when one was produced, otherwise a `vibeview show <id>` hint.
+func writeSessionsSection(w io.Writer, sr *result.SuiteResult) {
+	hasSession := false
+	for _, eval := range sr.Evals {
+		for _, v := range eval.Variants {
+			for _, run := range v.Runs {
+				if run.SessionID != "" {
+					hasSession = true
+				}
+			}
+		}
+	}
+	if !hasSession {
+		return
+	}
+
+	fmt.Fprintf(w, "## Sessions\n\n")
+	for _, eval := range sr.Evals {
+		name := evalDisplayName(eval)
+		for _, v := range eval.Variants {
+			for _, run := range v.Runs {
+				if ref := sessionRef(run); ref != "" {
+					fmt.Fprintf(w, "- **%s** > %s > sample %d: %s\n", name, v.Name, run.Sample, ref)
+				}
+			}
+		}
+	}
+	fmt.Fprintln(w)
+}
+
+// sessionRef renders a run's session as a markdown link when a page exists, or
+// a `vibeview show` hint when only the id is known.
+func sessionRef(run result.RunResult) string {
+	if run.SessionPage != "" {
+		return fmt.Sprintf("[view session](%s)", run.SessionPage)
+	}
+	if run.SessionID != "" {
+		return fmt.Sprintf("`vibeview show %s`", run.SessionID)
+	}
+	return ""
+}
+
 func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
 	var errors []result.EvalResult
 	for _, eval := range sr.Evals {

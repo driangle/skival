@@ -11,9 +11,16 @@ import (
 	"github.com/driangle/skival/internal/result"
 )
 
+// SaveOptions configures optional Save behavior.
+type SaveOptions struct {
+	// LinkSessions, when true, renders a static vibeview session page per run
+	// (next to its transcript sidecar) and records its path on the run result.
+	LinkSessions bool
+}
+
 // Save writes all result data to a timestamped directory under baseDir.
 // Returns the created directory path.
-func Save(baseDir string, sr *result.SuiteResult, weights report.Weights) (string, error) {
+func Save(baseDir string, sr *result.SuiteResult, weights report.Weights, opts SaveOptions) (string, error) {
 	timestamp := sr.StartedAt.Format("20060102-150405")
 	dir := filepath.Join(baseDir, timestamp)
 
@@ -21,7 +28,18 @@ func Save(baseDir string, sr *result.SuiteResult, weights report.Weights) (strin
 		return "", fmt.Errorf("creating results dir: %w", err)
 	}
 
+	// Sidecars first: vibeview reads them, so they must exist on disk before
+	// linkSessions runs. Run metadata (run-N.json) is written afterward so it
+	// captures any SessionPage that linking sets on the in-memory result.
 	if err := writeEvals(dir, sr); err != nil {
+		return "", err
+	}
+
+	if opts.LinkSessions {
+		linkSessions(dir, sr)
+	}
+
+	if err := writeRunMetas(dir, sr); err != nil {
 		return "", err
 	}
 
@@ -58,7 +76,7 @@ func writeEvals(dir string, sr *result.SuiteResult) error {
 			}
 
 			for _, run := range variant.Runs {
-				if err := writeRunJSON(variantDir, run); err != nil {
+				if err := writeRunSidecars(variantDir, run); err != nil {
 					return err
 				}
 			}
@@ -71,6 +89,24 @@ func writeEvals(dir string, sr *result.SuiteResult) error {
 		}
 	}
 
+	return nil
+}
+
+// writeRunMetas writes each run's run-N.json. It runs after writeEvals (which
+// writes transcript sidecars) and after optional session linking, so each
+// run-N.json captures the SessionPage set during linking.
+func writeRunMetas(dir string, sr *result.SuiteResult) error {
+	evalsDir := filepath.Join(dir, "evals")
+	for _, eval := range sr.Evals {
+		for _, variant := range eval.Variants {
+			variantDir := filepath.Join(evalsDir, eval.EvalID, variant.Name)
+			for _, run := range variant.Runs {
+				if err := writeRunMeta(variantDir, run); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -105,6 +141,7 @@ type runJSON struct {
 	CostUSD       float64 `json:"cost_usd"`
 	DurationMs    int64   `json:"duration_ms"`
 	SessionID     string  `json:"session_id,omitempty"`
+	SessionPage   string  `json:"session_page,omitempty"`
 	Pass          *bool   `json:"pass"`
 	Error         string  `json:"error,omitempty"`
 	Attempt       int     `json:"attempt,omitempty"`
@@ -112,7 +149,8 @@ type runJSON struct {
 	Retried       bool    `json:"retried,omitempty"`
 }
 
-func writeRunJSON(variantDir string, run result.RunResult) error {
+// writeRunMeta writes run-N.json for a single run.
+func writeRunMeta(variantDir string, run result.RunResult) error {
 	r := runJSON{
 		Sample:        run.Sample,
 		Text:          run.Text,
@@ -121,6 +159,7 @@ func writeRunJSON(variantDir string, run result.RunResult) error {
 		CostUSD:       run.CostUSD,
 		DurationMs:    run.DurationMs,
 		SessionID:     run.SessionID,
+		SessionPage:   run.SessionPage,
 		Pass:          run.Pass,
 		Attempt:       run.Attempt,
 		TotalAttempts: run.TotalAttempts,
@@ -131,10 +170,12 @@ func writeRunJSON(variantDir string, run result.RunResult) error {
 	}
 
 	filename := fmt.Sprintf("run-%d.json", run.Sample)
-	if err := writeAtomicJSON(filepath.Join(variantDir, filename), r); err != nil {
-		return err
-	}
+	return writeAtomicJSON(filepath.Join(variantDir, filename), r)
+}
 
+// writeRunSidecars writes a run's transcript JSONL files (conversation and, if
+// present, the judge conversation).
+func writeRunSidecars(variantDir string, run result.RunResult) error {
 	if len(run.Conversation) > 0 {
 		convPath := filepath.Join(variantDir, fmt.Sprintf("run-%d.conversation.jsonl", run.Sample))
 		if err := writeConversationJSONL(convPath, run.Conversation); err != nil {

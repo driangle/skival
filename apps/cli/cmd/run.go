@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/agentrunner/go/claudecode"
@@ -12,6 +13,7 @@ import (
 	"github.com/driangle/skival/internal/persist"
 	"github.com/driangle/skival/internal/registry"
 	"github.com/driangle/skival/internal/report"
+	"github.com/driangle/skival/internal/result"
 	execrunner "github.com/driangle/skival/internal/runners/exec"
 	"github.com/driangle/skival/internal/suite"
 	"github.com/spf13/cobra"
@@ -70,18 +72,47 @@ var runCmd = &cobra.Command{
 
 		weights := rankingWeights(s, compareOverride)
 
+		format, _ := cmd.Flags().GetString("format")
+		linkSessions, _ := cmd.Flags().GetBool("link-sessions")
+
 		resultsDir, _ := cmd.Flags().GetString("results-dir")
 		if resultsDir != "" {
-			outDir, err := persist.Save(resultsDir, sr, weights)
+			outDir, err := persist.Save(resultsDir, sr, weights, persist.SaveOptions{LinkSessions: linkSessions})
 			if err != nil {
 				return fmt.Errorf("saving results: %w", err)
 			}
 			fmt.Fprintf(os.Stderr, "Results saved to %s\n", outDir)
+
+			// Place an HTML report inside the results dir so its relative
+			// session links resolve against the per-run session pages.
+			if linkSessions && format == "html" {
+				if err := writeReportFile(filepath.Join(outDir, "report.html"), sr, weights); err != nil {
+					return err
+				}
+			}
 		}
 
-		format, _ := cmd.Flags().GetString("format")
 		return report.Write(os.Stdout, sr, format, weights)
 	},
+}
+
+// writeReportFile writes an HTML report to path via atomic temp+rename.
+func writeReportFile(path string, sr *result.SuiteResult, weights report.Weights) error {
+	f, err := os.CreateTemp(filepath.Dir(path), ".report-*.html")
+	if err != nil {
+		return fmt.Errorf("creating temp file for report: %w", err)
+	}
+	if err := report.Write(f, sr, "html", weights); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return fmt.Errorf("writing report.html: %w", err)
+	}
+	f.Close()
+	if err := os.Rename(f.Name(), path); err != nil {
+		os.Remove(f.Name())
+		return fmt.Errorf("writing report.html: %w", err)
+	}
+	return nil
 }
 
 // compareOverride resolves the --compare/--no-compare flags into a tri-state
@@ -161,6 +192,7 @@ func init() {
 	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")
 	runCmd.Flags().Bool("compare", false, "Force comparative judging on where criteria are configured")
 	runCmd.Flags().Bool("no-compare", false, "Disable comparative judging even if configured in the suite")
+	runCmd.Flags().Bool("link-sessions", false, "Render a static vibeview session page per run and link it from the HTML report (requires --results-dir; needs vibeview on PATH)")
 
 	rootCmd.AddCommand(runCmd)
 }

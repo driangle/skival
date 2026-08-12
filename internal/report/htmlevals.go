@@ -72,14 +72,17 @@ func buildHTMLRows(eval result.EvalResult, multi, multiModel bool) []htmlResultR
 		for _, run := range v.Runs {
 			status := runStatus(run)
 			rows = append(rows, htmlResultRow{
-				Variant:     label,
-				Sample:      fmt.Sprintf("%d", run.Sample),
-				Status:      status,
-				StatusClass: statusClass(status),
-				Cost:        formatCost(run.CostUSD),
-				Duration:    formatDuration(run.DurationMs),
-				SpanStyle:   spanCSS(0, run.DurationMs, slowest),
-				Detail:      runErrorMessage(run),
+				Variant:      label,
+				Sample:       fmt.Sprintf("%d", run.Sample),
+				Status:       status,
+				StatusClass:  statusClass(status),
+				Cost:         formatCost(run.CostUSD),
+				Duration:     formatDuration(run.DurationMs),
+				SpanStyle:    spanCSS(0, run.DurationMs, slowest),
+				Detail:       runErrorMessage(run),
+				SessionPage:  run.SessionPage,
+				SessionID:    run.SessionID,
+				SessionShort: shortSessionID(run.SessionID),
 			})
 		}
 		if agg := v.Aggregate; agg != nil && len(v.Runs) >= 2 {
@@ -195,6 +198,16 @@ func firstSentence(reason string) string {
 		return reason[:i+1]
 	}
 	return reason
+}
+
+// shortSessionID abbreviates a session id for compact display, keeping the
+// leading segment that vibeview's prefix matching accepts.
+func shortSessionID(id string) string {
+	const n = 8
+	if len(id) <= n {
+		return id
+	}
+	return id[:n]
 }
 
 // runErrorMessage is the reason a run errored, or "" if it did not error.

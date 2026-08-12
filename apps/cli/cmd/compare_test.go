@@ -13,7 +13,7 @@ import (
 
 func saveTestResults(t *testing.T, dir string, sr *result.SuiteResult) string {
 	t.Helper()
-	saved, err := persist.Save(dir, sr, report.DefaultWeights())
+	saved, err := persist.Save(dir, sr, report.DefaultWeights(), persist.SaveOptions{})
 	if err != nil {
 		t.Fatalf("saving test results: %v", err)
 	}

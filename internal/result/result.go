@@ -17,6 +17,9 @@ type RunResult struct {
 	DurationMs        int64
 	Usage             agentrunner.Usage
 	SessionID         string
+	// SessionPage is the path (relative to the results-dir root) of a static
+	// vibeview session page for this run, when --link-sessions produced one.
+	SessionPage string
 	Err               error
 	Pass              *bool
 	Conversation      []json.RawMessage

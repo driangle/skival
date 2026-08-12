@@ -25,6 +25,9 @@ type htmlData struct {
 	Errors       []htmlError
 
 	ShowQuality bool
+	// HasSessions is true when at least one run carries session info, which
+	// gates the "Session" column in the samples tables.
+	HasSessions bool
 }
 
 // htmlVerdict is the headline answer: which variant won, and by how much
@@ -80,6 +83,12 @@ type htmlResultRow struct {
 	// Detail is the failure reason for an errored run, revealed by expanding the
 	// row. Empty for runs that completed.
 	Detail string
+	// SessionPage is the relative path to a static vibeview session page for the
+	// run, when one was produced. SessionID/SessionShort back the fallback hint
+	// shown when no page exists.
+	SessionPage  string
+	SessionID    string
+	SessionShort string
 }
 
 // htmlJudgeVerdict is one comparative-judge score. Pips renders the 1-5 rating
