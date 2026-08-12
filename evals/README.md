@@ -45,10 +45,9 @@ skival validate evals/suite.yaml
 skival run evals/suite.yaml --results-dir results/dogfood
 ```
 
-To read the agent transcript behind each run, add `--link-sessions --format html`
-(needs [vibeview](https://github.com/driangle/vibeview) on `PATH`); skival writes a
-`report.html` into the results dir whose per-run "view session" links open the
-rendered conversation. Without vibeview it falls back to a `vibeview show <id>` hint:
+To read the agent transcript behind each run, add `--link-sessions --format html`;
+skival writes a `report.html` into the results dir whose per-run "view session"
+links open the rendered conversation:
 
 ```bash
 skival run evals/suite.yaml --results-dir results/dogfood --format html --link-sessions

@@ -1,17 +1,15 @@
 // Package sessionlink turns a persisted agent transcript into a static session
-// page rendered by the external `vibeview` CLI, degrading to a copy-pasteable
-// hint when vibeview is unavailable. It never fails the caller: a missing binary
-// or a failed export yields a fallback hint, not an error.
+// page using the vibeview SDK, which is compiled into skival — no external
+// binary is required. It never fails the caller: a render or write error yields
+// a fallback hint, not an error.
 package sessionlink
 
 import (
-	"context"
 	"log/slog"
-	"os/exec"
-)
+	"os"
 
-// binary is the vibeview executable name, resolved via PATH.
-const binary = "vibeview"
+	"github.com/driangle/vibeview/apps/lib/sessionhtml"
+)
 
 // Request describes one session to render.
 type Request struct {
@@ -20,26 +18,30 @@ type Request struct {
 	OutPath     string // where the static HTML session page should be written
 }
 
-// Link is the outcome of an export attempt. Exactly one field is set: Page when
-// a static page was produced, otherwise Hint with a command the user can run.
+// Link is the outcome of a render attempt. Exactly one field is set: Page when a
+// static page was produced, otherwise Hint with a command the user can run.
 type Link struct {
 	Page string // path to the generated static HTML page
 	Hint string // fallback command, e.g. "vibeview show <id>"
 }
 
-// Export renders req.SidecarPath to a static HTML page at req.OutPath using
-// vibeview. If vibeview is not on PATH or the export fails, it returns a Link
-// carrying a fallback hint instead.
-func Export(ctx context.Context, req Request) Link {
-	path, err := exec.LookPath(binary)
+// Export renders req.SidecarPath to a self-contained HTML page at req.OutPath via
+// the vibeview SDK. On a render or write error it returns a Link carrying a
+// fallback hint instead.
+func Export(req Request) Link {
+	page, err := sessionhtml.RenderSessionHTML(sessionhtml.Request{
+		Session:     req.SidecarPath,
+		CostEnabled: true,
+	})
 	if err != nil {
+		slog.Warn("rendering session page failed; falling back to session hint",
+			"session_id", req.SessionID, "error", err)
 		return fallback(req.SessionID)
 	}
 
-	cmd := exec.CommandContext(ctx, path, "export", req.SidecarPath, "--format", "html", "--out", req.OutPath)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		slog.Warn("vibeview export failed; falling back to session hint",
-			"session_id", req.SessionID, "error", err, "output", string(out))
+	if err := os.WriteFile(req.OutPath, page, 0o644); err != nil {
+		slog.Warn("writing session page failed; falling back to session hint",
+			"session_id", req.SessionID, "error", err)
 		return fallback(req.SessionID)
 	}
 

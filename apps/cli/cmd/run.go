@@ -192,7 +192,7 @@ func init() {
 	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")
 	runCmd.Flags().Bool("compare", false, "Force comparative judging on where criteria are configured")
 	runCmd.Flags().Bool("no-compare", false, "Disable comparative judging even if configured in the suite")
-	runCmd.Flags().Bool("link-sessions", false, "Render a static vibeview session page per run and link it from the HTML report (requires --results-dir; needs vibeview on PATH)")
+	runCmd.Flags().Bool("link-sessions", false, "Render a static session page per run (via the embedded vibeview renderer) and link it from the HTML report (requires --results-dir)")
 
 	rootCmd.AddCommand(runCmd)
 }

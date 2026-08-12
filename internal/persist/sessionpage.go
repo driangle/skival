@@ -1,7 +1,6 @@
 package persist
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -37,7 +36,7 @@ func linkRun(dir, variantDir string, run *result.RunResult) {
 	sidecar := filepath.Join(variantDir, fmt.Sprintf("run-%d.conversation.jsonl", run.Sample))
 	outPath := filepath.Join(variantDir, fmt.Sprintf("run-%d.session.html", run.Sample))
 
-	link := sessionlink.Export(context.Background(), sessionlink.Request{
+	link := sessionlink.Export(sessionlink.Request{
 		SidecarPath: sidecar,
 		SessionID:   run.SessionID,
 		OutPath:     outPath,

@@ -1,35 +1,33 @@
 package sessionlink
 
 import (
-	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-// writeFakeVibeview installs an executable named "vibeview" in a fresh dir and
-// puts that dir first on PATH, so Export resolves it. body is the script body
-// after the shebang.
-func writeFakeVibeview(t *testing.T, body string) {
+// validSession is a minimal two-message Claude transcript the vibeview SDK can
+// render (mirrors vibeview's own sessionhtml fixture).
+const validSession = `{"type":"user","uuid":"u1","sessionId":"sess-1","timestamp":1700000000000,"message":{"role":"user","content":[{"type":"text","text":"hello world"}]}}
+{"type":"assistant","uuid":"a1","sessionId":"sess-1","timestamp":1700000001000,"message":{"role":"assistant","model":"claude-sonnet-4-20250514","content":[{"type":"text","text":"Hi there!"}],"usage":{"input_tokens":10,"output_tokens":5,"costUSD":0.003}}}
+`
+
+// writeSidecar writes a transcript JSONL to a temp file and returns its path.
+func writeSidecar(t *testing.T, body string) string {
 	t.Helper()
-	dir := t.TempDir()
-	script := "#!/bin/sh\n" + body
-	path := filepath.Join(dir, "vibeview")
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatalf("writing fake vibeview: %v", err)
+	path := filepath.Join(t.TempDir(), "run-1.conversation.jsonl")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatalf("writing sidecar: %v", err)
 	}
-	t.Setenv("PATH", dir)
+	return path
 }
 
-func TestExport_SuccessReturnsPage(t *testing.T) {
-	// Export always invokes: export <sidecar> --format html --out <outPath>,
-	// so the out path is the 6th argument.
-	writeFakeVibeview(t, `printf '<html></html>' > "$6"`)
-
+func TestExport_RendersPageFromTranscript(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "run-1.session.html")
-	link := Export(context.Background(), Request{
-		SidecarPath: "conversation.jsonl",
-		SessionID:   "abc123",
+	link := Export(Request{
+		SidecarPath: writeSidecar(t, validSession),
+		SessionID:   "sess-1",
 		OutPath:     out,
 	})
 
@@ -39,45 +37,35 @@ func TestExport_SuccessReturnsPage(t *testing.T) {
 	if link.Hint != "" {
 		t.Errorf("Hint = %q, want empty on success", link.Hint)
 	}
-	if _, err := os.Stat(out); err != nil {
-		t.Errorf("expected session page to be written: %v", err)
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("expected a session page: %v", err)
+	}
+	// The SDK embeds session data in a known node; its presence proves we wrote
+	// a real vibeview page, not an empty file.
+	if !strings.Contains(string(data), "vibeview-export-data") {
+		t.Errorf("session page missing vibeview data node")
 	}
 }
 
-func TestExport_CommandFailureFallsBackToHint(t *testing.T) {
-	writeFakeVibeview(t, "exit 1\n")
-
-	link := Export(context.Background(), Request{
-		SidecarPath: "conversation.jsonl",
-		SessionID:   "abc123",
+func TestExport_RenderFailureFallsBackToHint(t *testing.T) {
+	// A path with no transcript makes the SDK fail; Export must not.
+	link := Export(Request{
+		SidecarPath: filepath.Join(t.TempDir(), "missing.jsonl"),
+		SessionID:   "sess-9",
 		OutPath:     filepath.Join(t.TempDir(), "out.html"),
 	})
 
 	if link.Page != "" {
 		t.Errorf("Page = %q, want empty on failure", link.Page)
 	}
-	if link.Hint != "vibeview show abc123" {
-		t.Errorf("Hint = %q, want fallback command", link.Hint)
-	}
-}
-
-func TestExport_MissingBinaryFallsBackToHint(t *testing.T) {
-	t.Setenv("PATH", t.TempDir()) // empty dir: no vibeview on PATH
-
-	link := Export(context.Background(), Request{SessionID: "xyz"})
-
-	if link.Page != "" {
-		t.Errorf("Page = %q, want empty when vibeview absent", link.Page)
-	}
-	if link.Hint != "vibeview show xyz" {
+	if link.Hint != "vibeview show sess-9" {
 		t.Errorf("Hint = %q, want fallback command", link.Hint)
 	}
 }
 
 func TestExport_NoSessionIDYieldsEmptyLink(t *testing.T) {
-	t.Setenv("PATH", t.TempDir())
-
-	link := Export(context.Background(), Request{})
+	link := Export(Request{SidecarPath: filepath.Join(t.TempDir(), "missing.jsonl")})
 
 	if link.Page != "" || link.Hint != "" {
 		t.Errorf("want empty Link with no session id, got %+v", link)

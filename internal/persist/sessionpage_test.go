@@ -10,6 +10,12 @@ import (
 	"github.com/driangle/skival/internal/result"
 )
 
+// validConversation is a minimal Claude transcript the vibeview SDK renders.
+var validConversation = []json.RawMessage{
+	json.RawMessage(`{"type":"user","uuid":"u1","sessionId":"sess-abc","timestamp":1700000000000,"message":{"role":"user","content":[{"type":"text","text":"hello"}]}}`),
+	json.RawMessage(`{"type":"assistant","uuid":"a1","sessionId":"sess-abc","timestamp":1700000001000,"message":{"role":"assistant","model":"claude-sonnet-4-20250514","content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":3,"output_tokens":2}}}`),
+}
+
 // suiteWithConversation returns a one-run suite whose run carries a transcript
 // sidecar and a session id, the prerequisites for session linking.
 func suiteWithConversation() *result.SuiteResult {
@@ -25,27 +31,14 @@ func suiteWithConversation() *result.SuiteResult {
 					Sample:       1,
 					Pass:         boolPtr(true),
 					SessionID:    "sess-abc",
-					Conversation: []json.RawMessage{json.RawMessage(`{"type":"user"}`)},
+					Conversation: validConversation,
 				}},
 			}},
 		}},
 	}
 }
 
-// installFakeVibeview puts a fake `vibeview export` on PATH that writes its
-// --out target, so linkSessions produces a page without the real binary.
-func installFakeVibeview(t *testing.T) {
-	t.Helper()
-	dir := t.TempDir()
-	script := "#!/bin/sh\nprintf '<html></html>' > \"$6\"\n"
-	if err := os.WriteFile(filepath.Join(dir, "vibeview"), []byte(script), 0o755); err != nil {
-		t.Fatalf("writing fake vibeview: %v", err)
-	}
-	t.Setenv("PATH", dir)
-}
-
 func TestSave_LinkSessionsPersistsSessionPage(t *testing.T) {
-	installFakeVibeview(t)
 	sr := suiteWithConversation()
 
 	outDir, err := Save(t.TempDir(), sr, defaultWeights(), SaveOptions{LinkSessions: true})
@@ -55,7 +48,7 @@ func TestSave_LinkSessionsPersistsSessionPage(t *testing.T) {
 
 	wantRel := filepath.Join("evals", "eval1", "baseline", "run-1.session.html")
 
-	// The page file exists on disk...
+	// The page file exists on disk (rendered in-process by the vibeview SDK)...
 	if _, err := os.Stat(filepath.Join(outDir, wantRel)); err != nil {
 		t.Errorf("expected session page on disk: %v", err)
 	}
@@ -70,31 +63,6 @@ func TestSave_LinkSessionsPersistsSessionPage(t *testing.T) {
 	}
 	if got := loaded.Evals[0].Variants[0].Runs[0].SessionPage; got != wantRel {
 		t.Errorf("loaded SessionPage = %q, want %q", got, wantRel)
-	}
-}
-
-func TestSave_LinkSessionsFallsBackWhenVibeviewAbsent(t *testing.T) {
-	t.Setenv("PATH", t.TempDir()) // no vibeview on PATH
-	sr := suiteWithConversation()
-
-	outDir, err := Save(t.TempDir(), sr, defaultWeights(), SaveOptions{LinkSessions: true})
-	if err != nil {
-		t.Fatalf("Save must not fail when vibeview is absent: %v", err)
-	}
-
-	// No page produced, but the session id survives for the report's fallback hint.
-	if got := sr.Evals[0].Variants[0].Runs[0].SessionPage; got != "" {
-		t.Errorf("SessionPage = %q, want empty on fallback", got)
-	}
-	if _, err := os.Stat(filepath.Join(outDir, "evals", "eval1", "baseline", "run-1.session.html")); !os.IsNotExist(err) {
-		t.Errorf("expected no session page on fallback, stat err = %v", err)
-	}
-	loaded, err := Load(outDir)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if got := loaded.Evals[0].Variants[0].Runs[0].SessionID; got != "sess-abc" {
-		t.Errorf("loaded SessionID = %q, want preserved", got)
 	}
 }
 
