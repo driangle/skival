@@ -27,6 +27,9 @@ var validateCmd = &cobra.Command{
 
 		fmt.Fprintf(out, "%s %s\n\n", color.Green("OK"), path)
 		fmt.Fprintf(out, "  version:     %d\n", s.Version)
+		if s.Title != "" {
+			fmt.Fprintf(out, "  title:       %s\n", s.Title)
+		}
 		if s.Description != "" {
 			fmt.Fprintf(out, "  description: %s\n", s.Description)
 		}

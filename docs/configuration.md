@@ -6,6 +6,7 @@ Suites are defined in YAML files. This page covers the full configuration schema
 
 ```yaml
 version: 1
+title: "Suite title"
 description: "Suite description"
 defaults:
   model: "claude-sonnet-4-6"
@@ -22,6 +23,7 @@ evals:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `version` | Yes | Schema version (currently `1`) |
+| `title` | No | Short heading for the report (falls back to "Eval Report"); `description` renders as a subtitle beneath it |
 | `description` | No | Human-readable suite description |
 | `defaults` | No | Default values inherited by all evals |
 | `ranking` | No | Ranking weight configuration (see [Ranking](#ranking)) |

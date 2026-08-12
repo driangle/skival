@@ -23,6 +23,7 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 	d := htmlData{
 		CSS:          reportCSS,
 		JS:           reportJS,
+		Title:        sr.Title,
 		Description:  sr.Description,
 		StartedAt:    sr.StartedAt.Format("2006-01-02 15:04:05"),
 		FinishedAt:   sr.FinishedAt.Format("2006-01-02 15:04:05"),

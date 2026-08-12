@@ -223,6 +223,7 @@ func writeConversationJSONL(path string, messages []json.RawMessage) error {
 }
 
 type summaryJSON struct {
+	Title       string               `json:"title,omitempty"`
 	Description string               `json:"description"`
 	StartedAt   string               `json:"started_at"`
 	FinishedAt  string               `json:"finished_at"`
@@ -231,6 +232,7 @@ type summaryJSON struct {
 
 func buildSummaryJSON(sr *result.SuiteResult, weights report.Weights) summaryJSON {
 	return summaryJSON{
+		Title:       sr.Title,
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format(time.RFC3339),
 		FinishedAt:  sr.FinishedAt.Format(time.RFC3339),

@@ -23,6 +23,7 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 	prog := newProgress(opts.Progress)
 
 	sr := &result.SuiteResult{
+		Title:       s.Title,
 		Description: s.Description,
 		StartedAt:   time.Now(),
 	}

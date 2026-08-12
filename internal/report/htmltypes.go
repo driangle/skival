@@ -9,6 +9,7 @@ type htmlData struct {
 	CSS template.CSS
 	JS  template.JS
 
+	Title        string
 	Description  string
 	StartedAt    string
 	FinishedAt   string

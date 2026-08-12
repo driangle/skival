@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eval Report{{if .Description}} — {{.Description}}{{end}}</title>
+<title>{{if .Title}}{{.Title}}{{else}}Eval Report{{end}}</title>
 <style>{{.CSS}}</style>
 </head>
 <body>
@@ -12,7 +12,8 @@
 <header>
   <div class="head-left">
     <div class="brand"><span class="dot"></span><span class="kicker">skival eval report</span></div>
-    <h1>{{if .Description}}{{.Description}}{{else}}Eval Report{{end}}</h1>
+    <h1>{{if .Title}}{{.Title}}{{else}}Eval Report{{end}}</h1>
+    {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}
     <div class="runmeta">
       <span>{{.StartedAt}}</span>
       <span class="sep">·</span><span>{{.WallDuration}} wall</span>

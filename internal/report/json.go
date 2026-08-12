@@ -10,6 +10,7 @@ import (
 
 // jsonReport is the top-level JSON output structure.
 type jsonReport struct {
+	Title       string        `json:"title,omitempty"`
 	Description string        `json:"description"`
 	StartedAt   string        `json:"started_at"`
 	FinishedAt  string        `json:"finished_at"`
@@ -102,6 +103,7 @@ func WriteJSON(w io.Writer, sr *result.SuiteResult, weights Weights) error {
 
 func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 	r := jsonReport{
+		Title:       sr.Title,
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format("2006-01-02T15:04:05Z07:00"),
 		FinishedAt:  sr.FinishedAt.Format("2006-01-02T15:04:05Z07:00"),

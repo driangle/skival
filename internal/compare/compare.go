@@ -13,6 +13,7 @@ type Comparison struct {
 
 // RunMeta captures identifying info about one side of the comparison.
 type RunMeta struct {
+	Title       string `json:"title,omitempty"`
 	Description string `json:"description"`
 	StartedAt   string `json:"started_at"`
 	FinishedAt  string `json:"finished_at"`
@@ -97,6 +98,7 @@ func Compare(baseline, candidate *result.SuiteResult) *Comparison {
 func newRunMeta(sr *result.SuiteResult) RunMeta {
 	const layout = "2006-01-02T15:04:05Z07:00"
 	return RunMeta{
+		Title:       sr.Title,
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format(layout),
 		FinishedAt:  sr.FinishedAt.Format(layout),

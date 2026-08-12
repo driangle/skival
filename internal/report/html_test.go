@@ -40,7 +40,31 @@ func TestWriteHTML_Header(t *testing.T) {
 		StartedAt:   time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC),
 		FinishedAt:  time.Date(2026, 3, 19, 10, 5, 0, 0, time.UTC),
 	}
-	wantAll(t, renderHTML(t, sr), "My test suite", "2026-03-19", "300.0s wall")
+	out := renderHTML(t, sr)
+	wantAll(t, out, "My test suite", "2026-03-19", "300.0s wall")
+	// With no title, the heading falls back to the generic label and the
+	// description renders as a subtitle rather than being blown up as the h1.
+	wantAll(t, out, "<h1>Eval Report</h1>", `<p class="subtitle">My test suite</p>`)
+	if strings.Contains(out, "<h1>My test suite</h1>") {
+		t.Errorf("description should not be the h1 heading")
+	}
+}
+
+func TestWriteHTML_Title(t *testing.T) {
+	sr := &result.SuiteResult{
+		Title:       "Skill impact study",
+		Description: "A longer paragraph explaining the suite in detail.",
+		StartedAt:   time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC),
+		FinishedAt:  time.Date(2026, 3, 19, 10, 5, 0, 0, time.UTC),
+	}
+	out := renderHTML(t, sr)
+	// The short title becomes the heading and the browser <title>; the
+	// description still renders as the subtitle beneath it.
+	wantAll(t, out,
+		"<h1>Skill impact study</h1>",
+		"<title>Skill impact study</title>",
+		`<p class="subtitle">A longer paragraph explaining the suite in detail.</p>`,
+	)
 }
 
 func TestWriteHTML_ResultsTable(t *testing.T) {

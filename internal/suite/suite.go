@@ -3,6 +3,7 @@ package suite
 // Suite is the top-level configuration for a benchmark suite.
 type Suite struct {
 	Version     int      `yaml:"version"`
+	Title       string   `yaml:"title,omitempty"`
 	Description string   `yaml:"description"`
 	Defaults    Defaults `yaml:"defaults"`
 	Ranking     *Ranking `yaml:"ranking,omitempty"`

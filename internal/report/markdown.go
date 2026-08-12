@@ -11,7 +11,11 @@ import (
 
 // WriteMarkdown writes a human-readable markdown report to w.
 func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
-	fmt.Fprintf(w, "# Eval Report\n\n")
+	title := sr.Title
+	if title == "" {
+		title = "Eval Report"
+	}
+	fmt.Fprintf(w, "# %s\n\n", title)
 	if sr.Description != "" {
 		fmt.Fprintf(w, "%s\n\n", sr.Description)
 	}

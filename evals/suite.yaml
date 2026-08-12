@@ -1,4 +1,5 @@
 version: 1
+title: "Does the skival skill improve suite authoring?"
 description: >-
   Dogfood suite: does injecting the real skival skill improve an agent's ability
   to author a valid skival suite.yaml? Each eval asks the agent to produce a

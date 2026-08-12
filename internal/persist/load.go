@@ -30,6 +30,7 @@ func Load(dir string) (*result.SuiteResult, error) {
 	finishedAt, _ := time.Parse(time.RFC3339, summary.FinishedAt)
 
 	sr := &result.SuiteResult{
+		Title:       summary.Title,
 		Description: summary.Description,
 		StartedAt:   startedAt,
 		FinishedAt:  finishedAt,

@@ -41,6 +41,7 @@ header { display: flex; align-items: flex-start; justify-content: space-between;
 .brand { display: flex; align-items: center; gap: 10px; }
 .dot { width: 9px; height: 9px; border-radius: 2px; background: var(--amber); }
 h1 { font-size: 30px; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; max-width: 22ch; text-wrap: pretty; }
+.subtitle { font-size: 14px; line-height: 1.5; color: var(--ink-2); max-width: 68ch; text-wrap: pretty; }
 .runmeta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); font-family: var(--mono); }
 .runmeta .sep { color: var(--ink-3); }
 .actions { display: flex; gap: 8px; flex-shrink: 0; }

@@ -21,7 +21,8 @@ This parses the file, checks for structural errors, and prints a summary of eval
 
 ```yaml
 version: 1                           # REQUIRED. Must be > 0. Always use 1.
-description: "What this suite tests" # Optional.
+title: "Short report heading"        # Optional. Report <h1>; falls back to "Eval Report".
+description: "What this suite tests" # Optional. Renders as a subtitle beneath the title.
 
 defaults:                             # Optional. Applied to all evals unless overridden.
   runner: claude-code                 # Default runner: claude-code | ollama | exec.

@@ -88,6 +88,9 @@ type ComparativeScore struct {
 
 // SuiteResult is the top-level result for an entire suite execution.
 type SuiteResult struct {
+	// Title is an optional short heading for the report; Description is the
+	// longer explanatory blurb rendered beneath it.
+	Title       string
 	Description string
 	StartedAt   time.Time
 	FinishedAt  time.Time
