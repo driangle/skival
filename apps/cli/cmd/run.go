@@ -83,12 +83,16 @@ var runCmd = &cobra.Command{
 			}
 			fmt.Fprintf(os.Stderr, "Results saved to %s\n", outDir)
 
-			// Place an HTML report inside the results dir so its relative
-			// session links resolve against the per-run session pages.
-			if linkSessions && format == "html" {
-				if err := writeReportFile(filepath.Join(outDir, "report.html"), sr, weights); err != nil {
+			// HTML is a file, not terminal output: write report.html into the
+			// results dir (so its relative session links resolve) and point the
+			// user at it rather than dumping the whole document to stdout.
+			if format == "html" {
+				reportPath := filepath.Join(outDir, "report.html")
+				if err := writeReportFile(reportPath, sr, weights); err != nil {
 					return err
 				}
+				fmt.Fprintf(os.Stderr, "HTML report written to %s\n", reportPath)
+				return nil
 			}
 		}
 
