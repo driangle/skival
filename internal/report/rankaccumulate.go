@@ -33,6 +33,7 @@ func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
 	if a.verified > 0 {
 		passRate = float64(a.passed) / float64(a.verified)
 	}
+	passLow, passHigh := wilsonInterval(a.passed, a.verified, wilsonZ95)
 
 	var costNorm, durNorm, tokenNorm, medCost, medDur, medTokens float64
 	if a.evalCount > 0 {
@@ -54,6 +55,8 @@ func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
 		Runner:            a.runner,
 		Model:             a.model,
 		PassRate:          passRate,
+		PassLow:           passLow,
+		PassHigh:          passHigh,
 		MedianCostUSD:     medCost,
 		MedianDuration:    int64(medDur),
 		MedianTotalTokens: int64(medTokens),
