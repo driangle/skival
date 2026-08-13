@@ -102,6 +102,8 @@ type jsonRanking struct {
 	Model             string   `json:"model,omitempty"`
 	CompositeScore    float64  `json:"composite_score"`
 	PassRate          float64  `json:"pass_rate"`
+	PassRateLow       float64  `json:"pass_rate_low"`
+	PassRateHigh      float64  `json:"pass_rate_high"`
 	MedianCostUSD     float64  `json:"median_cost_usd"`
 	MedianDuration    int64    `json:"median_duration_ms"`
 	MedianTotalTokens *int64   `json:"median_total_tokens,omitempty"`
@@ -243,6 +245,8 @@ func buildJSONRankings(sr *result.SuiteResult, weights Weights) []jsonRanking {
 			Model:          rank.Model,
 			CompositeScore: rank.CompositeScore,
 			PassRate:       rank.PassRate,
+			PassRateLow:    rank.PassLow,
+			PassRateHigh:   rank.PassHigh,
 			MedianCostUSD:  rank.MedianCostUSD,
 			MedianDuration: rank.MedianDuration,
 		}

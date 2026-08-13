@@ -43,6 +43,11 @@ type VariantRank struct {
 	Runner   string
 	Model    string
 	PassRate float64
+	// PassLow and PassHigh are the 95% Wilson score interval on PassRate. They
+	// bound how much the observed pass rate can be trusted at this sample size;
+	// wide intervals (small n) signal the ranking gap may not be real.
+	PassLow  float64
+	PassHigh float64
 	// MedianCostUSD and MedianDuration are the mean of the variant's per-eval
 	// medians, not a single median pooled across every eval. Pooling would mix
 	// the distributions of a cheap eval and an expensive eval into one number.
