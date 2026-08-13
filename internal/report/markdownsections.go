@@ -25,18 +25,18 @@ func writeWorkdirsSection(w io.Writer, sr *result.SuiteResult) {
 	}
 
 	fmt.Fprintf(w, "## Workdirs\n\n")
-	for _, eval := range sr.Evals {
-		name := evalDisplayName(eval)
-		for _, v := range eval.Variants {
-			for _, run := range v.Runs {
-				if run.WorkDir != "" {
-					fmt.Fprintf(w, "- **%s** > %s > sample %d: `%s`\n",
-						name, v.Name, run.Sample, run.WorkDir)
-				}
-			}
-		}
+	fmt.Fprintf(w, "%s\n\n", artifactPointer(sr, "workdirs"))
+}
+
+// artifactPointer returns a one-line pointer to where per-sample artifacts of
+// the given kind (e.g. "workdirs", "sessions") are recorded. When the suite was
+// persisted it points at the results dir; otherwise it notes the paths were not
+// saved to disk.
+func artifactPointer(sr *result.SuiteResult, kind string) string {
+	if sr.ResultsDir != "" {
+		return fmt.Sprintf("Per-sample %s are recorded under `%s`.", kind, sr.ResultsDir)
 	}
-	fmt.Fprintln(w)
+	return fmt.Sprintf("Per-sample %s were not persisted (run with `--results-dir` to save them).", kind)
 }
 
 // writeSessionsSection lists each run's agent session: a link to its static
@@ -57,29 +57,7 @@ func writeSessionsSection(w io.Writer, sr *result.SuiteResult) {
 	}
 
 	fmt.Fprintf(w, "## Sessions\n\n")
-	for _, eval := range sr.Evals {
-		name := evalDisplayName(eval)
-		for _, v := range eval.Variants {
-			for _, run := range v.Runs {
-				if ref := sessionRef(run); ref != "" {
-					fmt.Fprintf(w, "- **%s** > %s > sample %d: %s\n", name, v.Name, run.Sample, ref)
-				}
-			}
-		}
-	}
-	fmt.Fprintln(w)
-}
-
-// sessionRef renders a run's session as a markdown link when a page exists, or
-// a `vibeview show` hint when only the id is known.
-func sessionRef(run result.RunResult) string {
-	if run.SessionPage != "" {
-		return fmt.Sprintf("[view session](%s)", run.SessionPage)
-	}
-	if run.SessionID != "" {
-		return fmt.Sprintf("`vibeview show %s`", run.SessionID)
-	}
-	return ""
+	fmt.Fprintf(w, "%s\n\n", artifactPointer(sr, "sessions"))
 }
 
 func writeErrorsSection(w io.Writer, sr *result.SuiteResult) {
