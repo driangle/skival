@@ -147,7 +147,30 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	}
 
 	tw.Flush()
+	writeSignificanceNote(w, ranks)
 	fmt.Fprintln(w)
+}
+
+// writeSignificanceNote warns when the top two variants' 95% Wilson pass-rate
+// intervals overlap, meaning the #1 vs #2 gap is not distinguishable at this
+// sample size. It is a no-op with fewer than two ranks or non-overlapping
+// intervals.
+func writeSignificanceNote(w io.Writer, ranks []VariantRank) {
+	if len(ranks) < 2 {
+		return
+	}
+	a, b := ranks[0], ranks[1]
+	if !intervalsOverlap(a.PassLow, a.PassHigh, b.PassLow, b.PassHigh) {
+		return
+	}
+	fmt.Fprintf(w, "\n> ⚠ #1 (%s) vs #2 (%s): not significant at this sample "+
+		"size (pass-rate intervals overlap).\n", a.Name, b.Name)
+}
+
+// formatPassCI renders a variant's 95% Wilson pass-rate interval as "[21–83%]",
+// rounding each bound to a whole percent.
+func formatPassCI(r VariantRank) string {
+	return fmt.Sprintf("[%.0f–%.0f%%]", r.PassLow*100, r.PassHigh*100)
 }
 
 // rankingCols selects which optional columns the ranking table shows.
@@ -171,8 +194,8 @@ func rankingHeader(c rankingCols) (header, sep string) {
 		header += "\tMODEL"
 		sep += "\t-----"
 	}
-	header += "\tSCORE\tPASS RATE"
-	sep += "\t-----\t---------"
+	header += "\tSCORE\tPASS RATE\t95% CI"
+	sep += "\t-----\t---------\t------"
 	if c.quality {
 		header += "\tQUALITY"
 		sep += "\t-------"
@@ -196,7 +219,7 @@ func writeRankingRow(tw *tabwriter.Writer, r VariantRank, c rankingCols) {
 	if c.multiModel {
 		fmt.Fprintf(tw, "\t%s", r.Model)
 	}
-	fmt.Fprintf(tw, "\t%.3f\t%.0f%%", r.CompositeScore, r.PassRate*100)
+	fmt.Fprintf(tw, "\t%.3f\t%.0f%%\t%s", r.CompositeScore, r.PassRate*100, formatPassCI(r))
 	if c.quality {
 		fmt.Fprintf(tw, "\t%.2f", r.QualityScore)
 	}
