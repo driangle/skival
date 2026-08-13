@@ -1,12 +1,13 @@
 ---
 title: "Workdirs accumulate in /tmp unbounded; add --keep-workdirs"
 id: "01kzyjtey"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["workdir", "cleanup", "ux"]
 created: "2026-08-13"
 phase: phase-1
+completed_at: 2026-08-13
 ---
 
 # Workdirs accumulate in /tmp unbounded; add --keep-workdirs
@@ -20,10 +21,10 @@ failure, drop the rest automatically.
 
 ## Tasks
 
-- [ ] Add a `--keep-workdirs` option with values `all` / `failed` / `none` (default `failed`).
-- [ ] After each sample (and/or at run end), remove workdirs that don't match the keep policy.
-- [ ] Ensure kept workdirs remain the ones referenced by the report / failure details so debugging still works (coordinate with failure-reporting work).
-- [ ] Add tests: `failed` keeps only failing samples' workdirs, `all` keeps everything, `none` cleans all.
+- [x] Add a `--keep-workdirs` option with values `all` / `failed` / `none` (default `failed`).
+- [x] After each sample (and/or at run end), remove workdirs that don't match the keep policy.
+- [x] Ensure kept workdirs remain the ones referenced by the report / failure details so debugging still works (coordinate with failure-reporting work).
+- [x] Add tests: `failed` keeps only failing samples' workdirs, `all` keeps everything, `none` cleans all.
 
 ## Acceptance Criteria
 
