@@ -122,6 +122,19 @@ func TestStart_NonZeroExit(t *testing.T) {
 	}
 }
 
+func TestStart_DurationMeasured(t *testing.T) {
+	// The exec runner must report the subprocess wall-clock time; a sleeping
+	// command should yield a duration at least as long as it slept.
+	cfg := Config{Command: []string{"sleep", "0.1"}}
+	_, res, err := runWith(t, cfg, "x", "")
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if res.Duration < 100*time.Millisecond {
+		t.Errorf("Duration = %v, want >= 100ms for a 0.1s sleep", res.Duration)
+	}
+}
+
 func TestStart_Timeout(t *testing.T) {
 	cfg := Config{Command: []string{"sleep", "5"}}
 	session, err := NewRunner().Start(context.Background(), "x",

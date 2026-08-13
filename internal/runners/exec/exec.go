@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	osexec "os/exec"
+	"time"
 
 	agentrunner "github.com/driangle/agentrunner/go"
 )
@@ -91,10 +92,14 @@ func (r *Runner) run(ctx context.Context, inv *invocation, msgCh chan<- agentrun
 		defer inv.cleanup()
 	}
 
+	// Measure wall-clock time around the subprocess so the run reports a real
+	// duration; the exec runner has no upstream metering to source it from.
+	start := time.Now()
 	if err := inv.cmd.Start(); err != nil {
 		return nil, mapStartErr(err)
 	}
 	waitErr := inv.cmd.Wait()
+	elapsed := time.Since(start)
 
 	if ctx.Err() != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
@@ -110,7 +115,9 @@ func (r *Runner) run(ctx context.Context, inv *invocation, msgCh chan<- agentrun
 
 	final := forwardEvents(ctx, inv.eventsPath, msgCh)
 	r.logStderr(inv)
-	return buildResult(inv.stdout.String(), exitCode, final), nil
+	res := buildResult(inv.stdout.String(), exitCode, final)
+	res.Duration = elapsed
+	return res, nil
 }
 
 // mapStartErr translates a cmd.Start failure into a runner sentinel error.
