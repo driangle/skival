@@ -23,4 +23,7 @@ type Options struct {
 	// suite config, true forces it on where criteria are configured, false
 	// forces it off. Set from the --compare/--no-compare CLI flags.
 	Compare *bool
+	// KeepWorkdirs controls which isolated sample workdirs are retained after
+	// the run: "all", "failed", or "none". Empty resolves to "failed".
+	KeepWorkdirs string
 }

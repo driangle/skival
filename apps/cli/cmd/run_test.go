@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/driangle/skival/internal/report"
@@ -86,6 +89,52 @@ func TestRankingWeights_NoCompareOverrideDropsQuality(t *testing.T) {
 	w := rankingWeights(s, &off)
 	if w.Quality != 0 {
 		t.Errorf("--no-compare should drop quality weight, got %g", w.Quality)
+	}
+}
+
+func TestKeepWorkdirsFlagDefault(t *testing.T) {
+	f := runCmd.Flags().Lookup("keep-workdirs")
+	if f == nil {
+		t.Fatal("expected --keep-workdirs flag to be registered")
+	}
+	if f.DefValue != "failed" {
+		t.Errorf("expected --keep-workdirs default to be \"failed\", got %q", f.DefValue)
+	}
+}
+
+func TestRunCmd_InvalidKeepWorkdirsErrors(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "suite.yaml")
+	content := `
+version: 1
+description: "test suite"
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    name: "Test Eval"
+    prompt: "do something"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: "baseline"
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runCmd.Flags().Set("keep-workdirs", "bogus"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = runCmd.Flags().Set("keep-workdirs", "failed") })
+
+	err := runCmd.RunE(runCmd, []string{path})
+	if err == nil {
+		t.Fatal("expected error for invalid --keep-workdirs value")
+	}
+	if !strings.Contains(err.Error(), "keep-workdirs") {
+		t.Errorf("expected error to mention keep-workdirs, got: %v", err)
 	}
 }
 
