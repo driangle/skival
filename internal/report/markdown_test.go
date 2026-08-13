@@ -90,6 +90,83 @@ func TestWriteMarkdown_RankingTable(t *testing.T) {
 	}
 }
 
+// orderingSuite has two variants (so rankings render) plus per-sample workdirs.
+func orderingSuite() *result.SuiteResult {
+	return &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "fizzbuzz",
+			Variants: []result.VariantResult{
+				{Name: "a", Runs: []result.RunResult{{Sample: 1, CostUSD: 1.0, DurationMs: 100, Pass: boolPtr(true), WorkDir: "/wd/a-1"}}},
+				{Name: "b", Runs: []result.RunResult{{Sample: 1, CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false), WorkDir: "/wd/b-1"}}},
+			},
+		}},
+	}
+}
+
+func TestWriteMarkdown_RankingsBeforeWorkdirsAndSessions(t *testing.T) {
+	sr := orderingSuite()
+	sr.ResultsDir = "/tmp/results/xyz"
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+	out := buf.String()
+
+	rankIdx := strings.Index(out, "## Rankings")
+	workdirIdx := strings.Index(out, "## Workdirs")
+	resultsIdx := strings.Index(out, "## Results")
+	if rankIdx < 0 || workdirIdx < 0 || resultsIdx < 0 {
+		t.Fatalf("expected Results, Rankings and Workdirs sections, got:\n%s", out)
+	}
+	if !(resultsIdx < rankIdx && rankIdx < workdirIdx) {
+		t.Errorf("expected order Results < Rankings < Workdirs, got results=%d rank=%d workdir=%d", resultsIdx, rankIdx, workdirIdx)
+	}
+}
+
+func TestWriteMarkdown_WorkdirsCollapsed(t *testing.T) {
+	sr := orderingSuite()
+	sr.ResultsDir = "/tmp/results/xyz"
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+	out := buf.String()
+
+	if !strings.Contains(out, "Per-sample workdirs are recorded under `/tmp/results/xyz`.") {
+		t.Errorf("missing collapsed workdirs pointer:\n%s", out)
+	}
+	// Per-sample workdir path lines must no longer be emitted.
+	if strings.Contains(out, "/wd/a-1") || strings.Contains(out, "sample 1: `/wd") {
+		t.Errorf("expected collapsed workdirs, got per-sample lines:\n%s", out)
+	}
+}
+
+func TestWriteMarkdown_WorkdirsNoResultsDir(t *testing.T) {
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, orderingSuite(), DefaultWeights())
+	out := buf.String()
+	if !strings.Contains(out, "Per-sample workdirs were not persisted") {
+		t.Errorf("missing not-persisted workdirs pointer:\n%s", out)
+	}
+}
+
+func TestWriteMarkdown_ResultsFooter(t *testing.T) {
+	sr := orderingSuite()
+	sr.ResultsDir = "/tmp/results/xyz"
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+	out := buf.String()
+	if !strings.Contains(out, "**Results saved to** `/tmp/results/xyz`") {
+		t.Errorf("missing results-saved footer:\n%s", out)
+	}
+}
+
+func TestWriteMarkdown_NoFooterWithoutResultsDir(t *testing.T) {
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, orderingSuite(), DefaultWeights())
+	if strings.Contains(buf.String(), "**Results saved to**") {
+		t.Error("footer should be absent when ResultsDir is unset")
+	}
+}
+
 func TestWriteMarkdown_NoRankingForSingleVariant(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),

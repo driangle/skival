@@ -43,6 +43,28 @@ func makeSuiteResult() *result.SuiteResult {
 	}
 }
 
+func TestSave_SetsResultsDirAndSummaryFooter(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+
+	outDir, err := Save(tmpDir, sr, defaultWeights(), SaveOptions{})
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	if sr.ResultsDir != outDir {
+		t.Errorf("expected ResultsDir=%q, got %q", outDir, sr.ResultsDir)
+	}
+
+	data, err := os.ReadFile(filepath.Join(outDir, "summary.md"))
+	if err != nil {
+		t.Fatalf("reading summary.md: %v", err)
+	}
+	if !strings.Contains(string(data), "**Results saved to** `"+outDir+"`") {
+		t.Errorf("summary.md missing results-saved footer:\n%s", data)
+	}
+}
+
 func TestSaveAndLoad_RoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	sr := makeSuiteResult()

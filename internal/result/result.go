@@ -95,4 +95,8 @@ type SuiteResult struct {
 	StartedAt   time.Time
 	FinishedAt  time.Time
 	Evals       []EvalResult
+	// ResultsDir is the directory where run artifacts (workdirs, sessions,
+	// transcripts) were persisted, when the suite was run with --results-dir.
+	// Empty when results were not saved to disk.
+	ResultsDir string
 }
