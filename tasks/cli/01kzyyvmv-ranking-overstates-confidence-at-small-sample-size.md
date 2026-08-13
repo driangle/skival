@@ -1,12 +1,13 @@
 ---
 title: "Ranking overstates confidence at small sample sizes"
 id: "01kzyyvmv"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["ranking", "statistics", "reporting"]
 created: "2026-08-13"
 phase: phase-3
+completed_at: 2026-08-13
 ---
 
 # Ranking overstates confidence at small sample sizes
@@ -26,11 +27,11 @@ a run.
 
 ## Tasks
 
-- [ ] Compute a confidence interval on pass rate per variant (Wilson interval on the pass/fail counts).
-- [ ] Surface the interval (or its width) alongside the correctness score in the report, so the precision of the point estimate is visible.
-- [ ] Flag pairs/rankings as "not significant at this sample size" when variants' pass-rate intervals overlap.
-- [ ] Consider whether the composite score's displayed precision should scale with sample size (avoid three decimals on a nine-sample run).
-- [ ] Add tests: Wilson interval computation, overlap/"not significant" flagging, and rendering in the report.
+- [x] Compute a confidence interval on pass rate per variant (Wilson interval on the pass/fail counts).
+- [x] Surface the interval (or its width) alongside the correctness score in the report, so the precision of the point estimate is visible.
+- [x] Flag pairs/rankings as "not significant at this sample size" when variants' pass-rate intervals overlap.
+- [x] Consider whether the composite score's displayed precision should scale with sample size (avoid three decimals on a nine-sample run).
+- [x] Add tests: Wilson interval computation, overlap/"not significant" flagging, and rendering in the report.
 
 ## Acceptance Criteria
 

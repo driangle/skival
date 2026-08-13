@@ -1,12 +1,13 @@
 ---
 title: "Failed samples don't record why they failed"
 id: "01kzy1aqw"
-status: pending
+status: completed
 priority: high
 type: bug
 tags: ["reporting", "verification"]
 created: "2026-08-13"
 phase: phase-3
+completed_at: 2026-08-13
 ---
 
 # Failed samples don't record why they failed
@@ -43,9 +44,9 @@ biggest time sink reported in this feedback.
 
 ## Tasks
 
-- [ ] Persist per-step results `{name, type, pass, exit_code, stdout, stderr}` on each run/sample record.
-- [ ] Include the first failing step's name and message in the report table or a "Failures" section.
-- [ ] Add tests covering a failed sample: assert per-step details are persisted and the failure reason is surfaced in the report.
+- [x] Persist per-step results `{name, type, pass, exit_code, stdout, stderr}` on each run/sample record.
+- [x] Include the first failing step's name and message in the report table or a "Failures" section.
+- [x] Add tests covering a failed sample: assert per-step details are persisted and the failure reason is surfaced in the report.
 
 ## Acceptance Criteria
 
