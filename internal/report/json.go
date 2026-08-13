@@ -64,6 +64,38 @@ type jsonRun struct {
 	Error       string     `json:"error,omitempty"`
 	SessionID   string     `json:"session_id,omitempty"`
 	SessionPage string     `json:"session_page,omitempty"`
+	Steps       []jsonStep `json:"steps,omitempty"`
+}
+
+// jsonStep mirrors a verification step's outcome in the JSON report.
+type jsonStep struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Pass     bool   `json:"pass"`
+	ExitCode *int   `json:"exit_code,omitempty"`
+	Stdout   string `json:"stdout,omitempty"`
+	Stderr   string `json:"stderr,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// jsonRunSteps mirrors a run's verification steps, or nil when there are none.
+func jsonRunSteps(run result.RunResult) []jsonStep {
+	if len(run.Steps) == 0 {
+		return nil
+	}
+	out := make([]jsonStep, 0, len(run.Steps))
+	for _, s := range run.Steps {
+		out = append(out, jsonStep{
+			Name:     s.Name,
+			Type:     s.Type,
+			Pass:     s.Pass,
+			ExitCode: s.ExitCode,
+			Stdout:   s.Stdout,
+			Stderr:   s.Stderr,
+			Reason:   s.Reason,
+		})
+	}
+	return out
 }
 
 // jsonUsage is the per-run token breakdown. Nil when the run reported no tokens.
@@ -179,6 +211,7 @@ func buildJSONVariant(v result.VariantResult) jsonVariant {
 			Pass:        run.Pass,
 			SessionID:   run.SessionID,
 			SessionPage: run.SessionPage,
+			Steps:       jsonRunSteps(run),
 		}
 		if run.Err != nil {
 			jr.Error = run.Err.Error()

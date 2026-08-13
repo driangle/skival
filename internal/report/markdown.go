@@ -29,6 +29,7 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	writeSessionsSection(w, sr)
 	writeComparisonSection(w, sr)
 	writeErrorsSection(w, sr)
+	writeFailuresSection(w, sr)
 	writeSkippedSection(w, sr)
 	writeRankingTable(w, sr, multi, multiModel, weights)
 }

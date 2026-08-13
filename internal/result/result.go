@@ -9,17 +9,17 @@ import (
 
 // RunResult captures the outcome of a single sample run.
 type RunResult struct {
-	Sample            int
-	Text              string
-	IsError           bool
-	ExitCode          int
-	CostUSD           float64
-	DurationMs        int64
-	Usage             agentrunner.Usage
-	SessionID         string
+	Sample     int
+	Text       string
+	IsError    bool
+	ExitCode   int
+	CostUSD    float64
+	DurationMs int64
+	Usage      agentrunner.Usage
+	SessionID  string
 	// SessionPage is the path (relative to the results-dir root) of a static
 	// vibeview session page for this run, when --link-sessions produced one.
-	SessionPage string
+	SessionPage       string
 	Err               error
 	Pass              *bool
 	Conversation      []json.RawMessage
@@ -28,6 +28,21 @@ type RunResult struct {
 	Attempt           int    // 1-indexed attempt number (0 means no retry was configured)
 	TotalAttempts     int    // total attempts made for this sample
 	Retried           bool   // true if this result came from a retry (attempt > 1)
+	// Steps holds the per-verifier-step results from the verification pipeline,
+	// preserving why a sample passed or failed.
+	Steps []StepResult
+}
+
+// StepResult captures the outcome of a single verification pipeline step,
+// including the command detail that explains a failure.
+type StepResult struct {
+	Name     string
+	Type     string
+	Pass     bool
+	ExitCode *int
+	Stdout   string
+	Stderr   string
+	Reason   string
 }
 
 // VariantResult groups runs for one variant.
