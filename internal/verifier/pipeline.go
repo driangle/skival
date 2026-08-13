@@ -3,10 +3,39 @@ package verifier
 import (
 	"context"
 	"fmt"
+	"os"
 
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/suite"
 )
+
+// stepDirs holds the directories exposed to verifier path/command inputs via
+// ${SKIVAL_...} substitution: work is the per-sample working directory and
+// suite is the directory containing the loaded suite.yaml.
+type stepDirs struct {
+	work  string
+	suite string
+}
+
+// expandPathVars substitutes ${SKIVAL_WORK_DIR} and ${SKIVAL_SUITE_DIR} in raw,
+// falling back to the process environment for any other referenced variable.
+// It lets graders live next to suite.yaml and be referenced without embedding
+// them in the (possibly isolated) working directory.
+func expandPathVars(raw string, dirs stepDirs) string {
+	if raw == "" {
+		return raw
+	}
+	return os.Expand(raw, func(key string) string {
+		switch key {
+		case "SKIVAL_WORK_DIR":
+			return dirs.work
+		case "SKIVAL_SUITE_DIR":
+			return dirs.suite
+		default:
+			return os.Getenv(key)
+		}
+	})
+}
 
 // StepResult records the outcome of a single pipeline step.
 type StepResult struct {
@@ -35,15 +64,19 @@ type namedVerifier struct {
 // BuildPipeline assembles a verification pipeline from verify steps.
 // Steps run in list order. Returns nil if no steps are provided.
 // The runner and prompt are only needed when judge steps are present.
-func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...PipelineOption) *Pipeline {
+// workDir is the per-sample working directory (${SKIVAL_WORK_DIR}) against
+// which relative paths resolve; suiteDir is the directory containing suite.yaml
+// (${SKIVAL_SUITE_DIR}).
+func BuildPipeline(verifySteps []suite.VerifyStep, workDir, suiteDir string, opts ...PipelineOption) *Pipeline {
 	var cfg pipelineConfig
 	for _, o := range opts {
 		o(&cfg)
 	}
 
+	dirs := stepDirs{work: workDir, suite: suiteDir}
 	var steps []namedVerifier
 	for i, step := range verifySteps {
-		if nv, ok := buildStepVerifier(step, i, evalDir, cfg); ok {
+		if nv, ok := buildStepVerifier(step, i, dirs, cfg); ok {
 			steps = append(steps, nv)
 		}
 	}
@@ -67,42 +100,44 @@ func named(typ, name, fallback string, v Verifier) namedVerifier {
 // buildStepVerifier constructs the verifier for a single verify step. The bool
 // is false when the step type produces no verifier (unknown type, or a judge
 // step with no runner configured).
-func buildStepVerifier(step suite.VerifyStep, i int, evalDir string, cfg pipelineConfig) (namedVerifier, bool) {
+func buildStepVerifier(step suite.VerifyStep, i int, dirs stepDirs, cfg pipelineConfig) (namedVerifier, bool) {
 	switch step.Type {
 	case "agent_exits_ok":
 		return named(step.Type, step.Name, "agent_exits_ok", &ExecuteVerifier{}), true
 	case "check":
-		return named(step.Type, step.Name, "check", &CheckVerifier{Dir: evalDir, Command: step.Run}), true
+		cmd := expandPathVars(step.Run, dirs)
+		return named(step.Type, step.Name, "check", &CheckVerifier{Dir: dirs.work, Command: cmd}), true
 	case "check_output":
-		return named(step.Type, step.Name, "check_output", &CheckOutputVerifier{Command: step.Run, Dir: evalDir}), true
+		cmd := expandPathVars(step.Run, dirs)
+		return named(step.Type, step.Name, "check_output", &CheckOutputVerifier{Command: cmd, Dir: dirs.work}), true
 	case "output_contains":
 		return named(step.Type, step.Name, "output_contains", &OutputVerifier{ExpectedSubstrings: step.Values}), true
 	case "judge":
 		return buildJudgeVerifier(step, cfg)
 	default:
-		return buildProbeVerifier(step, i, evalDir)
+		return buildProbeVerifier(step, i, dirs)
 	}
 }
 
 // buildProbeVerifier constructs probe-style verifiers whose default names are
 // suffixed with the step index. It returns false for unrecognized types.
-func buildProbeVerifier(step suite.VerifyStep, i int, evalDir string) (namedVerifier, bool) {
+func buildProbeVerifier(step suite.VerifyStep, i int, dirs stepDirs) (namedVerifier, bool) {
 	switch step.Type {
 	case "command":
 		return named(step.Type, step.Name, fmt.Sprintf("command[%d]", i), &CommandProbeVerifier{
 			Probe: suite.CommandProbe{
-				Run:    step.Run,
+				Run:    expandPathVars(step.Run, dirs),
 				Assert: suite.CommandProbeAssert{Exits: step.Exits, StdoutContains: step.StdoutContains},
 			},
-			Dir: evalDir,
+			Dir: dirs.work,
 		}), true
 	case "file_contains":
 		return named(step.Type, step.Name, fmt.Sprintf("file_contains[%d]", i), &FileProbeVerifier{
 			Probe: suite.FileProbe{
-				Path:   step.Path,
+				Path:   expandPathVars(step.Path, dirs),
 				Assert: suite.FileProbeAssert{Exists: step.Exists, Contains: step.Contains},
 			},
-			Dir: evalDir,
+			Dir: dirs.work,
 		}), true
 	case "http_check":
 		return named(step.Type, step.Name, fmt.Sprintf("http_check[%d]", i), &HTTPProbeVerifier{

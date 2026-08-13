@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -109,6 +110,7 @@ func resolveFileRefs(s *Suite, suiteDir string) ([]string, error) {
 func resolvePaths(s *Suite, suiteDir string) {
 	for i := range s.Evals {
 		e := &s.Evals[i]
+		e.SuiteDir = suiteDir
 
 		if e.Dir == "" {
 			e.Dir = suiteDir
@@ -120,7 +122,7 @@ func resolvePaths(s *Suite, suiteDir string) {
 			step := &e.Verify[j]
 			switch step.Type {
 			case "check_output":
-				if step.Run != "" && !filepath.IsAbs(step.Run) {
+				if step.Run != "" && !filepath.IsAbs(step.Run) && !hasPathVar(step.Run) {
 					step.Run = filepath.Join(suiteDir, step.Run)
 				}
 			case "file_contains":
@@ -133,6 +135,13 @@ func resolvePaths(s *Suite, suiteDir string) {
 			resolveVariantPaths(&e.Variants[j], suiteDir)
 		}
 	}
+}
+
+// hasPathVar reports whether a path references a ${SKIVAL_...} substitution
+// variable. Such paths are left raw at load time so they can be expanded at
+// pipeline-build time against the suite and working directories.
+func hasPathVar(raw string) bool {
+	return strings.Contains(raw, "${SKIVAL_")
 }
 
 func resolveVariantPaths(v *Variant, suiteDir string) {
