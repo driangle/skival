@@ -38,6 +38,7 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 
 	sr.FinishedAt = time.Now()
 	prog.finish()
+	cleanupWorkdirs(sr, opts.KeepWorkdirs)
 	return sr, nil
 }
 

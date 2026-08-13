@@ -25,6 +25,7 @@ skival run <suite.yaml> [flags]
 | `--evals <ids>` | | Comma-separated list of eval IDs to run |
 | `--format <type>` | `markdown` | Output format: `markdown`, `json`, or `html` |
 | `--timeout <secs>` | | Timeout in seconds for all evals (overrides suite/eval-level timeouts) |
+| `--keep-workdirs <policy>` | `failed` | Which isolated sample workdirs to keep after the run: `all`, `failed`, or `none` |
 | `--compare` | | Force comparative judging on where criteria are configured (overrides `enabled: false`) |
 | `--no-compare` | | Disable comparative judging even if the suite configures it |
 
