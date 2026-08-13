@@ -28,6 +28,10 @@ func Save(baseDir string, sr *result.SuiteResult, weights report.Weights, opts S
 		return "", fmt.Errorf("creating results dir: %w", err)
 	}
 
+	// Record where artifacts live so the summary/report can point readers here
+	// instead of listing every per-sample path.
+	sr.ResultsDir = dir
+
 	// Sidecars first: vibeview reads them, so they must exist on disk before
 	// linkSessions runs. Run metadata (run-N.json) is written afterward so it
 	// captures any SessionPage that linking sets on the in-memory result.

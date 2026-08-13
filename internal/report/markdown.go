@@ -25,13 +25,24 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	multi := hasMultipleRunners(sr)
 	multiModel := hasMultipleModels(sr)
 	writeResultsTable(w, sr, multi, multiModel)
+	writeRankingTable(w, sr, multi, multiModel, weights)
 	writeWorkdirsSection(w, sr)
 	writeSessionsSection(w, sr)
 	writeComparisonSection(w, sr)
 	writeErrorsSection(w, sr)
 	writeFailuresSection(w, sr)
 	writeSkippedSection(w, sr)
-	writeRankingTable(w, sr, multi, multiModel, weights)
+	writeResultsFooter(w, sr)
+}
+
+// writeResultsFooter echoes the results-dir location at the bottom of the
+// report so a reader who redirected stderr can still find the saved artifacts.
+// It is omitted when results were not persisted to disk.
+func writeResultsFooter(w io.Writer, sr *result.SuiteResult) {
+	if sr.ResultsDir == "" {
+		return
+	}
+	fmt.Fprintf(w, "---\n\n**Results saved to** `%s`\n", sr.ResultsDir)
 }
 
 // writeComparisonSection renders per-eval comparative quality scores, and notes

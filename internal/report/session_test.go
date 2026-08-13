@@ -55,13 +55,29 @@ func TestWriteHTML_NoSessionColumnWithoutSessions(t *testing.T) {
 }
 
 func TestWriteMarkdown_SessionsSection(t *testing.T) {
+	sr := sessionSuite()
+	sr.ResultsDir = "/tmp/results/run-1"
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+	out := buf.String()
+	// The section is collapsed to a single pointer at the results dir; the
+	// per-sample session lines are no longer emitted inline.
+	wantAll(t, out,
+		"## Sessions",
+		"Per-sample sessions are recorded under `/tmp/results/run-1`.",
+	)
+	if strings.Contains(out, "sample 1:") || strings.Contains(out, "vibeview show hintonly2") {
+		t.Errorf("expected collapsed sessions pointer, got per-sample lines:\n%s", out)
+	}
+}
+
+func TestWriteMarkdown_SessionsSection_NoResultsDir(t *testing.T) {
 	var buf bytes.Buffer
 	WriteMarkdown(&buf, sessionSuite(), DefaultWeights())
 	out := buf.String()
 	wantAll(t, out,
 		"## Sessions",
-		"[view session](evals/e1/control/run-1.session.html)",
-		"`vibeview show hintonly2`",
+		"Per-sample sessions were not persisted",
 	)
 }
 
