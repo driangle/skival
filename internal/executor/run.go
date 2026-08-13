@@ -92,7 +92,7 @@ func buildSamplePipeline(eval *suite.Eval, v *suite.Variant, runner agentrunner.
 			verifier.WithAgentModel(v.Model),
 		)
 	}
-	return verifier.BuildPipeline(eval.Verify, verifyDir, pipelineOpts...)
+	return verifier.BuildPipeline(eval.Verify, verifyDir, eval.SuiteDir, pipelineOpts...)
 }
 
 // runSampleAttempts runs a sample with retries, keeping the best result across attempts.

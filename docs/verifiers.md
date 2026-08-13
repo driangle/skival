@@ -11,6 +11,19 @@ verify:
 
 The available step types are `agent_exits_ok`, `check`, `check_output`, `output_contains`, `command`, `file_contains`, `http_check`, `tcp_check`, and `judge`.
 
+## Path variables
+
+The `run` (for `check`, `check_output`, `command`) and `path` (for `file_contains`) fields support two substitution variables, expanded when the pipeline is built:
+
+| Variable | Expands to |
+|----------|------------|
+| `${SKIVAL_WORK_DIR}` | The per-sample working directory — the isolated temp copy when `isolate: true`, otherwise the eval/variant `dir`. |
+| `${SKIVAL_SUITE_DIR}` | The directory containing the loaded `suite.yaml`. |
+
+Any other `${VAR}` falls back to the process environment.
+
+Keep graders next to `suite.yaml` and reference them via `${SKIVAL_SUITE_DIR}` (e.g. `run: "${SKIVAL_SUITE_DIR}/grader.sh"`). Because they live outside the working tree, they are not copied into — nor readable from — the agent's isolated working directory, so the agent under test cannot inspect or tamper with the grader. Use `${SKIVAL_WORK_DIR}` to address files the agent produced in its per-sample working directory.
+
 ## `agent_exits_ok`
 
 Checks that the agent process exited with code 0.

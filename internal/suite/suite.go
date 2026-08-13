@@ -75,6 +75,12 @@ type Eval struct {
 	Matrix       *Matrix           `yaml:"matrix,omitempty"`
 	Compare      *Compare          `yaml:"compare,omitempty"`
 	Variants     []Variant         `yaml:"variants"`
+
+	// SuiteDir is the directory containing the loaded suite.yaml. It is set
+	// during loading (not parsed from YAML) and exposed to verifier inputs via
+	// the ${SKIVAL_SUITE_DIR} substitution so graders can live next to the
+	// suite file rather than inside the (possibly isolated) working directory.
+	SuiteDir string `yaml:"-"`
 }
 
 // VerifyStep defines a single verification step.

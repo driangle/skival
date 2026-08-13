@@ -8,12 +8,12 @@ import (
 )
 
 func TestBuildPipeline_NoSteps(t *testing.T) {
-	p := BuildPipeline(nil, "")
+	p := BuildPipeline(nil, "", "")
 	if p != nil {
 		t.Fatal("expected nil pipeline for nil steps")
 	}
 
-	p = BuildPipeline([]suite.VerifyStep{}, "")
+	p = BuildPipeline([]suite.VerifyStep{}, "", "")
 	if p != nil {
 		t.Fatal("expected nil pipeline for empty steps")
 	}
@@ -22,7 +22,7 @@ func TestBuildPipeline_NoSteps(t *testing.T) {
 func TestBuildPipeline_OutputContainsOnly(t *testing.T) {
 	p := BuildPipeline([]suite.VerifyStep{
 		{Type: "output_contains", Values: []string{"hello"}},
-	}, "")
+	}, "", "")
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
 	}
@@ -36,7 +36,7 @@ func TestBuildPipeline_AllVerifiers(t *testing.T) {
 		{Type: "agent_exits_ok"},
 		{Type: "output_contains", Values: []string{"ok"}},
 		{Type: "check_output", Run: "exit 0"},
-	}, "/tmp")
+	}, "/tmp", "")
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -61,7 +61,7 @@ func TestBuildPipeline_WithTypedSteps(t *testing.T) {
 		{Type: "file_contains", Path: "/tmp/test.txt", Exists: &trueVal},
 		{Type: "command", Run: "echo hi", Exits: &exitZero},
 		{Type: "tcp_check", Host: "localhost", Port: 8080},
-	}, "/tmp")
+	}, "/tmp", "")
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -83,7 +83,7 @@ func TestBuildPipeline_StepsRunInListOrder(t *testing.T) {
 		{Type: "check_output", Run: "exit 0"},
 		{Type: "http_check", URL: "http://localhost"},
 		{Type: "agent_exits_ok"},
-	}, "/tmp")
+	}, "/tmp", "")
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
@@ -103,7 +103,7 @@ func TestBuildPipeline_StepsRunInListOrder(t *testing.T) {
 func TestBuildPipeline_CustomName(t *testing.T) {
 	p := BuildPipeline([]suite.VerifyStep{
 		{Type: "command", Name: "tests_pass", Run: "pytest tests/ -q"},
-	}, "/tmp")
+	}, "/tmp", "")
 
 	if p == nil {
 		t.Fatal("expected non-nil pipeline")
