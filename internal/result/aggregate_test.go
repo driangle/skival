@@ -3,6 +3,8 @@ package result
 import (
 	"math"
 	"testing"
+
+	agentrunner "github.com/driangle/agentrunner/go"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -100,6 +102,59 @@ func TestComputeAggregate_FourRunsEven(t *testing.T) {
 	}
 	if agg.MedianDurationMs != 250 {
 		t.Errorf("median duration = %d, want 250", agg.MedianDurationMs)
+	}
+}
+
+func TestComputeAggregate_UsageMedians(t *testing.T) {
+	runs := []RunResult{
+		{Usage: agentrunner.Usage{InputTokens: 100, OutputTokens: 10, CacheCreationInputTokens: 5, CacheReadInputTokens: 1}},
+		{Usage: agentrunner.Usage{InputTokens: 300, OutputTokens: 30, CacheCreationInputTokens: 15, CacheReadInputTokens: 3}},
+		{Usage: agentrunner.Usage{InputTokens: 200, OutputTokens: 20, CacheCreationInputTokens: 10, CacheReadInputTokens: 2}},
+	}
+	agg := ComputeAggregate(runs)
+	if agg.Usage == nil {
+		t.Fatal("expected non-nil usage aggregate")
+	}
+	if agg.Usage.MedianInputTokens != 200 {
+		t.Errorf("median input = %d, want 200", agg.Usage.MedianInputTokens)
+	}
+	if agg.Usage.MedianOutputTokens != 20 {
+		t.Errorf("median output = %d, want 20", agg.Usage.MedianOutputTokens)
+	}
+	if agg.Usage.MedianCacheCreationTokens != 10 {
+		t.Errorf("median cache creation = %d, want 10", agg.Usage.MedianCacheCreationTokens)
+	}
+	if agg.Usage.MedianCacheReadTokens != 2 {
+		t.Errorf("median cache read = %d, want 2", agg.Usage.MedianCacheReadTokens)
+	}
+}
+
+func TestComputeAggregate_UsageEvenMedian(t *testing.T) {
+	runs := []RunResult{
+		{Usage: agentrunner.Usage{InputTokens: 100, OutputTokens: 40}},
+		{Usage: agentrunner.Usage{InputTokens: 200, OutputTokens: 60}},
+	}
+	agg := ComputeAggregate(runs)
+	if agg.Usage == nil {
+		t.Fatal("expected non-nil usage aggregate")
+	}
+	// Sorted input: 100, 200 → median 150; output: 40, 60 → median 50.
+	if agg.Usage.MedianInputTokens != 150 {
+		t.Errorf("median input = %d, want 150", agg.Usage.MedianInputTokens)
+	}
+	if agg.Usage.MedianOutputTokens != 50 {
+		t.Errorf("median output = %d, want 50", agg.Usage.MedianOutputTokens)
+	}
+}
+
+func TestComputeAggregate_NoUsage_NilAggregate(t *testing.T) {
+	runs := []RunResult{
+		{CostUSD: 1.0, DurationMs: 1000},
+		{CostUSD: 2.0, DurationMs: 2000},
+	}
+	agg := ComputeAggregate(runs)
+	if agg.Usage != nil {
+		t.Errorf("expected nil usage aggregate when no tokens, got %+v", agg.Usage)
 	}
 }
 

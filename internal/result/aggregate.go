@@ -15,7 +15,19 @@ type Aggregate struct {
 	MaxDurationMs    int64
 	CostCV           *float64
 	DurationCV       *float64
-	Pass             *bool
+	// Usage holds median token usage across the runs, or nil when no run
+	// reported any tokens (e.g. the exec runner), so token-free suites render
+	// exactly as before.
+	Usage *UsageAggregate
+	Pass  *bool
+}
+
+// UsageAggregate holds median token usage across a variant's runs.
+type UsageAggregate struct {
+	MedianInputTokens         int64
+	MedianOutputTokens        int64
+	MedianCacheCreationTokens int64
+	MedianCacheReadTokens     int64
 }
 
 // ComputeAggregate calculates aggregate statistics from a set of runs.
@@ -41,10 +53,41 @@ func ComputeAggregate(runs []RunResult) *Aggregate {
 		MaxDurationMs:    int64(maxVal(durations)),
 		CostCV:           cv(costs),
 		DurationCV:       cv(durations),
+		Usage:            computeUsageAggregate(runs),
 		Pass:             conservativePass(runs),
 	}
 
 	return agg
+}
+
+// computeUsageAggregate returns median token usage across runs, or nil when no
+// run reported any tokens.
+func computeUsageAggregate(runs []RunResult) *UsageAggregate {
+	in := make([]float64, len(runs))
+	out := make([]float64, len(runs))
+	cc := make([]float64, len(runs))
+	cr := make([]float64, len(runs))
+	var any bool
+	for i, r := range runs {
+		u := r.Usage
+		in[i] = float64(u.InputTokens)
+		out[i] = float64(u.OutputTokens)
+		cc[i] = float64(u.CacheCreationInputTokens)
+		cr[i] = float64(u.CacheReadInputTokens)
+		if u.InputTokens != 0 || u.OutputTokens != 0 ||
+			u.CacheCreationInputTokens != 0 || u.CacheReadInputTokens != 0 {
+			any = true
+		}
+	}
+	if !any {
+		return nil
+	}
+	return &UsageAggregate{
+		MedianInputTokens:         int64(median(in)),
+		MedianOutputTokens:        int64(median(out)),
+		MedianCacheCreationTokens: int64(median(cc)),
+		MedianCacheReadTokens:     int64(median(cr)),
+	}
 }
 
 func median(vals []float64) float64 {

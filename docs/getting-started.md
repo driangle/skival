@@ -63,10 +63,10 @@ My first eval suite
 
 ## Results
 
-EVAL         VARIANT     SAMPLE  STATUS  COST     DURATION
-----         -------     ------  ------  ----     --------
-hello-world  baseline    1       pass    $0.0042  12.3s
-hello-world  with-skill  1       pass    $0.0038  9.1s
+EVAL         VARIANT     SAMPLE  STATUS  COST     DURATION  TOKENS (IN/OUT)
+----         -------     ------  ------  ----     --------  ---------------
+hello-world  baseline    1       pass    $0.0042  12.3s     18.2k/1.1k
+hello-world  with-skill  1       pass    $0.0038  9.1s      16.4k/980
 
 ## Rankings
 
@@ -81,21 +81,21 @@ With `--samples 3`, you get aggregate statistics per variant:
 ```
 ## Results
 
-EVAL         VARIANT     SAMPLE  STATUS  COST     DURATION
-----         -------     ------  ------  ----     --------
-hello-world  baseline    1       pass    $0.0042  12.3s
-hello-world  baseline    2       pass    $0.0039  11.8s
-hello-world  baseline    3       pass    $0.0045  13.1s
-hello-world  baseline    agg     PASS    $0.0042 [$0.0039–$0.0045]  12.3s [11.8s–13.1s] cost_cv=7.1% dur_cv=5.3%
-hello-world  with-skill  1       pass    $0.0038  9.1s
-hello-world  with-skill  2       pass    $0.0035  8.7s
-hello-world  with-skill  3       pass    $0.0040  9.8s
-hello-world  with-skill  agg     PASS    $0.0038 [$0.0035–$0.0040]  9.1s [8.7s–9.8s] cost_cv=6.6% dur_cv=6.1%
+EVAL         VARIANT     SAMPLE  STATUS  COST     DURATION  TOKENS (IN/OUT)
+----         -------     ------  ------  ----     --------  ---------------
+hello-world  baseline    1       pass    $0.0042  12.3s     18.2k/1.1k
+hello-world  baseline    2       pass    $0.0039  11.8s     17.9k/1.0k
+hello-world  baseline    3       pass    $0.0045  13.1s     18.6k/1.2k
+hello-world  baseline    agg     PASS    $0.0042 [$0.0039–$0.0045]  12.3s [11.8s–13.1s] cost_cv=7.1% dur_cv=5.3%  18.2k/1.1k
+hello-world  with-skill  1       pass    $0.0038  9.1s      16.4k/980
+hello-world  with-skill  2       pass    $0.0035  8.7s      16.1k/940
+hello-world  with-skill  3       pass    $0.0040  9.8s      16.8k/1.0k
+hello-world  with-skill  agg     PASS    $0.0038 [$0.0035–$0.0040]  9.1s [8.7s–9.8s] cost_cv=6.6% dur_cv=6.1%  16.4k/980
 ```
 
 The `agg` row reports descriptive statistics only — the median, the min–max
-range in brackets, and the coefficient of variation (`cost_cv` / `dur_cv`) as a
-measure of run-to-run spread. These summarize the samples you collected; they
+range in brackets, the coefficient of variation (`cost_cv` / `dur_cv`) as a
+measure of run-to-run spread, and the median input/output token usage. These summarize the samples you collected; they
 are not confidence intervals or significance tests. The coefficient of variation
 requires at least 3 samples to be meaningful, so it is omitted for smaller runs.
 

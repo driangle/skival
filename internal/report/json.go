@@ -55,26 +55,44 @@ type jsonVariant struct {
 }
 
 type jsonRun struct {
-	Sample      int     `json:"sample"`
-	Status      string  `json:"status"`
-	CostUSD     float64 `json:"cost_usd"`
-	DurationMs  int64   `json:"duration_ms"`
-	Pass        *bool   `json:"pass"`
-	Error       string  `json:"error,omitempty"`
-	SessionID   string  `json:"session_id,omitempty"`
-	SessionPage string  `json:"session_page,omitempty"`
+	Sample      int        `json:"sample"`
+	Status      string     `json:"status"`
+	CostUSD     float64    `json:"cost_usd"`
+	DurationMs  int64      `json:"duration_ms"`
+	Usage       *jsonUsage `json:"usage,omitempty"`
+	Pass        *bool      `json:"pass"`
+	Error       string     `json:"error,omitempty"`
+	SessionID   string     `json:"session_id,omitempty"`
+	SessionPage string     `json:"session_page,omitempty"`
+}
+
+// jsonUsage is the per-run token breakdown. Nil when the run reported no tokens.
+type jsonUsage struct {
+	InputTokens         int `json:"input_tokens"`
+	OutputTokens        int `json:"output_tokens"`
+	CacheCreationTokens int `json:"cache_creation_tokens"`
+	CacheReadTokens     int `json:"cache_read_tokens"`
 }
 
 type jsonAggregate struct {
-	MedianCostUSD    float64  `json:"median_cost_usd"`
-	MinCostUSD       float64  `json:"min_cost_usd"`
-	MaxCostUSD       float64  `json:"max_cost_usd"`
-	MedianDurationMs int64    `json:"median_duration_ms"`
-	MinDurationMs    int64    `json:"min_duration_ms"`
-	MaxDurationMs    int64    `json:"max_duration_ms"`
-	CostCV           *float64 `json:"cost_cv,omitempty"`
-	DurationCV       *float64 `json:"duration_cv,omitempty"`
-	Pass             *bool    `json:"pass"`
+	MedianCostUSD    float64       `json:"median_cost_usd"`
+	MinCostUSD       float64       `json:"min_cost_usd"`
+	MaxCostUSD       float64       `json:"max_cost_usd"`
+	MedianDurationMs int64         `json:"median_duration_ms"`
+	MinDurationMs    int64         `json:"min_duration_ms"`
+	MaxDurationMs    int64         `json:"max_duration_ms"`
+	CostCV           *float64      `json:"cost_cv,omitempty"`
+	DurationCV       *float64      `json:"duration_cv,omitempty"`
+	Usage            *jsonUsageAgg `json:"usage,omitempty"`
+	Pass             *bool         `json:"pass"`
+}
+
+// jsonUsageAgg is the per-variant median token usage. Nil when no tokens exist.
+type jsonUsageAgg struct {
+	MedianInputTokens         int64 `json:"median_input_tokens"`
+	MedianOutputTokens        int64 `json:"median_output_tokens"`
+	MedianCacheCreationTokens int64 `json:"median_cache_creation_tokens"`
+	MedianCacheReadTokens     int64 `json:"median_cache_read_tokens"`
 }
 
 type jsonRanking struct {
@@ -156,6 +174,7 @@ func buildJSONVariant(v result.VariantResult) jsonVariant {
 			Status:      runStatus(run),
 			CostUSD:     run.CostUSD,
 			DurationMs:  run.DurationMs,
+			Usage:       jsonRunUsage(run),
 			Pass:        run.Pass,
 			SessionID:   run.SessionID,
 			SessionPage: run.SessionPage,
@@ -175,10 +194,39 @@ func buildJSONVariant(v result.VariantResult) jsonVariant {
 			MaxDurationMs:    agg.MaxDurationMs,
 			CostCV:           agg.CostCV,
 			DurationCV:       agg.DurationCV,
+			Usage:            jsonAggUsage(agg.Usage),
 			Pass:             agg.Pass,
 		}
 	}
 	return jt
+}
+
+// jsonRunUsage renders a run's token usage, or nil when it reported none.
+func jsonRunUsage(run result.RunResult) *jsonUsage {
+	u := run.Usage
+	if u.InputTokens == 0 && u.OutputTokens == 0 &&
+		u.CacheCreationInputTokens == 0 && u.CacheReadInputTokens == 0 {
+		return nil
+	}
+	return &jsonUsage{
+		InputTokens:         u.InputTokens,
+		OutputTokens:        u.OutputTokens,
+		CacheCreationTokens: u.CacheCreationInputTokens,
+		CacheReadTokens:     u.CacheReadInputTokens,
+	}
+}
+
+// jsonAggUsage renders a variant's median token usage, or nil when absent.
+func jsonAggUsage(u *result.UsageAggregate) *jsonUsageAgg {
+	if u == nil {
+		return nil
+	}
+	return &jsonUsageAgg{
+		MedianInputTokens:         u.MedianInputTokens,
+		MedianOutputTokens:        u.MedianOutputTokens,
+		MedianCacheCreationTokens: u.MedianCacheCreationTokens,
+		MedianCacheReadTokens:     u.MedianCacheReadTokens,
+	}
 }
 
 func buildJSONRankings(sr *result.SuiteResult, weights Weights) []jsonRanking {

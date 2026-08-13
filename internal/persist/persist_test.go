@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/report"
 	"github.com/driangle/skival/internal/result"
 )
@@ -159,6 +161,68 @@ func TestSave_SummaryJSON(t *testing.T) {
 	}
 	if summary.Description != "test suite" {
 		t.Errorf("description = %q", summary.Description)
+	}
+}
+
+func TestSaveAndLoad_UsageRoundTrip(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult()
+	sr.Evals[0].Variants[0].Runs[0].Usage = agentrunner.Usage{
+		InputTokens:              1500,
+		OutputTokens:             240,
+		CacheCreationInputTokens: 80,
+		CacheReadInputTokens:     12,
+	}
+
+	outDir, err := Save(tmpDir, sr, defaultWeights(), SaveOptions{})
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	// The serialized run carries the usage object.
+	data, err := os.ReadFile(filepath.Join(outDir, "evals", "eval1", "control", "run-1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"usage"`) {
+		t.Errorf("run-1.json missing usage field:\n%s", data)
+	}
+
+	loaded, err := Load(outDir)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	got := loaded.Evals[0].Variants[0].Runs[0].Usage
+	want := sr.Evals[0].Variants[0].Runs[0].Usage
+	if got != want {
+		t.Errorf("usage round-trip mismatch: got %+v, want %+v", got, want)
+	}
+}
+
+func TestSave_OmitsUsageWhenZero(t *testing.T) {
+	tmpDir := t.TempDir()
+	sr := makeSuiteResult() // runs carry no usage
+
+	outDir, err := Save(tmpDir, sr, defaultWeights(), SaveOptions{})
+	if err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(outDir, "evals", "eval1", "control", "run-1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), `"usage"`) {
+		t.Errorf("run-1.json should omit usage when zero:\n%s", data)
+	}
+
+	// Loading a run without usage yields the zero value, not an error.
+	loaded, err := Load(outDir)
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if got := loaded.Evals[0].Variants[0].Runs[0].Usage; got != (agentrunner.Usage{}) {
+		t.Errorf("expected zero usage for legacy run, got %+v", got)
 	}
 }
 

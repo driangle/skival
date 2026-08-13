@@ -41,8 +41,41 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 	d.Evals = buildHTMLEvals(sr, multi, multiModel)
 	d.Errors = buildHTMLErrors(sr)
 	d.HasSessions = anySession(sr)
+	d.HasTokens = anyTokens(sr)
+	d.DetailColSpan = detailColSpan(d.HasTokens, d.HasSessions)
 
 	return d
+}
+
+// detailColSpan counts the samples table's columns (6 fixed: variant, sample,
+// status, cost, duration, spread) plus the optional Tokens and Session columns,
+// so the expandable error-detail row spans the full table width.
+func detailColSpan(hasTokens, hasSessions bool) int {
+	span := 6
+	if hasTokens {
+		span++
+	}
+	if hasSessions {
+		span++
+	}
+	return span
+}
+
+// anyTokens reports whether any run recorded token usage, gating the "Tokens"
+// column so suites from runners without usage (e.g. exec) render unchanged.
+func anyTokens(sr *result.SuiteResult) bool {
+	for _, eval := range sr.Evals {
+		for _, v := range eval.Variants {
+			for _, run := range v.Runs {
+				u := run.Usage
+				if u.InputTokens != 0 || u.OutputTokens != 0 ||
+					u.CacheCreationInputTokens != 0 || u.CacheReadInputTokens != 0 {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // anySession reports whether any run carries a session id, gating the "Session"

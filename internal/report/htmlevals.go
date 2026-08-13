@@ -71,6 +71,7 @@ func buildHTMLRows(eval result.EvalResult, multi, multiModel bool) []htmlResultR
 		label := variantLabel(v, multi, multiModel)
 		for _, run := range v.Runs {
 			status := runStatus(run)
+			tokens, tokensTitle := runTokens(run)
 			rows = append(rows, htmlResultRow{
 				Variant:      label,
 				Sample:       fmt.Sprintf("%d", run.Sample),
@@ -78,6 +79,8 @@ func buildHTMLRows(eval result.EvalResult, multi, multiModel bool) []htmlResultR
 				StatusClass:  statusClass(status),
 				Cost:         formatCost(run.CostUSD),
 				Duration:     formatDuration(run.DurationMs),
+				Tokens:       tokens,
+				TokensTitle:  tokensTitle,
 				SpanStyle:    spanCSS(0, run.DurationMs, slowest),
 				Detail:       runErrorMessage(run),
 				SessionPage:  run.SessionPage,
@@ -104,6 +107,7 @@ func buildHTMLAggRow(variant string, agg *result.Aggregate, slowest int64) htmlR
 			status, class = "FAIL", "fail"
 		}
 	}
+	tokens, tokensTitle := aggUsageTokens(agg.Usage)
 	return htmlResultRow{
 		Variant:     variant,
 		Sample:      "median",
@@ -111,10 +115,38 @@ func buildHTMLAggRow(variant string, agg *result.Aggregate, slowest int64) htmlR
 		StatusClass: class,
 		Cost:        formatCost(agg.MedianCostUSD),
 		Duration:    formatDuration(agg.MedianDurationMs),
+		Tokens:      tokens,
+		TokensTitle: tokensTitle,
 		CVInfo:      cvInfo(agg),
 		SpanStyle:   spanCSS(agg.MinDurationMs, agg.MaxDurationMs, slowest),
 		IsAgg:       true,
 	}
+}
+
+// runTokens returns a run's compact input/output token display and a full
+// breakdown title for the hover tooltip. Both are empty when no usage exists.
+func runTokens(run result.RunResult) (display, title string) {
+	u := run.Usage
+	if u.InputTokens == 0 && u.OutputTokens == 0 &&
+		u.CacheCreationInputTokens == 0 && u.CacheReadInputTokens == 0 {
+		return "", ""
+	}
+	display = formatTokenPair(int64(u.InputTokens), int64(u.OutputTokens))
+	title = fmt.Sprintf("in %d · out %d · cache write %d · cache read %d",
+		u.InputTokens, u.OutputTokens, u.CacheCreationInputTokens, u.CacheReadInputTokens)
+	return display, title
+}
+
+// aggUsageTokens returns the median input/output token display and a breakdown
+// title for the aggregate row. Both are empty when no usage exists.
+func aggUsageTokens(u *result.UsageAggregate) (display, title string) {
+	if u == nil {
+		return "", ""
+	}
+	display = formatTokenPair(u.MedianInputTokens, u.MedianOutputTokens)
+	title = fmt.Sprintf("median — in %d · out %d · cache write %d · cache read %d",
+		u.MedianInputTokens, u.MedianOutputTokens, u.MedianCacheCreationTokens, u.MedianCacheReadTokens)
+	return display, title
 }
 
 func cvInfo(agg *result.Aggregate) string {

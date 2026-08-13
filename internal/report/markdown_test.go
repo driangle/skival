@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/result"
 )
 
@@ -372,5 +373,45 @@ func TestWriteMarkdown_AggregateRow(t *testing.T) {
 	}
 	if !strings.Contains(out, "cost_cv=15.0%") {
 		t.Error("missing CV info")
+	}
+}
+
+func TestWriteMarkdown_Tokens(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "fizzbuzz",
+			Variants: []result.VariantResult{{
+				Name: "control",
+				Runs: []result.RunResult{
+					{Sample: 1, CostUSD: 0.1, DurationMs: 1000, Pass: boolPtr(true),
+						Usage: agentrunner.Usage{InputTokens: 1500, OutputTokens: 240}},
+					{Sample: 2, CostUSD: 0.2, DurationMs: 2000, Pass: boolPtr(true),
+						Usage: agentrunner.Usage{InputTokens: 2500, OutputTokens: 260}},
+				},
+				Aggregate: &result.Aggregate{
+					MedianCostUSD: 0.15, MinCostUSD: 0.1, MaxCostUSD: 0.2,
+					MedianDurationMs: 1500, MinDurationMs: 1000, MaxDurationMs: 2000,
+					Pass:  boolPtr(true),
+					Usage: &result.UsageAggregate{MedianInputTokens: 2000, MedianOutputTokens: 250},
+				},
+			}},
+		}},
+	}
+
+	var buf bytes.Buffer
+	WriteMarkdown(&buf, sr, DefaultWeights())
+	out := buf.String()
+
+	if !strings.Contains(out, "TOKENS (IN/OUT)") {
+		t.Error("missing tokens column header")
+	}
+	// Per-run figure (compact formatting) and the median aggregate figure.
+	if !strings.Contains(out, "1.5k/240") {
+		t.Errorf("missing per-run tokens 1.5k/240 in output:\n%s", out)
+	}
+	if !strings.Contains(out, "2.0k/250") {
+		t.Errorf("missing median tokens 2.0k/250 in output:\n%s", out)
 	}
 }

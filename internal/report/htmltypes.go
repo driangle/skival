@@ -29,6 +29,13 @@ type htmlData struct {
 	// HasSessions is true when at least one run carries session info, which
 	// gates the "Session" column in the samples tables.
 	HasSessions bool
+	// HasTokens is true when at least one run reported token usage, which gates
+	// the "Tokens" column so runners without usage (e.g. exec) look unchanged.
+	HasTokens bool
+	// DetailColSpan is the number of columns in the samples table, so the
+	// expandable error-detail row spans the full width regardless of which
+	// optional columns (Tokens, Session) are shown.
+	DetailColSpan int
 }
 
 // htmlVerdict is the headline answer: which variant won, and by how much
@@ -78,6 +85,11 @@ type htmlResultRow struct {
 	StatusClass string
 	Cost        string
 	Duration    string
+	// Tokens is the compact input/output token display (e.g. "1.2k/340"), and
+	// TokensTitle the full breakdown shown on hover. Both are empty when the run
+	// reported no usage, which hides the cell content.
+	Tokens      string
+	TokensTitle string
 	CVInfo      string
 	SpanStyle   template.CSS
 	IsAgg       bool

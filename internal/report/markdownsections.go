@@ -223,3 +223,25 @@ func formatDuration(ms int64) string {
 func formatCost(usd float64) string {
 	return fmt.Sprintf("$%.4f", usd)
 }
+
+// formatTokens renders a token count compactly: raw below 1k, then "1.2k" /
+// "3.4M" so a wide range of totals stays readable in a fixed column.
+func formatTokens(n int64) string {
+	switch {
+	case n < 1000:
+		return fmt.Sprintf("%d", n)
+	case n < 1_000_000:
+		return fmt.Sprintf("%.1fk", float64(n)/1000)
+	default:
+		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
+	}
+}
+
+// formatTokenPair renders input/output token counts as "in/out", or "—" when
+// both are zero (e.g. a runner that reports no usage).
+func formatTokenPair(in, out int64) string {
+	if in == 0 && out == 0 {
+		return "—"
+	}
+	return formatTokens(in) + "/" + formatTokens(out)
+}

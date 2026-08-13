@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/result"
 )
 
@@ -330,5 +331,83 @@ func TestWriteJSON_RunStatus(t *testing.T) {
 	}
 	if runs[2].Status != "ok" {
 		t.Errorf("run 3 status = %q, want ok", runs[2].Status)
+	}
+}
+
+func TestWriteJSON_Usage(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID:   "e1",
+			EvalName: "fizzbuzz",
+			Variants: []result.VariantResult{{
+				Name: "control",
+				Runs: []result.RunResult{
+					{Sample: 1, CostUSD: 0.5, DurationMs: 2000, Pass: boolPtr(true),
+						Usage: agentrunner.Usage{InputTokens: 1500, OutputTokens: 240, CacheCreationInputTokens: 80, CacheReadInputTokens: 12}},
+				},
+				Aggregate: &result.Aggregate{
+					MedianCostUSD: 0.5, MedianDurationMs: 2000, Pass: boolPtr(true),
+					Usage: &result.UsageAggregate{MedianInputTokens: 1500, MedianOutputTokens: 240, MedianCacheCreationTokens: 80, MedianCacheReadTokens: 12},
+				},
+			}},
+		}},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		Evals []struct {
+			Variants []struct {
+				Runs []struct {
+					Usage *jsonUsage `json:"usage"`
+				} `json:"runs"`
+				Aggregate struct {
+					Usage *jsonUsageAgg `json:"usage"`
+				} `json:"aggregate"`
+			} `json:"variants"`
+		} `json:"evals"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	v := parsed.Evals[0].Variants[0]
+	if v.Runs[0].Usage == nil {
+		t.Fatal("run usage missing from JSON")
+	}
+	if v.Runs[0].Usage.InputTokens != 1500 || v.Runs[0].Usage.OutputTokens != 240 {
+		t.Errorf("run usage = %+v, want input 1500 / output 240", v.Runs[0].Usage)
+	}
+	if v.Aggregate.Usage == nil {
+		t.Fatal("aggregate usage missing from JSON")
+	}
+	if v.Aggregate.Usage.MedianInputTokens != 1500 || v.Aggregate.Usage.MedianCacheReadTokens != 12 {
+		t.Errorf("aggregate usage = %+v", v.Aggregate.Usage)
+	}
+}
+
+func TestWriteJSON_NoUsage_OmitsField(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalID: "e1", EvalName: "fizzbuzz",
+			Variants: []result.VariantResult{{
+				Name: "control",
+				Runs: []result.RunResult{{Sample: 1, CostUSD: 0.5, DurationMs: 2000, Pass: boolPtr(true)}},
+			}},
+		}},
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+	if strings.Contains(buf.String(), `"usage"`) {
+		t.Errorf("usage should be omitted when no tokens:\n%s", buf.String())
 	}
 }

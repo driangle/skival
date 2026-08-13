@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/result"
 )
 
@@ -331,5 +332,43 @@ func twoVariantSuite() *result.SuiteResult {
 				{Name: "b", Runs: []result.RunResult{{Sample: 1, CostUSD: 2.0, DurationMs: 200, Pass: boolPtr(false)}}},
 			},
 		}},
+	}
+}
+
+func TestWriteHTML_Tokens(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "fizzbuzz",
+			Variants: []result.VariantResult{{
+				Name: "control",
+				Runs: []result.RunResult{
+					{Sample: 1, CostUSD: 0.1, DurationMs: 1000, Pass: boolPtr(true),
+						Usage: agentrunner.Usage{InputTokens: 1500, OutputTokens: 240, CacheReadInputTokens: 12}},
+				},
+			}},
+		}},
+	}
+	out := renderHTML(t, sr)
+	// Column header, the compact per-run figure, and the hover breakdown title.
+	wantAll(t, out, ">Tokens<", "1.5k/240", "cache read 12")
+}
+
+func TestWriteHTML_NoTokensColumnWhenNoUsage(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Now(),
+		FinishedAt: time.Now(),
+		Evals: []result.EvalResult{{
+			EvalName: "fizzbuzz",
+			Variants: []result.VariantResult{{
+				Name: "control",
+				Runs: []result.RunResult{{Sample: 1, CostUSD: 0.1, DurationMs: 1000, Pass: boolPtr(true)}},
+			}},
+		}},
+	}
+	out := renderHTML(t, sr)
+	if strings.Contains(out, ">Tokens<") {
+		t.Error("tokens column should be hidden when no run reported usage")
 	}
 }

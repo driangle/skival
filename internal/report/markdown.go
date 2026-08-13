@@ -119,13 +119,13 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	fmt.Fprintf(w, "## Results\n\n")
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(tw, "EVAL\tVARIANT\tSAMPLE\tSTATUS\tCOST\tDURATION\n")
-	fmt.Fprintf(tw, "----\t---------\t------\t------\t----\t--------\n")
+	fmt.Fprintf(tw, "EVAL\tVARIANT\tSAMPLE\tSTATUS\tCOST\tDURATION\tTOKENS (IN/OUT)\n")
+	fmt.Fprintf(tw, "----\t---------\t------\t------\t----\t--------\t---------------\n")
 
 	for _, eval := range sr.Evals {
 		name := evalDisplayName(eval)
 		if eval.Err != nil {
-			fmt.Fprintf(tw, "%s\t—\t—\tERROR\t—\t—\n", name)
+			fmt.Fprintf(tw, "%s\t—\t—\tERROR\t—\t—\t—\n", name)
 			continue
 		}
 		for _, v := range eval.Variants {
@@ -134,9 +134,10 @@ func writeResultsTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 				status := runStatus(run)
 				cost := fmt.Sprintf("$%.4f", run.CostUSD)
 				duration := formatDuration(run.DurationMs)
+				tokens := formatTokenPair(int64(run.Usage.InputTokens), int64(run.Usage.OutputTokens))
 
-				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\n",
-					name, label, run.Sample, status, cost, duration)
+				fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\t%s\n",
+					name, label, run.Sample, status, cost, duration, tokens)
 			}
 
 			if agg := v.Aggregate; agg != nil && len(v.Runs) >= 2 {
@@ -188,6 +189,15 @@ func writeAggregateRow(tw *tabwriter.Writer, evalName, variantName string, agg *
 		cvInfo = " " + strings.Join(parts, " ")
 	}
 
-	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\n",
-		evalName, variantName, passStr, costRange, durationRange, cvInfo)
+	fmt.Fprintf(tw, "%s\t%s\tagg\t%s\t%s\t%s%s\t%s\n",
+		evalName, variantName, passStr, costRange, durationRange, cvInfo, aggTokens(agg))
+}
+
+// aggTokens renders a variant's median input/output tokens for the aggregate
+// row, or "—" when no token usage was recorded.
+func aggTokens(agg *result.Aggregate) string {
+	if agg.Usage == nil {
+		return "—"
+	}
+	return formatTokenPair(agg.Usage.MedianInputTokens, agg.Usage.MedianOutputTokens)
 }

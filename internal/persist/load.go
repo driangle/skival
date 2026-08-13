@@ -135,23 +135,7 @@ func loadRun(varDir, fileName string) (result.RunResult, error) {
 		return result.RunResult{}, fmt.Errorf("parsing %s: %w", fileName, err)
 	}
 
-	run := result.RunResult{
-		Sample:        rj.Sample,
-		Text:          rj.Text,
-		IsError:       rj.IsError,
-		ExitCode:      rj.ExitCode,
-		CostUSD:       rj.CostUSD,
-		DurationMs:    rj.DurationMs,
-		SessionID:     rj.SessionID,
-		SessionPage:   rj.SessionPage,
-		Pass:          rj.Pass,
-		Attempt:       rj.Attempt,
-		TotalAttempts: rj.TotalAttempts,
-		Retried:       rj.Retried,
-	}
-	if rj.Error != "" {
-		run.Err = fmt.Errorf("%s", rj.Error)
-	}
+	run := rj.toRunResult()
 
 	// Load conversation JSONL files if they exist.
 	baseName := strings.TrimSuffix(fileName, ".json")

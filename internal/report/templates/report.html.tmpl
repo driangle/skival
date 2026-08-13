@@ -122,6 +122,7 @@
           <th onclick="sortTable(this)">Status</th>
           <th class="num" onclick="sortTable(this)">Cost</th>
           <th class="num" onclick="sortTable(this)">Duration</th>
+          {{if $.HasTokens}}<th class="num" onclick="sortTable(this)">Tokens</th>{{end}}
           <th onclick="sortTable(this)">Spread</th>
           {{if $.HasSessions}}<th>Session</th>{{end}}
         </tr>
@@ -133,6 +134,7 @@
           <td><span class="status {{.StatusClass}}">{{.Status}}</span></td>
           <td class="num">{{.Cost}}</td>
           <td class="num">{{.Duration}}</td>
+          {{if $.HasTokens}}<td class="num"{{if .TokensTitle}} title="{{.TokensTitle}}"{{end}}>{{.Tokens}}</td>{{end}}
           {{if .Detail}}<td class="spread"><span class="rowcaret">▸</span></td>
           {{else}}<td class="spread"><div class="spread-inner">
             <div class="spread-track"><i style="{{.SpanStyle}}"></i></div>
@@ -140,7 +142,7 @@
           </div></td>{{end}}
           {{if $.HasSessions}}<td class="session">{{if .SessionPage}}<a href="{{.SessionPage}}" target="_blank" rel="noopener">view</a>{{else if .SessionID}}<span class="mono" title="vibeview show {{.SessionID}}">{{.SessionShort}}</span>{{end}}</td>{{end}}
         </tr>
-        {{if .Detail}}<tr class="err-detail" data-variant="{{.Variant}}" hidden><td colspan="{{if $.HasSessions}}7{{else}}6{{end}}"><span class="msg">{{.Detail}}</span></td></tr>
+        {{if .Detail}}<tr class="err-detail" data-variant="{{.Variant}}" hidden><td colspan="{{$.DetailColSpan}}"><span class="msg">{{.Detail}}</span></td></tr>
         {{end}}{{end}}
         </tbody>
       </table>{{end}}

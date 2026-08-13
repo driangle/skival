@@ -1,11 +1,12 @@
 ---
 title: "Surface token usage in reports (persist + render)"
 id: "01kzs8hp2"
-status: pending
+status: completed
 priority: medium
 type: bug
 tags: ["reporting", "persistence", "tokens"]
 created: "2026-08-11"
+completed_at: 2026-08-13
 ---
 
 # Surface token usage in reports (persist + render)
@@ -51,16 +52,16 @@ Usage plumbing exists end-to-end **up to** persistence/rendering, then stops:
 
 ## Tasks
 
-- [ ] Persist usage: add token fields (input, output, cache_creation, cache_read,
+- [x] Persist usage: add token fields (input, output, cache_creation, cache_read,
       or an embedded `usage` object) to `runResultJSON` in `internal/persist/persist.go`
       (save) and `internal/persist/load.go` (load), round-tripping `agentrunner.Usage`.
-- [ ] Aggregate usage: extend `internal/result/aggregate.go` with median (and
+- [x] Aggregate usage: extend `internal/result/aggregate.go` with median (and
       min/max where it fits the existing pattern) token metrics per variant.
-- [ ] Render usage in reports: add token columns/fields to the markdown, JSON,
+- [x] Render usage in reports: add token columns/fields to the markdown, JSON,
       and HTML report builders/templates in `internal/report/` next to cost.
-- [ ] Add tests: persist round-trip retains usage; aggregate medians are correct;
+- [x] Add tests: persist round-trip retains usage; aggregate medians are correct;
       each report format includes the token figures.
-- [ ] Confirm cost and tokens stay consistent (cost is derived from the same
+- [x] Confirm cost and tokens stay consistent (cost is derived from the same
       usage) and update README/docs if the reported fields are named.
 
 ## Acceptance Criteria
