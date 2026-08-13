@@ -80,6 +80,25 @@ func main() {}
 	}
 }
 
+func TestCheckVerifier_CapturesExitCodeAndStreams(t *testing.T) {
+	dir := t.TempDir()
+
+	v := &CheckVerifier{Dir: dir, Command: "echo out; echo err 1>&2; exit 7"}
+	r := v.Verify(context.Background(), VerifyInput{})
+	if r.Pass {
+		t.Fatal("expected fail")
+	}
+	if r.ExitCode == nil || *r.ExitCode != 7 {
+		t.Errorf("exit code = %v, want 7", r.ExitCode)
+	}
+	if r.Stdout != "out\n" {
+		t.Errorf("stdout = %q, want %q", r.Stdout, "out\n")
+	}
+	if r.Stderr != "err\n" {
+		t.Errorf("stderr = %q, want %q", r.Stderr, "err\n")
+	}
+}
+
 func TestCheckVerifier_ImplementsVerifier(t *testing.T) {
 	var _ Verifier = &CheckVerifier{}
 }

@@ -22,18 +22,26 @@ func (v *CheckOutputVerifier) Verify(ctx context.Context, input VerifyInput) Ver
 	cmd.Dir = v.Dir
 	cmd.Stdin = strings.NewReader(input.RunOutput)
 
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 	if err == nil {
-		return VerifyResult{Pass: true, Reason: "check_output exited 0"}
+		return VerifyResult{
+			Pass:   true,
+			Reason: "check_output exited 0",
+			Stdout: stdout.String(),
+			Stderr: stderr.String(),
+		}
 	}
 
 	if ctx.Err() != nil {
 		return VerifyResult{
 			Pass:   false,
 			Reason: fmt.Sprintf("check_output timed out: %v", ctx.Err()),
+			Stdout: stdout.String(),
+			Stderr: stderr.String(),
 		}
 	}
 
@@ -42,7 +50,10 @@ func (v *CheckOutputVerifier) Verify(ctx context.Context, input VerifyInput) Ver
 		reason = err.Error()
 	}
 	return VerifyResult{
-		Pass:   false,
-		Reason: fmt.Sprintf("check_output failed: %s", reason),
+		Pass:     false,
+		Reason:   fmt.Sprintf("check_output failed: %s", reason),
+		ExitCode: exitCodeOf(err),
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
 	}
 }

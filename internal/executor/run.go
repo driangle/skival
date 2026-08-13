@@ -152,6 +152,7 @@ func runVerification(ctx context.Context, pipeline *verifier.Pipeline, run resul
 	}
 	pr := pipeline.Run(ctx, input)
 	run.Pass = &pr.Pass
+	run.Steps = mapStepResults(pr.Steps)
 	prog.verifyResults(label, variant, pr.Steps)
 	for _, step := range pr.Steps {
 		slog.Debug("Verifier result", "step", step.Name, "pass", step.Result.Pass, "reason", step.Result.Reason)
@@ -160,6 +161,27 @@ func runVerification(ctx context.Context, pipeline *verifier.Pipeline, run resul
 		}
 	}
 	return run
+}
+
+// mapStepResults converts pipeline step results into the persisted result form,
+// preserving the command detail (exit code, stdout, stderr) behind each failure.
+func mapStepResults(steps []verifier.StepResult) []result.StepResult {
+	if len(steps) == 0 {
+		return nil
+	}
+	out := make([]result.StepResult, 0, len(steps))
+	for _, s := range steps {
+		out = append(out, result.StepResult{
+			Name:     s.Name,
+			Type:     s.Type,
+			Pass:     s.Result.Pass,
+			ExitCode: s.Result.ExitCode,
+			Stdout:   s.Result.Stdout,
+			Stderr:   s.Result.Stderr,
+			Reason:   s.Result.Reason,
+		})
+	}
+	return out
 }
 
 // attemptIsFinal reports whether the retry loop should stop after this attempt.

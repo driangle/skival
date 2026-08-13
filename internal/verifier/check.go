@@ -18,18 +18,26 @@ func (v *CheckVerifier) Verify(ctx context.Context, _ VerifyInput) VerifyResult 
 	c := exec.CommandContext(ctx, "sh", "-c", v.Command)
 	c.Dir = v.Dir
 
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
+	c.Stdout = &stdout
 	c.Stderr = &stderr
 
 	err := c.Run()
 	if err == nil {
-		return VerifyResult{Pass: true, Reason: fmt.Sprintf("check: command succeeded (%s)", v.Command)}
+		return VerifyResult{
+			Pass:   true,
+			Reason: fmt.Sprintf("check: command succeeded (%s)", v.Command),
+			Stdout: stdout.String(),
+			Stderr: stderr.String(),
+		}
 	}
 
 	if ctx.Err() != nil {
 		return VerifyResult{
 			Pass:   false,
 			Reason: fmt.Sprintf("check: command timed out: %v", ctx.Err()),
+			Stdout: stdout.String(),
+			Stderr: stderr.String(),
 		}
 	}
 
@@ -38,7 +46,10 @@ func (v *CheckVerifier) Verify(ctx context.Context, _ VerifyInput) VerifyResult 
 		reason = err.Error()
 	}
 	return VerifyResult{
-		Pass:   false,
-		Reason: fmt.Sprintf("check: command failed: %s", reason),
+		Pass:     false,
+		Reason:   fmt.Sprintf("check: command failed: %s", reason),
+		ExitCode: exitCodeOf(err),
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
 	}
 }
