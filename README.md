@@ -68,6 +68,7 @@ skival report <results-dir>    Generate reports from saved results
 | `--variants` | Filter to specific variants |
 | `--evals` | Filter to specific eval IDs |
 | `--format` | Output format: `markdown`, `json`, `html` (default: `markdown`) |
+| `--keep-workdirs` | Which isolated sample workdirs to keep after the run: `all`, `failed`, or `none` (default: `failed`) |
 | `--link-sessions` | Render a static session page per run and link it from the report (requires `--results-dir`) |
 | `-v, --verbose` | Enable debug-level logging |
 

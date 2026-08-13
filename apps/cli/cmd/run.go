@@ -40,13 +40,17 @@ var runCmd = &cobra.Command{
 		parallel, _ := cmd.Flags().GetInt("parallel")
 		parallelVariants, _ := cmd.Flags().GetInt("parallel-variants")
 		timeout, _ := cmd.Flags().GetInt("timeout")
-		slog.Debug("Filters", "evals", evalIDs, "variants", variants, "samples", samples, "parallel", parallel, "parallel-variants", parallelVariants, "timeout", timeout)
+		keepWorkdirs, _ := cmd.Flags().GetString("keep-workdirs")
+		slog.Debug("Filters", "evals", evalIDs, "variants", variants, "samples", samples, "parallel", parallel, "parallel-variants", parallelVariants, "timeout", timeout, "keep-workdirs", keepWorkdirs)
 
 		if timeout < 0 {
 			return fmt.Errorf("--timeout must be a positive number of seconds")
 		}
 		if timeout == 0 && cmd.Flags().Changed("timeout") {
 			return fmt.Errorf("--timeout must be a positive number of seconds")
+		}
+		if err := executor.ValidateKeepWorkdirs(keepWorkdirs); err != nil {
+			return err
 		}
 
 		compareOverride, err := compareOverride(cmd)
@@ -63,6 +67,7 @@ var runCmd = &cobra.Command{
 			ParallelVariants: parallelVariants,
 			Timeout:          timeout,
 			Compare:          compareOverride,
+			KeepWorkdirs:     keepWorkdirs,
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
@@ -196,6 +201,7 @@ func init() {
 	runCmd.Flags().StringSlice("evals", nil, "Filter to specific eval IDs")
 	runCmd.Flags().String("format", "markdown", "Output format: markdown, json, html")
 	runCmd.Flags().Int("timeout", 0, "Timeout in seconds for all evals (overrides suite/eval-level timeouts)")
+	runCmd.Flags().String("keep-workdirs", "failed", "Which sample workdirs to keep after the run: all, failed, or none")
 	runCmd.Flags().Bool("compare", false, "Force comparative judging on where criteria are configured")
 	runCmd.Flags().Bool("no-compare", false, "Disable comparative judging even if configured in the suite")
 	runCmd.Flags().Bool("link-sessions", false, "Render a static session page per run (via the embedded vibeview renderer) and link it from the HTML report (requires --results-dir)")
