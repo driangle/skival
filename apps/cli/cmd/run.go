@@ -150,6 +150,7 @@ func rankingWeights(s *suite.Suite, override *bool) report.Weights {
 			Cost:        s.Ranking.Weights.Cost,
 			Duration:    s.Ranking.Weights.Duration,
 			Quality:     s.Ranking.Weights.Quality,
+			Tokens:      s.Ranking.Weights.Tokens,
 		}
 	}
 	w := report.DefaultWeights()
@@ -167,6 +168,7 @@ func withQualityWeight(base report.Weights, q float64) report.Weights {
 		Correctness: base.Correctness * scale,
 		Cost:        base.Cost * scale,
 		Duration:    base.Duration * scale,
+		Tokens:      base.Tokens * scale,
 		Quality:     q,
 	}
 }

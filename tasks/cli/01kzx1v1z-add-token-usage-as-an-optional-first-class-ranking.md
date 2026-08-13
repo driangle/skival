@@ -1,11 +1,12 @@
 ---
 title: "Add token usage as an optional first-class ranking dimension"
 id: "01kzx1v1z"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["ranking", "tokens", "reporting"]
 created: "2026-08-13"
+completed_at: 2026-08-13
 ---
 
 # Add token usage as an optional first-class ranking dimension
@@ -53,34 +54,60 @@ total tokens (input + output)** per variant, normalized *within each eval*
 relative to the best (lowest) variant, exactly like cost/duration
 (`ratioLowerBetter` in `rank.go`).
 
+## Decision
+
+**Chosen: Option A — an independent `tokens` weight** (confirmed by the user on
+2026-08-13, over the task's Option B recommendation).
+
+`ranking.weights.tokens` becomes a first-class weight alongside
+`correctness`/`cost`/`duration`/`quality`, all still required to be `>= 0` and
+to sum to `1.0`. It defaults to `0`, so existing suites — which never set it —
+rank byte-for-byte identically. A suite that knows no model pricing sets
+`cost: 0` and gives the freed weight to `tokens`, ranking on the model-agnostic
+token signal instead.
+
+Rationale / handling the double-count concern: cost and tokens are correlated,
+so summing a nonzero `cost` and a nonzero `tokens` weight double-counts the same
+economic signal. Rather than forbidding that in code, we document it: set one of
+the two to `0`. This keeps the config surface minimal (one more weight, no new
+enum, no change to the sum-to-1.0 invariant) at the cost of trusting the user
+not to double-weight — which the docs call out explicitly.
+
+Token dimension: scored on **median total tokens (input + output)** per variant,
+normalized within each eval against the best (lowest) variant via
+`ratioLowerBetter`, exactly like cost/duration. Variants with no usage report 0
+total tokens and are treated as the best (mirroring how `cost = 0` is handled).
+
 ## Tasks
 
-- [ ] Decide the config surface (Option A/B/C above) — capture the decision and
+- [x] Decide the config surface (Option A/B/C above) — capture the decision and
       rationale in this task before coding. Default must leave existing suites
       ranking identically.
-- [ ] Extend config: add the chosen field(s) to `internal/suite/suite.go`
-      (`RankingWeights` / `Ranking`) and mirror in `internal/report/rank.go`
-      (`Weights`, `DefaultWeights`).
-- [ ] Update `internal/suite/validate.go` (`validateRankingWeights`) so the new
-      field is validated (≥ 0, and — if it's a weight — included in the
-      sum-to-1.0 check; if it's an `economy` selector, validate the enum).
-- [ ] Score tokens in `rank.go`: accumulate each variant's median total tokens
-      per eval (alongside `costMedSum`/`durMedSum` in `variantAccumulator` /
-      `scoreEval` / `foldMetrics`) and fold a `ratioLowerBetter`-normalized
-      token term into the composite. Ensure only one economic term contributes
-      when Option B is chosen.
-- [ ] Surface the choice in reports: show which economy basis drove the ranking
-      in the markdown/HTML `weightsNote` / rankings block; optionally add a
-      token bar to the HTML rankings.
-- [ ] Handle the zero-token case: variants/runners with no usage must not be
-      unfairly scored (a suite ranking on tokens where a runner reports none
-      should degrade gracefully, mirroring how `cost = 0` is handled today).
-- [ ] Tests: token-based ranking orders variants correctly; default config
-      reproduces current rankings byte-for-byte; validation accepts/rejects the
-      new field; zero-token runners degrade gracefully.
-- [ ] Update docs (`docs/cli.md`, `docs/getting-started.md`,
-      `docs/configuration.md`) to document the new ranking option and explain
-      why cost and tokens are not both summed.
+- [x] Extend config: add the chosen field(s) to `internal/suite/suite.go`
+      (`RankingWeights.Tokens`) and mirror in `internal/report/rank.go`
+      (`Weights.Tokens`; `DefaultWeights` leaves it 0).
+- [x] Update `internal/suite/validate.go` (`validateRankingWeights`) so the new
+      field is validated (≥ 0, and included in the sum-to-1.0 check).
+- [x] Score tokens in `rank.go`: accumulate each variant's median total tokens
+      per eval (`tokenNormSum`/`tokenMedSum` in `variantAccumulator` /
+      `scoreEval` / `foldMetrics`, via `totalTokens`) and fold a
+      `ratioLowerBetter`-normalized token term into the composite. (Accumulation
+      machinery moved to `rankaccumulate.go` to keep `rank.go` under the 300-line
+      limit.)
+- [x] Surface the choice in reports: token weight noted in the HTML
+      `weightsNote`; `MEDIAN TOKENS` column in markdown and a `median tokens`
+      metric/bar in HTML, plus `median_total_tokens` in JSON — all gated on
+      `weights.tokens > 0`, so default output is byte-for-byte unchanged.
+- [x] Handle the zero-token case: variants with no usage report 0 total tokens
+      and are treated as the best via `ratioLowerBetter`, mirroring `cost = 0`;
+      no NaN/Inf. Covered by tests.
+- [x] Tests: `rank_tokens_test.go` (ordering, unchanged default, zero-token
+      degradation, all-zero fallback, median total reported), `tokens_report_test.go`
+      (markdown/JSON/HTML gating), plus validation + YAML-parse tests in the
+      suite package.
+- [x] Update docs (`docs/cli.md`, `docs/getting-started.md`,
+      `docs/configuration.md`) to document the new `tokens` weight and explain
+      why cost and tokens must not both be weighted.
 
 ## Acceptance Criteria
 

@@ -134,59 +134,77 @@ func writeRankingTable(w io.Writer, sr *result.SuiteResult, multiRunner, multiMo
 	fmt.Fprintf(w, "## Rankings\n\n")
 
 	showQuality := hasComparison(sr)
+	showTokens := weights.Tokens > 0
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	header, sep := rankingHeader(multiRunner, multiModel, showQuality)
+	cols := rankingCols{multiRunner: multiRunner, multiModel: multiModel, quality: showQuality, tokens: showTokens}
+	header, sep := rankingHeader(cols)
 	fmt.Fprint(tw, header)
 	fmt.Fprint(tw, sep)
 
 	for _, r := range ranks {
-		writeRankingRow(tw, r, multiRunner, multiModel, showQuality)
+		writeRankingRow(tw, r, cols)
 	}
 
 	tw.Flush()
 	fmt.Fprintln(w)
 }
 
+// rankingCols selects which optional columns the ranking table shows.
+type rankingCols struct {
+	multiRunner bool
+	multiModel  bool
+	quality     bool
+	tokens      bool
+}
+
 // rankingHeader builds the ranking table header and separator rows, including
 // only the extra columns requested by the caller.
-func rankingHeader(multiRunner, multiModel, showQuality bool) (header, sep string) {
+func rankingHeader(c rankingCols) (header, sep string) {
 	header = "RANK\tVARIANT"
 	sep = "----\t---------"
-	if multiRunner {
+	if c.multiRunner {
 		header += "\tRUNNER"
 		sep += "\t------"
 	}
-	if multiModel {
+	if c.multiModel {
 		header += "\tMODEL"
 		sep += "\t-----"
 	}
 	header += "\tSCORE\tPASS RATE"
 	sep += "\t-----\t---------"
-	if showQuality {
+	if c.quality {
 		header += "\tQUALITY"
 		sep += "\t-------"
 	}
-	header += "\tMEDIAN COST\tMEDIAN DURATION\n"
-	sep += "\t-----------\t---------------\n"
+	header += "\tMEDIAN COST"
+	sep += "\t-----------"
+	if c.tokens {
+		header += "\tMEDIAN TOKENS"
+		sep += "\t-------------"
+	}
+	header += "\tMEDIAN DURATION\n"
+	sep += "\t---------------\n"
 	return header, sep
 }
 
-func writeRankingRow(tw *tabwriter.Writer, r VariantRank, multiRunner, multiModel, showQuality bool) {
+func writeRankingRow(tw *tabwriter.Writer, r VariantRank, c rankingCols) {
 	fmt.Fprintf(tw, "#%d\t%s", r.Rank, r.Name)
-	if multiRunner {
+	if c.multiRunner {
 		fmt.Fprintf(tw, "\t%s", r.Runner)
 	}
-	if multiModel {
+	if c.multiModel {
 		fmt.Fprintf(tw, "\t%s", r.Model)
 	}
 	fmt.Fprintf(tw, "\t%.3f\t%.0f%%", r.CompositeScore, r.PassRate*100)
-	if showQuality {
+	if c.quality {
 		fmt.Fprintf(tw, "\t%.2f", r.QualityScore)
 	}
-	fmt.Fprintf(tw, "\t$%.4f\t%s\n",
-		r.MedianCostUSD,
-		formatDuration(r.MedianDuration))
+	fmt.Fprintf(tw, "\t$%.4f", r.MedianCostUSD)
+	if c.tokens {
+		fmt.Fprintf(tw, "\t%s", formatTokens(r.MedianTotalTokens))
+	}
+	fmt.Fprintf(tw, "\t%s\n", formatDuration(r.MedianDuration))
 }
 
 // evalDisplayName returns the eval name, falling back to ID.

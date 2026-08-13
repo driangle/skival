@@ -68,6 +68,10 @@ Run a cheap pass without comparative judging, even if the suite configures it:
 skival run suite.yaml --no-compare
 ```
 
+### Ranking
+
+Both `skival run` and `skival report` rank variants by a composite score. The weighting lives in the suite's [`ranking`](/configuration#ranking) block, not on the command line. By default the composite weights correctness, cost, and duration. When a suite's runner reports no cost (local models, self-hosted models, the `exec` runner), set `ranking.weights.tokens` to rank on model-agnostic token efficiency instead of `cost` — see [Ranking on tokens instead of cost](/configuration#ranking-on-tokens-instead-of-cost). Weight `cost` **or** `tokens`, not both: they measure the same economic signal and summing them double-counts it.
+
 ## `skival report`
 
 Regenerate reports from previously saved results.

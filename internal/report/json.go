@@ -96,15 +96,16 @@ type jsonUsageAgg struct {
 }
 
 type jsonRanking struct {
-	Rank           int      `json:"rank"`
-	Name           string   `json:"name"`
-	Runner         string   `json:"runner,omitempty"`
-	Model          string   `json:"model,omitempty"`
-	CompositeScore float64  `json:"composite_score"`
-	PassRate       float64  `json:"pass_rate"`
-	MedianCostUSD  float64  `json:"median_cost_usd"`
-	MedianDuration int64    `json:"median_duration_ms"`
-	QualityScore   *float64 `json:"quality_score,omitempty"`
+	Rank              int      `json:"rank"`
+	Name              string   `json:"name"`
+	Runner            string   `json:"runner,omitempty"`
+	Model             string   `json:"model,omitempty"`
+	CompositeScore    float64  `json:"composite_score"`
+	PassRate          float64  `json:"pass_rate"`
+	MedianCostUSD     float64  `json:"median_cost_usd"`
+	MedianDuration    int64    `json:"median_duration_ms"`
+	MedianTotalTokens *int64   `json:"median_total_tokens,omitempty"`
+	QualityScore      *float64 `json:"quality_score,omitempty"`
 }
 
 // WriteJSON writes a machine-readable JSON report to w.
@@ -231,6 +232,7 @@ func jsonAggUsage(u *result.UsageAggregate) *jsonUsageAgg {
 
 func buildJSONRankings(sr *result.SuiteResult, weights Weights) []jsonRanking {
 	showQuality := hasComparison(sr)
+	showTokens := weights.Tokens > 0
 	ranks := RankVariants(sr, weights)
 	var rankings []jsonRanking
 	for _, rank := range ranks {
@@ -243,6 +245,10 @@ func buildJSONRankings(sr *result.SuiteResult, weights Weights) []jsonRanking {
 			PassRate:       rank.PassRate,
 			MedianCostUSD:  rank.MedianCostUSD,
 			MedianDuration: rank.MedianDuration,
+		}
+		if showTokens {
+			t := rank.MedianTotalTokens
+			jr.MedianTotalTokens = &t
 		}
 		if showQuality {
 			q := rank.QualityScore

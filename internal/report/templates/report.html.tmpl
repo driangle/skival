@@ -84,6 +84,11 @@
         <div class="bar"><i style="{{.CostWidth}}"></i></div>
         <span class="metric-label">median cost</span>
       </div>
+      {{if $.ShowTokens}}<div class="metric">
+        <span class="metric-val">{{.MedianTokens}}</span>
+        <div class="bar"><i style="{{.TokenWidth}}"></i></div>
+        <span class="metric-label">median tokens</span>
+      </div>{{end}}
       <div class="metric">
         <span class="metric-val">{{.MedianDuration}}</span>
         <div class="bar"><i style="{{.DurationWidth}}"></i></div>

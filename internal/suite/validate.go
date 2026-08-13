@@ -173,7 +173,10 @@ func validateRankingWeights(r *Ranking) []string {
 	if w.Quality < 0 {
 		errs = append(errs, fmt.Sprintf("ranking.weights.quality must be >= 0, got %g", w.Quality))
 	}
-	sum := w.Correctness + w.Cost + w.Duration + w.Quality
+	if w.Tokens < 0 {
+		errs = append(errs, fmt.Sprintf("ranking.weights.tokens must be >= 0, got %g", w.Tokens))
+	}
+	sum := w.Correctness + w.Cost + w.Duration + w.Quality + w.Tokens
 	if math.Abs(sum-1.0) > 1e-9 {
 		errs = append(errs, fmt.Sprintf("ranking.weights must sum to 1.0, got %g", sum))
 	}

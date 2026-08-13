@@ -26,6 +26,10 @@ type htmlData struct {
 	Errors       []htmlError
 
 	ShowQuality bool
+	// ShowTokens is true when the token weight is active (weights.tokens > 0),
+	// which gates the "median tokens" metric in the rankings block. Default
+	// suites leave it false, so their rankings render exactly as before.
+	ShowTokens bool
 	// HasSessions is true when at least one run carries session info, which
 	// gates the "Session" column in the samples tables.
 	HasSessions bool
@@ -126,10 +130,12 @@ type htmlRanking struct {
 	QualityScore   string
 	MedianCost     string
 	MedianDuration string
+	MedianTokens   string
 	CompositeWidth template.CSS
 	QualityWidth   template.CSS
 	CostWidth      template.CSS
 	DurationWidth  template.CSS
+	TokenWidth     template.CSS
 }
 
 type htmlError struct {

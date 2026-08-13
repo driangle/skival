@@ -31,10 +31,11 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 		Counts:       buildHTMLCounts(sr),
 		WeightsNote:  weightsNote(weights),
 		ShowQuality:  hasComparison(sr),
+		ShowTokens:   weights.Tokens > 0,
 	}
 
 	ranks := RankVariants(sr, weights)
-	d.Rankings = buildHTMLRankings(ranks, d.ShowQuality)
+	d.Rankings = buildHTMLRankings(ranks, d.ShowQuality, d.ShowTokens)
 	d.Verdict = buildHTMLVerdict(ranks, d.ShowQuality)
 	d.Health = buildHTMLHealth(sr)
 	d.VariantNames = htmlVariantNames(sr)
@@ -124,6 +125,9 @@ func weightsNote(w Weights) string {
 		fmt.Sprintf("%.2g pass", w.Correctness),
 		fmt.Sprintf("%.2g cost", w.Cost),
 		fmt.Sprintf("%.2g speed", w.Duration),
+	}
+	if w.Tokens > 0 {
+		parts = append(parts, fmt.Sprintf("%.2g tokens", w.Tokens))
 	}
 	if w.Quality > 0 {
 		parts = append([]string{fmt.Sprintf("%.2g quality", w.Quality)}, parts...)

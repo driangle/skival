@@ -268,7 +268,7 @@ Each value in a dimension can override any variant-level field:
 
 ## Ranking
 
-Configure how variants are scored and ranked. The composite score is a weighted sum of correctness, cost, and duration.
+Configure how variants are scored and ranked. The composite score is a weighted sum of correctness, cost, duration, tokens, and quality.
 
 ```yaml
 ranking:
@@ -276,6 +276,7 @@ ranking:
     correctness: 0.60    # default: 0.60
     cost: 0.28           # default: 0.28
     duration: 0.12       # default: 0.12
+    tokens: 0.00         # default: 0.00
     quality: 0.00        # default: 0.00
 ```
 
@@ -284,17 +285,37 @@ ranking:
 | `weights.correctness` | `0.60` | Weight for pass rate (higher is better) |
 | `weights.cost` | `0.28` | Weight for median cost (lower is better) |
 | `weights.duration` | `0.12` | Weight for median duration (lower is better) |
+| `weights.tokens` | `0.00` | Weight for median total tokens, input + output (lower is better) |
 | `weights.quality` | `0.00` | Weight for comparative-judge quality (higher is better; see [Comparative Judging](#comparative-judging)) |
 
-All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is omitted, the default weights apply. `quality` defaults to `0.0`, so suites that do not use comparative judging rank exactly as before. When you enable `compare` **without** setting explicit `ranking.weights`, a quality weight is carved out automatically (see [Comparative Judging](#comparative-judging)).
+All weights must be `>= 0` and must sum to `1.0`. When the `ranking` section is omitted, the default weights apply. `tokens` and `quality` both default to `0.0`, so suites that set neither rank exactly as before. When you enable `compare` **without** setting explicit `ranking.weights`, a quality weight is carved out automatically (see [Comparative Judging](#comparative-judging)).
+
+### Ranking on tokens instead of cost
+
+Cost is only meaningful when skival knows the model's pricing. For local models, self-hosted or newly-released models, and the `exec` runner, the runner reports `cost_usd = 0`, so the cost dimension silently contributes nothing. Token usage is a **model-agnostic efficiency signal** — it lets you compare a token-hungry cheap model against a terse expensive one without trusting a price table.
+
+To rank on tokens, move the economic weight from `cost` to `tokens`:
+
+```yaml
+ranking:
+  weights:
+    correctness: 0.60
+    cost: 0.00           # no pricing available
+    duration: 0.12
+    tokens: 0.28         # rank efficiency by tokens instead
+```
+
+**Do not weight both `cost` and `tokens`.** Cost is approximately `tokens × price`, so the two measure the same underlying economic signal — giving both a nonzero weight double-counts it. Pick one: `cost` when you trust the pricing, `tokens` when you don't. skival does not forbid setting both (the weights just have to sum to `1.0`), so it is on you to choose one economic basis.
+
+Variants whose runner reports no token usage are scored as `0` total tokens — i.e. treated as the most efficient, exactly the way a `cost = 0` variant is treated as free. A suite that ranks on tokens while mixing runners that report tokens with runners that don't will therefore favor the token-less ones; keep the compared variants on runners that all report usage.
 
 ### How the composite score is computed
 
 - **Correctness** uses the pass rate directly (fraction of verified runs that passed), which is already on a `0–1` scale.
-- **Cost and duration are scored per eval, relative to that eval's best variant** (ratio-to-best): the cheapest/fastest variant in an eval scores `1.0`, one that is twice as expensive scores `0.5`, and so on. This makes the score sensitive to the *size* of a gap, not just who won — losing cost by 1% and by 90% produce different scores. The per-eval scores are then averaged across evals, so a cheap eval and an expensive eval are never pooled into a single figure.
-- **Single-variant evals** score `1.0` on cost and duration by definition (the lone variant is its own best), so only its pass rate can pull the composite below the weight sum.
+- **Cost, duration, and tokens are scored per eval, relative to that eval's best variant** (ratio-to-best): the cheapest/fastest/most-token-efficient variant in an eval scores `1.0`, one that is twice as expensive scores `0.5`, and so on. This makes the score sensitive to the *size* of a gap, not just who won — losing cost by 1% and by 90% produce different scores. The per-eval scores are then averaged across evals, so a cheap eval and an expensive eval are never pooled into a single figure.
+- **Single-variant evals** score `1.0` on cost, duration, and tokens by definition (the lone variant is its own best), so only its pass rate can pull the composite below the weight sum.
 
-The `median cost` and `median duration` shown in the rankings table are the mean of each variant's per-eval medians.
+The `median cost`, `median tokens`, and `median duration` shown in the rankings table are the mean of each variant's per-eval medians. The `median tokens` column appears only when `weights.tokens > 0`.
 
 ## Comparative Judging
 

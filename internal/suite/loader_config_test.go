@@ -160,6 +160,41 @@ evals:
 	}
 }
 
+func TestLoad_RankingWeightsTokens(t *testing.T) {
+	// A suite that knows no model pricing ranks on tokens: cost 0, tokens weighted.
+	dir := t.TempDir()
+	writeSuiteFile(t, dir, "suite.yaml", `
+version: 1
+defaults:
+  runner: claude-code
+ranking:
+  weights:
+    correctness: 0.50
+    cost: 0.0
+    duration: 0.20
+    tokens: 0.30
+evals:
+  - id: eval-1
+    prompt: "task"
+    model: "claude-sonnet-4-6"
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: baseline
+`)
+
+	s, err := Load(filepath.Join(dir, "suite.yaml"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.Ranking == nil {
+		t.Fatal("expected ranking config to be set")
+	}
+	if s.Ranking.Weights.Tokens != 0.30 {
+		t.Errorf("expected tokens=0.30, got %g", s.Ranking.Weights.Tokens)
+	}
+}
+
 func TestLoad_RankingWeightsOmitted(t *testing.T) {
 	dir := t.TempDir()
 	writeSuiteFile(t, dir, "suite.yaml", `

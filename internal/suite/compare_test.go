@@ -127,6 +127,23 @@ func TestValidateRankingWeights_IncludesQuality(t *testing.T) {
 	}
 }
 
+func TestValidateRankingWeights_IncludesTokens(t *testing.T) {
+	// A suite that ranks on tokens instead of cost: cost 0, tokens carries the
+	// economic weight, and the five weights still sum to 1.0.
+	ok := &Ranking{Weights: RankingWeights{Correctness: 0.5, Cost: 0, Duration: 0.2, Tokens: 0.3}}
+	if errs := validateRankingWeights(ok); len(errs) != 0 {
+		t.Errorf("valid weights with tokens rejected: %v", errs)
+	}
+	badSum := &Ranking{Weights: RankingWeights{Correctness: 0.5, Cost: 0.28, Duration: 0.12, Tokens: 0.3}}
+	if errs := validateRankingWeights(badSum); len(errs) == 0 {
+		t.Error("weights summing to 1.2 should be rejected")
+	}
+	neg := &Ranking{Weights: RankingWeights{Correctness: 1.1, Cost: 0, Duration: 0, Tokens: -0.1}}
+	if errs := validateRankingWeights(neg); len(errs) == 0 {
+		t.Error("negative tokens weight should be rejected")
+	}
+}
+
 func TestValidateCompare(t *testing.T) {
 	if errs := validateCompare(nil, "compare"); len(errs) != 0 {
 		t.Errorf("nil compare should be valid, got %v", errs)

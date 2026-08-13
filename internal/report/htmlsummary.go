@@ -148,22 +148,23 @@ func orDash(s string) string {
 
 // buildHTMLRankings renders each rank as a row with bars scaled against the
 // worst value in its column, so relative standing reads without arithmetic.
-func buildHTMLRankings(ranks []VariantRank, showQuality bool) []htmlRanking {
+func buildHTMLRankings(ranks []VariantRank, showQuality, showTokens bool) []htmlRanking {
 	if len(ranks) < 2 {
 		return nil
 	}
 	var maxScore, maxQual, maxCost float64
-	var maxDur int64
+	var maxDur, maxTokens int64
 	for _, r := range ranks {
 		maxScore = max(maxScore, r.CompositeScore)
 		maxQual = max(maxQual, qualityOrPass(r, showQuality))
 		maxCost = max(maxCost, r.MedianCostUSD)
 		maxDur = max(maxDur, r.MedianDuration)
+		maxTokens = max(maxTokens, r.MedianTotalTokens)
 	}
 
 	rows := make([]htmlRanking, 0, len(ranks))
 	for _, r := range ranks {
-		rows = append(rows, htmlRanking{
+		row := htmlRanking{
 			Rank:           r.Rank,
 			Name:           r.Name,
 			Attribution:    orDash(strings.Trim(strings.Join([]string{r.Runner, r.Model}, " · "), " ·")),
@@ -176,7 +177,12 @@ func buildHTMLRankings(ranks []VariantRank, showQuality bool) []htmlRanking {
 			QualityWidth:   widthCSS(qualityOrPass(r, showQuality), maxQual),
 			CostWidth:      widthCSS(r.MedianCostUSD, maxCost),
 			DurationWidth:  widthCSS(float64(r.MedianDuration), float64(maxDur)),
-		})
+		}
+		if showTokens {
+			row.MedianTokens = formatTokens(r.MedianTotalTokens)
+			row.TokenWidth = widthCSS(float64(r.MedianTotalTokens), float64(maxTokens))
+		}
+		rows = append(rows, row)
 	}
 	return rows
 }

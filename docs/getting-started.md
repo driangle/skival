@@ -76,6 +76,8 @@ RANK  VARIANT     SCORE  PASS RATE  MEDIAN COST  MEDIAN DURATION
 #2    baseline    0.811  100%       $0.0042      12.3s
 ```
 
+The composite `SCORE` weights correctness, cost, duration, and (optionally) tokens and quality. If you don't know a model's pricing — local models, self-hosted models, or the `exec` runner all report `$0.0000` — rank on token usage instead of cost by moving the economic weight to `tokens`; a `MEDIAN TOKENS` column then joins the rankings table. See [Configuration — Ranking on tokens instead of cost](/configuration#ranking-on-tokens-instead-of-cost).
+
 With `--samples 3`, you get aggregate statistics per variant:
 
 ```

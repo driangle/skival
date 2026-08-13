@@ -18,11 +18,19 @@ type Ranking struct {
 
 // RankingWeights defines the relative importance of each metric in the composite score.
 // All weights must be >= 0 and sum to 1.0.
+//
+// Cost and Tokens both weigh an economic signal, and they are strongly
+// correlated (cost ≈ tokens × price). Setting both to nonzero values
+// double-counts that signal; a suite that ranks on tokens (e.g. because model
+// pricing is unknown) should set cost: 0 and give the freed weight to tokens.
 type RankingWeights struct {
 	Correctness float64 `yaml:"correctness"`
 	Cost        float64 `yaml:"cost"`
 	Duration    float64 `yaml:"duration"`
 	Quality     float64 `yaml:"quality"`
+	// Tokens weights median total token usage (input + output). It defaults to
+	// 0, so suites that never set it rank exactly as before.
+	Tokens float64 `yaml:"tokens"`
 }
 
 // Retry configures retry behavior for failed sample runs.
