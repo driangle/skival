@@ -59,21 +59,23 @@ func runCommandProbe(ctx context.Context, cmd *exec.Cmd) (int, *VerifyResult) {
 
 func (v *CommandProbeVerifier) checkAssertions(exitCode int, stdout, stderr *bytes.Buffer) VerifyResult {
 	a := v.Probe.Assert
+	base := VerifyResult{ExitCode: &exitCode, Stdout: stdout.String(), Stderr: stderr.String()}
 
 	if a.Exits != nil && exitCode != *a.Exits {
 		reason := fmt.Sprintf("expected exit code %d, got %d", *a.Exits, exitCode)
 		if stderr.Len() > 0 {
 			reason += ": " + strings.TrimSpace(stderr.String())
 		}
-		return VerifyResult{Pass: false, Reason: reason}
+		base.Reason = reason
+		return base
 	}
 
 	if a.StdoutContains != "" && !strings.Contains(stdout.String(), a.StdoutContains) {
-		return VerifyResult{
-			Pass:   false,
-			Reason: fmt.Sprintf("expected %q not found in command stdout", a.StdoutContains),
-		}
+		base.Reason = fmt.Sprintf("expected %q not found in command stdout", a.StdoutContains)
+		return base
 	}
 
-	return VerifyResult{Pass: true, Reason: fmt.Sprintf("command probe passed: %s", v.Probe.Run)}
+	base.Pass = true
+	base.Reason = fmt.Sprintf("command probe passed: %s", v.Probe.Run)
+	return base
 }

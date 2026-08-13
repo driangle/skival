@@ -26,6 +26,59 @@ type runJSON struct {
 	Attempt       int        `json:"attempt,omitempty"`
 	TotalAttempts int        `json:"total_attempts,omitempty"`
 	Retried       bool       `json:"retried,omitempty"`
+	Steps         []stepJSON `json:"steps,omitempty"`
+}
+
+// stepJSON is the serialized form of a single verification step, capturing why a
+// sample passed or failed (this is exactly what a failure investigation reads).
+type stepJSON struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Pass     bool   `json:"pass"`
+	ExitCode *int   `json:"exit_code,omitempty"`
+	Stdout   string `json:"stdout,omitempty"`
+	Stderr   string `json:"stderr,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// toStepJSON converts result step records into their serialized form.
+func toStepJSON(steps []result.StepResult) []stepJSON {
+	if len(steps) == 0 {
+		return nil
+	}
+	out := make([]stepJSON, 0, len(steps))
+	for _, s := range steps {
+		out = append(out, stepJSON{
+			Name:     s.Name,
+			Type:     s.Type,
+			Pass:     s.Pass,
+			ExitCode: s.ExitCode,
+			Stdout:   s.Stdout,
+			Stderr:   s.Stderr,
+			Reason:   s.Reason,
+		})
+	}
+	return out
+}
+
+// toStepResults converts serialized steps back into result step records.
+func toStepResults(steps []stepJSON) []result.StepResult {
+	if len(steps) == 0 {
+		return nil
+	}
+	out := make([]result.StepResult, 0, len(steps))
+	for _, s := range steps {
+		out = append(out, result.StepResult{
+			Name:     s.Name,
+			Type:     s.Type,
+			Pass:     s.Pass,
+			ExitCode: s.ExitCode,
+			Stdout:   s.Stdout,
+			Stderr:   s.Stderr,
+			Reason:   s.Reason,
+		})
+	}
+	return out
 }
 
 // usageJSON is the serialized token usage for a single run. It is a pointer on
@@ -84,6 +137,7 @@ func (rj runJSON) toRunResult() result.RunResult {
 		Attempt:       rj.Attempt,
 		TotalAttempts: rj.TotalAttempts,
 		Retried:       rj.Retried,
+		Steps:         toStepResults(rj.Steps),
 	}
 	if rj.Error != "" {
 		run.Err = fmt.Errorf("%s", rj.Error)
@@ -107,6 +161,7 @@ func writeRunMeta(variantDir string, run result.RunResult) error {
 		Attempt:       run.Attempt,
 		TotalAttempts: run.TotalAttempts,
 		Retried:       run.Retried,
+		Steps:         toStepJSON(run.Steps),
 	}
 	if run.Err != nil {
 		r.Error = run.Err.Error()

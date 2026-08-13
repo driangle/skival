@@ -11,6 +11,7 @@ import (
 // StepResult records the outcome of a single pipeline step.
 type StepResult struct {
 	Name   string
+	Type   string
 	Result VerifyResult
 }
 
@@ -27,6 +28,7 @@ type Pipeline struct {
 
 type namedVerifier struct {
 	name     string
+	typ      string
 	verifier Verifier
 }
 
@@ -54,11 +56,12 @@ func BuildPipeline(verifySteps []suite.VerifyStep, evalDir string, opts ...Pipel
 }
 
 // named builds a namedVerifier, defaulting the name to fallback when unset.
-func named(name, fallback string, v Verifier) namedVerifier {
+// typ is the verify step's declared type, carried through for reporting.
+func named(typ, name, fallback string, v Verifier) namedVerifier {
 	if name == "" {
 		name = fallback
 	}
-	return namedVerifier{name: name, verifier: v}
+	return namedVerifier{name: name, typ: typ, verifier: v}
 }
 
 // buildStepVerifier constructs the verifier for a single verify step. The bool
@@ -67,13 +70,13 @@ func named(name, fallback string, v Verifier) namedVerifier {
 func buildStepVerifier(step suite.VerifyStep, i int, evalDir string, cfg pipelineConfig) (namedVerifier, bool) {
 	switch step.Type {
 	case "agent_exits_ok":
-		return named(step.Name, "agent_exits_ok", &ExecuteVerifier{}), true
+		return named(step.Type, step.Name, "agent_exits_ok", &ExecuteVerifier{}), true
 	case "check":
-		return named(step.Name, "check", &CheckVerifier{Dir: evalDir, Command: step.Run}), true
+		return named(step.Type, step.Name, "check", &CheckVerifier{Dir: evalDir, Command: step.Run}), true
 	case "check_output":
-		return named(step.Name, "check_output", &CheckOutputVerifier{Command: step.Run, Dir: evalDir}), true
+		return named(step.Type, step.Name, "check_output", &CheckOutputVerifier{Command: step.Run, Dir: evalDir}), true
 	case "output_contains":
-		return named(step.Name, "output_contains", &OutputVerifier{ExpectedSubstrings: step.Values}), true
+		return named(step.Type, step.Name, "output_contains", &OutputVerifier{ExpectedSubstrings: step.Values}), true
 	case "judge":
 		return buildJudgeVerifier(step, cfg)
 	default:
@@ -86,7 +89,7 @@ func buildStepVerifier(step suite.VerifyStep, i int, evalDir string, cfg pipelin
 func buildProbeVerifier(step suite.VerifyStep, i int, evalDir string) (namedVerifier, bool) {
 	switch step.Type {
 	case "command":
-		return named(step.Name, fmt.Sprintf("command[%d]", i), &CommandProbeVerifier{
+		return named(step.Type, step.Name, fmt.Sprintf("command[%d]", i), &CommandProbeVerifier{
 			Probe: suite.CommandProbe{
 				Run:    step.Run,
 				Assert: suite.CommandProbeAssert{Exits: step.Exits, StdoutContains: step.StdoutContains},
@@ -94,7 +97,7 @@ func buildProbeVerifier(step suite.VerifyStep, i int, evalDir string) (namedVeri
 			Dir: evalDir,
 		}), true
 	case "file_contains":
-		return named(step.Name, fmt.Sprintf("file_contains[%d]", i), &FileProbeVerifier{
+		return named(step.Type, step.Name, fmt.Sprintf("file_contains[%d]", i), &FileProbeVerifier{
 			Probe: suite.FileProbe{
 				Path:   step.Path,
 				Assert: suite.FileProbeAssert{Exists: step.Exists, Contains: step.Contains},
@@ -102,7 +105,7 @@ func buildProbeVerifier(step suite.VerifyStep, i int, evalDir string) (namedVeri
 			Dir: evalDir,
 		}), true
 	case "http_check":
-		return named(step.Name, fmt.Sprintf("http_check[%d]", i), &HTTPProbeVerifier{
+		return named(step.Type, step.Name, fmt.Sprintf("http_check[%d]", i), &HTTPProbeVerifier{
 			Probe: suite.HTTPProbe{
 				URL:    step.URL,
 				Method: step.Method,
@@ -110,7 +113,7 @@ func buildProbeVerifier(step suite.VerifyStep, i int, evalDir string) (namedVeri
 			},
 		}), true
 	case "tcp_check":
-		return named(step.Name, fmt.Sprintf("tcp_check[%d]", i), &TCPProbeVerifier{
+		return named(step.Type, step.Name, fmt.Sprintf("tcp_check[%d]", i), &TCPProbeVerifier{
 			Probe: suite.TCPProbe{Host: step.Host, Port: step.Port},
 		}), true
 	default:
@@ -124,7 +127,7 @@ func buildJudgeVerifier(step suite.VerifyStep, cfg pipelineConfig) (namedVerifie
 	if cfg.runner == nil {
 		return namedVerifier{}, false
 	}
-	return named(step.Name, "judge", &JudgeVerifier{
+	return named(step.Type, step.Name, "judge", &JudgeVerifier{
 		Runner:     cfg.runner,
 		Criteria:   step.Criteria,
 		Prompt:     cfg.evalPrompt,
@@ -165,7 +168,7 @@ func (p *Pipeline) Run(ctx context.Context, input VerifyInput) PipelineResult {
 
 	for _, s := range p.steps {
 		r := s.verifier.Verify(ctx, input)
-		completed = append(completed, StepResult{Name: s.name, Result: r})
+		completed = append(completed, StepResult{Name: s.name, Type: s.typ, Result: r})
 		if !r.Pass {
 			return PipelineResult{Pass: false, Steps: completed}
 		}
