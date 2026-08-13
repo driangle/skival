@@ -20,6 +20,10 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 		opts = &Options{}
 	}
 
+	if err := validateFilters(s, opts); err != nil {
+		return nil, err
+	}
+
 	prog := newProgress(opts.Progress)
 
 	sr := &result.SuiteResult{
