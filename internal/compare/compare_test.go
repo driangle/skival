@@ -321,6 +321,7 @@ func TestWriteMarkdown(t *testing.T) {
 		"removed",
 		"new",
 		"added",
+		attributionMarkdown,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("markdown output missing %q, got:\n%s", want, out)
@@ -361,6 +362,23 @@ func TestWriteJSON(t *testing.T) {
 	}
 	if parsed.Evals[0].Variants[0].CostDelta == nil || *parsed.Evals[0].Variants[0].CostDelta != -0.01 {
 		t.Error("cost delta not preserved in JSON roundtrip")
+	}
+}
+
+func TestWriteJSON_Attribution(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, &Comparison{}); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		MadeWith jsonAttribution `json:"made_with"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("JSON parse error: %v", err)
+	}
+	if parsed.MadeWith.Tool != attributionTool || parsed.MadeWith.URL != attributionURL {
+		t.Errorf("unexpected made_with: %+v", parsed.MadeWith)
 	}
 }
 

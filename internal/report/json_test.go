@@ -56,6 +56,27 @@ func TestWriteJSON_ValidJSON(t *testing.T) {
 	}
 }
 
+func TestWriteJSON_Attribution(t *testing.T) {
+	sr := &result.SuiteResult{
+		StartedAt:  time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC),
+		FinishedAt: time.Date(2026, 3, 19, 10, 5, 0, 0, time.UTC),
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, sr, DefaultWeights()); err != nil {
+		t.Fatalf("WriteJSON error: %v", err)
+	}
+
+	var parsed struct {
+		MadeWith jsonAttribution `json:"made_with"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+	if parsed.MadeWith.Tool != attributionTool || parsed.MadeWith.URL != attributionURL {
+		t.Errorf("unexpected made_with: %+v", parsed.MadeWith)
+	}
+}
+
 func TestWriteJSON_Rankings(t *testing.T) {
 	sr := &result.SuiteResult{
 		StartedAt:  time.Now(),

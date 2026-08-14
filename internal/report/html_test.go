@@ -35,6 +35,11 @@ func TestWriteHTML_ValidDocument(t *testing.T) {
 	wantAll(t, renderHTML(t, sr), "<!DOCTYPE html>", "</html>", "Eval Report", "skival eval report", "Run health")
 }
 
+func TestWriteHTML_Attribution(t *testing.T) {
+	sr := &result.SuiteResult{StartedAt: time.Now(), FinishedAt: time.Now()}
+	wantAll(t, renderHTML(t, sr), `href="https://github.com/driangle/skival"`, "Made with")
+}
+
 func TestWriteHTML_Header(t *testing.T) {
 	sr := &result.SuiteResult{
 		Description: "My test suite",
