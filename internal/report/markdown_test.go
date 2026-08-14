@@ -118,7 +118,7 @@ func TestWriteMarkdown_RankingsBeforeWorkdirsAndSessions(t *testing.T) {
 	if rankIdx < 0 || workdirIdx < 0 || resultsIdx < 0 {
 		t.Fatalf("expected Results, Rankings and Workdirs sections, got:\n%s", out)
 	}
-	if !(resultsIdx < rankIdx && rankIdx < workdirIdx) {
+	if resultsIdx >= rankIdx || rankIdx >= workdirIdx {
 		t.Errorf("expected order Results < Rankings < Workdirs, got results=%d rank=%d workdir=%d", resultsIdx, rankIdx, workdirIdx)
 	}
 }
