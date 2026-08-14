@@ -1,12 +1,13 @@
 ---
 title: "Expose suite/work dir variables in verifier paths"
 id: "01kzyg3bb"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["verification", "integrity", "paths"]
 created: "2026-08-13"
 phase: phase-2
+completed_at: 2026-08-13
 ---
 
 # Expose suite/work dir variables in verifier paths
@@ -32,10 +33,10 @@ live outside the copied tree.
 
 ## Tasks
 
-- [ ] Add `${SKIVAL_SUITE_DIR}` (dir containing `suite.yaml`) and `${SKIVAL_WORK_DIR}` (per-sample working dir) to the path-substitution machinery.
-- [ ] Apply substitution to verifier fields: `check.run`/`command` and `file_contains` paths (and any other verifier path inputs).
-- [ ] Document that graders should live in the suite dir and be referenced via `${SKIVAL_SUITE_DIR}` so they are not copied into — or readable from — the agent's working tree.
-- [ ] Add tests: a grader outside the copied tree, referenced via `${SKIVAL_SUITE_DIR}`, runs correctly and is absent from the sample's isolated workspace.
+- [x] Add `${SKIVAL_SUITE_DIR}` (dir containing `suite.yaml`) and `${SKIVAL_WORK_DIR}` (per-sample working dir) to the path-substitution machinery.
+- [x] Apply substitution to verifier fields: `check.run`/`command` and `file_contains` paths (and any other verifier path inputs).
+- [x] Document that graders should live in the suite dir and be referenced via `${SKIVAL_SUITE_DIR}` so they are not copied into — or readable from — the agent's working tree.
+- [x] Add tests: a grader outside the copied tree, referenced via `${SKIVAL_SUITE_DIR}`, runs correctly and is absent from the sample's isolated workspace.
 
 ## Acceptance Criteria
 
