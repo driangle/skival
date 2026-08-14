@@ -14,8 +14,11 @@ install:
 vet:
 	go vet ./...
 
+# golangci-lint is pinned as a `go tool` dependency in go.mod, so this runs
+# the exact same version as CI and builds it with the repo's Go toolchain.
+# No separate install step is needed.
 lint:
-	golangci-lint run ./...
+	go tool golangci-lint run ./...
 
 # Enforce per-file line limits (300 non-test / 500 test). See
 # scripts/check-file-length.sh and README.md ("Code size limits").
