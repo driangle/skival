@@ -70,6 +70,8 @@ skival report <results-dir>    Generate reports from saved results
 | `--format` | Output format: `markdown`, `json`, `html` (default: `markdown`) |
 | `--keep-workdirs` | Which isolated sample workdirs to keep after the run: `all`, `failed`, or `none` (default: `failed`) |
 | `--link-sessions` | Render a static session page per run and link it from the report (requires `--results-dir`) |
+| `--dry-run` | Print the resolved run matrix and exit without executing (add `--results-dir` to estimate cost from prior medians) |
+| `--max-cost <usd>` | Abort the run once cumulative sample cost exceeds this cap (`0` = no cap) |
 | `-v, --verbose` | Enable debug-level logging |
 
 ### Linking agent sessions

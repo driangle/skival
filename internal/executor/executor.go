@@ -33,20 +33,36 @@ func Execute(ctx context.Context, s *suite.Suite, reg *registry.Registry, opts *
 	}
 
 	evals := filterEvals(s.Evals, opts.EvalIDs)
+	b := newBudget(opts.MaxCost)
 
 	for i := range evals {
+		// Once the cost cap is crossed, stop before starting a new eval so we
+		// don't run its (side-effecting) before hook only to skip every sample.
+		if b.stopped() {
+			break
+		}
 		prog.evalStart(i+1, len(evals), evalLabel(&evals[i]))
-		evalResult := executeEval(ctx, &evals[i], s.Compare, reg, opts, prog)
+		evalResult := executeEval(ctx, &evals[i], s.Compare, reg, opts, prog, b)
 		sr.Evals = append(sr.Evals, evalResult)
 	}
 
 	sr.FinishedAt = time.Now()
+	sr.Abort = budgetAbort(b)
 	prog.finish()
 	cleanupWorkdirs(sr, opts.KeepWorkdirs)
 	return sr, nil
 }
 
-func executeEval(ctx context.Context, eval *suite.Eval, suiteCmp *suite.Compare, reg *registry.Registry, opts *Options, prog *progress) result.EvalResult {
+// budgetAbort returns an Abort record when the cost cap was crossed, else nil.
+func budgetAbort(b *budget) *result.Abort {
+	spent, exceeded := b.report()
+	if !exceeded {
+		return nil
+	}
+	return &result.Abort{Reason: "cost cap exceeded", SpentUSD: spent, CapUSD: b.cap}
+}
+
+func executeEval(ctx context.Context, eval *suite.Eval, suiteCmp *suite.Compare, reg *registry.Registry, opts *Options, prog *progress, b *budget) result.EvalResult {
 	er := result.EvalResult{
 		EvalID:   eval.ID,
 		EvalName: eval.Name,
@@ -70,8 +86,8 @@ func executeEval(ctx context.Context, eval *suite.Eval, suiteCmp *suite.Compare,
 	}
 
 	if pv > 1 {
-		er.Variants = append(er.Variants, runVariantsParallel(ctx, eval, label, variants, reg, opts, prog, pv)...)
-	} else if runVariantsSequential(ctx, eval, label, variants, reg, opts, prog, &er) {
+		er.Variants = append(er.Variants, runVariantsParallel(ctx, eval, label, variants, reg, opts, prog, pv, b)...)
+	} else if runVariantsSequential(ctx, eval, label, variants, reg, opts, prog, &er, b) {
 		return er
 	}
 
@@ -99,7 +115,7 @@ func evalBeforeHookFailed(er *result.EvalResult, variants []variantEntry, label 
 
 // runVariantsParallel executes variants concurrently with bounded concurrency,
 // returning results in variant order.
-func runVariantsParallel(ctx context.Context, eval *suite.Eval, label string, variants []variantEntry, reg *registry.Registry, opts *Options, prog *progress, limit int) []result.VariantResult {
+func runVariantsParallel(ctx context.Context, eval *suite.Eval, label string, variants []variantEntry, reg *registry.Registry, opts *Options, prog *progress, limit int, b *budget) []result.VariantResult {
 	results := make([]result.VariantResult, len(variants))
 	sem := make(chan struct{}, limit)
 	var wg sync.WaitGroup
@@ -112,7 +128,7 @@ func runVariantsParallel(ctx context.Context, eval *suite.Eval, label string, va
 			defer func() { <-sem }()
 			cache := make(map[string]agentrunner.Runner)
 			v := variants[idx]
-			results[idx] = executeVariant(ctx, eval, label, v.variant, v.isControl, reg, cache, opts, prog)
+			results[idx] = executeVariant(ctx, eval, label, v.variant, v.isControl, reg, cache, opts, prog, b)
 		}(i)
 	}
 	wg.Wait()
@@ -122,7 +138,7 @@ func runVariantsParallel(ctx context.Context, eval *suite.Eval, label string, va
 // runVariantsSequential executes variants one at a time, running the reset hook
 // between variants. It appends results to er and returns true if the eval was
 // aborted early (reset hook failure), in which case remaining variants are skipped.
-func runVariantsSequential(ctx context.Context, eval *suite.Eval, label string, variants []variantEntry, reg *registry.Registry, opts *Options, prog *progress, er *result.EvalResult) bool {
+func runVariantsSequential(ctx context.Context, eval *suite.Eval, label string, variants []variantEntry, reg *registry.Registry, opts *Options, prog *progress, er *result.EvalResult, b *budget) bool {
 	runnerCache := make(map[string]agentrunner.Runner)
 
 	for i := range variants {
@@ -144,7 +160,7 @@ func runVariantsSequential(ctx context.Context, eval *suite.Eval, label string, 
 		}
 
 		v := variants[i]
-		vr := executeVariant(ctx, eval, label, v.variant, v.isControl, reg, runnerCache, opts, prog)
+		vr := executeVariant(ctx, eval, label, v.variant, v.isControl, reg, runnerCache, opts, prog, b)
 		er.Variants = append(er.Variants, vr)
 	}
 	return false
@@ -169,7 +185,7 @@ func collectVariants(eval *suite.Eval, filter []string) []variantEntry {
 	return entries
 }
 
-func executeVariant(ctx context.Context, eval *suite.Eval, label string, v *suite.Variant, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress) result.VariantResult {
+func executeVariant(ctx context.Context, eval *suite.Eval, label string, v *suite.Variant, isControl bool, reg *registry.Registry, runnerCache map[string]agentrunner.Runner, opts *Options, prog *progress, b *budget) result.VariantResult {
 	vr := result.VariantResult{
 		Name:      v.Name,
 		Runner:    v.Runner,
@@ -185,7 +201,7 @@ func executeVariant(ctx context.Context, eval *suite.Eval, label string, v *suit
 	samples := resolveSamples(eval, opts)
 	parallel := resolveParallel(eval, opts, samples)
 
-	vr.Runs = runSamples(ctx, eval, label, v, samples, parallel, runner, prog, opts.Timeout)
+	vr.Runs = runSamples(ctx, eval, label, v, samples, parallel, runner, prog, opts.Timeout, b)
 	vr.Aggregate = result.ComputeAggregate(vr.Runs)
 
 	return vr
@@ -233,32 +249,4 @@ func resolveParallel(eval *suite.Eval, opts *Options, samples int) int {
 		parallel = samples
 	}
 	return parallel
-}
-
-// runSamples runs a variant's samples sequentially or with bounded concurrency,
-// returning results in sample order.
-func runSamples(ctx context.Context, eval *suite.Eval, label string, v *suite.Variant, samples, parallel int, runner agentrunner.Runner, prog *progress, timeoutOverride int) []result.RunResult {
-	if parallel <= 1 {
-		var runs []result.RunResult
-		for i := 0; i < samples; i++ {
-			runs = append(runs, runSample(ctx, eval, label, v, i, samples, runner, prog, timeoutOverride))
-		}
-		return runs
-	}
-
-	runs := make([]result.RunResult, samples)
-	sem := make(chan struct{}, parallel)
-	var wg sync.WaitGroup
-
-	for i := 0; i < samples; i++ {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			runs[idx] = runSample(ctx, eval, label, v, idx, samples, runner, prog, timeoutOverride)
-		}(i)
-	}
-	wg.Wait()
-	return runs
 }

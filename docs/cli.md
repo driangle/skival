@@ -28,8 +28,20 @@ skival run <suite.yaml> [flags]
 | `--keep-workdirs <policy>` | `failed` | Which isolated sample workdirs to keep after the run: `all`, `failed`, or `none` |
 | `--compare` | | Force comparative judging on where criteria are configured (overrides `enabled: false`) |
 | `--no-compare` | | Disable comparative judging even if the suite configures it |
+| `--dry-run` | | Print the resolved run matrix (evals × variants × samples) and exit without executing |
+| `--max-cost <usd>` | `0` | Abort the run once cumulative sample cost (USD) exceeds this cap (`0` = no cap) |
 
 `--compare` and `--no-compare` are mutually exclusive. When neither is given, comparative judging follows the suite's [`compare`](/configuration#comparative-judging) configuration.
+
+#### Cost preview (`--dry-run`)
+
+`--dry-run` resolves the full run matrix — every eval × variant cell, with the model, runner, and sample count that would be used — and prints it without executing anything. It honors `--evals`, `--variants`, and `--samples`, so you can preview exactly the slice you intend to run.
+
+Pass `--results-dir <dir>` (pointing at a **previous** run's output) to price the matrix: each cell is estimated as its prior median cost × its sample count, and an estimated total is printed. Cells with no matching prior are shown with `—` and excluded from the total (a coverage note reports how many cells were priced).
+
+#### Budget cap (`--max-cost`)
+
+`--max-cost <usd>` is a suite-wide circuit breaker. Each sample's cost is added to a running total once the sample completes; when the total exceeds the cap, no further samples (or evals) are started. Samples already in flight under `--parallel`/`--parallel-variants` are allowed to finish — a sample is never interrupted mid-run, since its cost is only known at completion — so actual spend may modestly exceed the cap. On abort, the partial results collected so far are still reported (and saved when `--results-dir` is set), a clear message is printed, and the command exits non-zero. This complements the per-variant `runner_config.max_budget_usd`, which caps a single variant rather than the whole suite.
 
 ### Examples
 
@@ -67,6 +79,24 @@ Run a cheap pass without comparative judging, even if the suite configures it:
 
 ```bash
 skival run suite.yaml --no-compare
+```
+
+Preview the run matrix without executing anything:
+
+```bash
+skival run suite.yaml --dry-run
+```
+
+Estimate cost from a previous run's medians before committing:
+
+```bash
+skival run suite.yaml --dry-run --results-dir ./results/20260810-203238
+```
+
+Cap total spend at $10, aborting once cumulative cost crosses it:
+
+```bash
+skival run suite.yaml --samples 10 --max-cost 10
 ```
 
 ### Ranking

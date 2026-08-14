@@ -53,6 +53,11 @@ var runCmd = &cobra.Command{
 			return err
 		}
 
+		maxCost, _ := cmd.Flags().GetFloat64("max-cost")
+		if maxCost < 0 {
+			return fmt.Errorf("--max-cost must be a positive dollar amount")
+		}
+
 		compareOverride, err := compareOverride(cmd)
 		if err != nil {
 			return err
@@ -68,6 +73,11 @@ var runCmd = &cobra.Command{
 			Timeout:          timeout,
 			Compare:          compareOverride,
 			KeepWorkdirs:     keepWorkdirs,
+			MaxCost:          maxCost,
+		}
+
+		if dryRun, _ := cmd.Flags().GetBool("dry-run"); dryRun {
+			return runDryRun(cmd, s, execOpts)
 		}
 
 		sr, err := executor.Execute(cmd.Context(), s, reg, execOpts)
@@ -76,33 +86,70 @@ var runCmd = &cobra.Command{
 		}
 
 		weights := rankingWeights(s, compareOverride)
-
-		format, _ := cmd.Flags().GetString("format")
-		linkSessions, _ := cmd.Flags().GetBool("link-sessions")
-
-		resultsDir, _ := cmd.Flags().GetString("results-dir")
-		if resultsDir != "" {
-			outDir, err := persist.Save(resultsDir, sr, weights, persist.SaveOptions{LinkSessions: linkSessions})
-			if err != nil {
-				return fmt.Errorf("saving results: %w", err)
-			}
-			fmt.Fprintf(os.Stderr, "Results saved to %s\n", outDir)
-
-			// HTML is a file, not terminal output: write report.html into the
-			// results dir (so its relative session links resolve) and point the
-			// user at it rather than dumping the whole document to stdout.
-			if format == "html" {
-				reportPath := filepath.Join(outDir, "report.html")
-				if err := writeReportFile(reportPath, sr, weights); err != nil {
-					return err
-				}
-				fmt.Fprintf(os.Stderr, "HTML report written to %s\n", reportPath)
-				return nil
-			}
+		if err := emitResults(cmd, sr, weights); err != nil {
+			return err
 		}
-
-		return report.Write(os.Stdout, sr, format, weights)
+		return abortError(sr)
 	},
+}
+
+// runDryRun resolves and prints the run matrix (optionally priced from a prior
+// --results-dir) without executing anything.
+func runDryRun(cmd *cobra.Command, s *suite.Suite, execOpts *executor.Options) error {
+	plan, err := executor.BuildPlan(s, execOpts)
+	if err != nil {
+		return err
+	}
+	if resultsDir, _ := cmd.Flags().GetString("results-dir"); resultsDir != "" {
+		if prior, err := persist.Load(resultsDir); err == nil {
+			plan.ApplyEstimate(executor.PriorsFromResults(prior))
+		} else {
+			fmt.Fprintf(os.Stderr, "No prior results to estimate from at %s: %v\n", resultsDir, err)
+		}
+	}
+	executor.WritePlan(os.Stdout, plan)
+	return nil
+}
+
+// emitResults saves (when --results-dir is set) and renders the suite results.
+func emitResults(cmd *cobra.Command, sr *result.SuiteResult, weights report.Weights) error {
+	format, _ := cmd.Flags().GetString("format")
+	linkSessions, _ := cmd.Flags().GetBool("link-sessions")
+
+	resultsDir, _ := cmd.Flags().GetString("results-dir")
+	if resultsDir != "" {
+		outDir, err := persist.Save(resultsDir, sr, weights, persist.SaveOptions{LinkSessions: linkSessions})
+		if err != nil {
+			return fmt.Errorf("saving results: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "Results saved to %s\n", outDir)
+
+		// HTML is a file, not terminal output: write report.html into the
+		// results dir (so its relative session links resolve) and point the
+		// user at it rather than dumping the whole document to stdout.
+		if format == "html" {
+			reportPath := filepath.Join(outDir, "report.html")
+			if err := writeReportFile(reportPath, sr, weights); err != nil {
+				return err
+			}
+			fmt.Fprintf(os.Stderr, "HTML report written to %s\n", reportPath)
+			return nil
+		}
+	}
+
+	return report.Write(os.Stdout, sr, format, weights)
+}
+
+// abortError converts a budget-cap abort into a non-zero-exit error, after the
+// partial results have already been reported. Returns nil for a full run.
+func abortError(sr *result.SuiteResult) error {
+	if sr.Abort == nil {
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "\nRun aborted: %s — cumulative cost $%.4f exceeded --max-cost $%.4f\n",
+		sr.Abort.Reason, sr.Abort.SpentUSD, sr.Abort.CapUSD)
+	return fmt.Errorf("run aborted: cumulative cost $%.4f exceeded --max-cost $%.4f",
+		sr.Abort.SpentUSD, sr.Abort.CapUSD)
 }
 
 // writeReportFile writes an HTML report to path via atomic temp+rename.
@@ -205,6 +252,8 @@ func init() {
 	runCmd.Flags().Bool("compare", false, "Force comparative judging on where criteria are configured")
 	runCmd.Flags().Bool("no-compare", false, "Disable comparative judging even if configured in the suite")
 	runCmd.Flags().Bool("link-sessions", false, "Render a static session page per run (via the embedded vibeview renderer) and link it from the HTML report (requires --results-dir)")
+	runCmd.Flags().Bool("dry-run", false, "Print the resolved run matrix (evals × variants × samples) and exit without executing; combine with --results-dir to estimate cost from prior medians")
+	runCmd.Flags().Float64("max-cost", 0, "Abort the run once cumulative sample cost (USD) exceeds this cap (0 = no cap)")
 
 	rootCmd.AddCommand(runCmd)
 }

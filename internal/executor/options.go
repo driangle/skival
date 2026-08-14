@@ -26,4 +26,8 @@ type Options struct {
 	// KeepWorkdirs controls which isolated sample workdirs are retained after
 	// the run: "all", "failed", or "none". Empty resolves to "failed".
 	KeepWorkdirs string
+	// MaxCost is the suite-wide cumulative cost cap in USD. When > 0, the run
+	// stops launching new samples once total spend crosses it (see budget).
+	// 0 disables the cap.
+	MaxCost float64
 }

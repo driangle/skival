@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/driangle/skival/internal/report"
+	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
 )
 
@@ -144,5 +146,123 @@ func TestCompareFlagsRegistered(t *testing.T) {
 	}
 	if runCmd.Flags().Lookup("no-compare") == nil {
 		t.Error("--no-compare flag not registered")
+	}
+}
+
+func TestCostFlagsRegistered(t *testing.T) {
+	if runCmd.Flags().Lookup("dry-run") == nil {
+		t.Error("--dry-run flag not registered")
+	}
+	if f := runCmd.Flags().Lookup("max-cost"); f == nil {
+		t.Error("--max-cost flag not registered")
+	} else if f.DefValue != "0" {
+		t.Errorf("expected --max-cost default 0, got %q", f.DefValue)
+	}
+}
+
+const dryRunSuite = `
+version: 1
+description: "test suite"
+defaults:
+  runner: claude-code
+evals:
+  - id: eval-1
+    name: "First Eval"
+    prompt: "do something"
+    model: "claude-sonnet-4-6"
+    samples: 2
+    verify:
+      - type: agent_exits_ok
+    variants:
+      - name: "baseline"
+      - name: "treatment"
+        model: "claude-opus-4-6"
+`
+
+// captureStdout redirects os.Stdout for the duration of fn and returns what was
+// written. The run command prints the dry-run matrix to os.Stdout directly.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	defer func() { os.Stdout = orig }()
+
+	fn()
+	w.Close()
+
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatal(err)
+	}
+	return buf.String()
+}
+
+func writeSuite(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "suite.yaml")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestRunCmd_DryRunPrintsMatrixWithoutExecuting(t *testing.T) {
+	path := writeSuite(t, dryRunSuite)
+
+	if err := runCmd.Flags().Set("dry-run", "true"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = runCmd.Flags().Set("dry-run", "false") })
+
+	var runErr error
+	out := captureStdout(t, func() { runErr = runCmd.RunE(runCmd, []string{path}) })
+	if runErr != nil {
+		t.Fatalf("dry-run should not error, got: %v", runErr)
+	}
+
+	for _, want := range []string{"First Eval", "baseline", "treatment", "claude-opus-4-6", "dry run"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected dry-run output to contain %q, got:\n%s", want, out)
+		}
+	}
+	// 2 variants × 2 samples = 4 total samples, nothing executed.
+	if !strings.Contains(out, "4 total samples") {
+		t.Errorf("expected 4 total samples in output, got:\n%s", out)
+	}
+}
+
+func TestAbortError(t *testing.T) {
+	if err := abortError(&result.SuiteResult{}); err != nil {
+		t.Errorf("expected nil error for a completed run, got: %v", err)
+	}
+
+	sr := &result.SuiteResult{Abort: &result.Abort{Reason: "cost cap exceeded", SpentUSD: 0.15, CapUSD: 0.10}}
+	err := abortError(sr)
+	if err == nil {
+		t.Fatal("expected non-nil error for an aborted run")
+	}
+	if !strings.Contains(err.Error(), "max-cost") {
+		t.Errorf("expected abort error to mention max-cost, got: %v", err)
+	}
+}
+
+func TestRunCmd_NegativeMaxCostErrors(t *testing.T) {
+	path := writeSuite(t, dryRunSuite)
+
+	if err := runCmd.Flags().Set("max-cost", "-1"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = runCmd.Flags().Set("max-cost", "0") })
+
+	err := runCmd.RunE(runCmd, []string{path})
+	if err == nil {
+		t.Fatal("expected error for negative --max-cost")
+	}
+	if !strings.Contains(err.Error(), "max-cost") {
+		t.Errorf("expected error to mention max-cost, got: %v", err)
 	}
 }

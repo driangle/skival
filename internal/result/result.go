@@ -114,4 +114,17 @@ type SuiteResult struct {
 	// transcripts) were persisted, when the suite was run with --results-dir.
 	// Empty when results were not saved to disk.
 	ResultsDir string
+	// Abort is set when the run stopped early before every sample completed
+	// (e.g. the --max-cost cap was crossed). Nil when the suite ran in full.
+	Abort *Abort
+}
+
+// Abort records why a suite run stopped before executing every planned sample.
+type Abort struct {
+	// Reason is a short human-readable explanation (e.g. "cost cap exceeded").
+	Reason string
+	// SpentUSD is the cumulative sample cost at the moment the run was aborted.
+	SpentUSD float64
+	// CapUSD is the --max-cost threshold that was crossed.
+	CapUSD float64
 }

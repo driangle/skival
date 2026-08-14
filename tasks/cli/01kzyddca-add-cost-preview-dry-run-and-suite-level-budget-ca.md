@@ -1,12 +1,13 @@
 ---
 title: "Add cost preview (--dry-run) and suite-level budget cap (--max-cost)"
 id: "01kzyddca"
-status: pending
+status: completed
 priority: medium
 type: feature
 tags: ["cost", "budget", "cli", "ux"]
 created: "2026-08-13"
 phase: phase-4
+completed_at: 2026-08-14
 ---
 
 # Add cost preview (--dry-run) and suite-level budget cap (--max-cost)
@@ -30,11 +31,11 @@ Two additions would fix this:
 
 ## Tasks
 
-- [ ] Add `--dry-run` that prints the resolved run matrix (evals × variants × samples) and the resolved model per variant, then exits without running.
-- [ ] When `--results-dir` is provided, use prior per-eval/variant medians to produce an estimated total cost in the dry-run output.
-- [ ] Add a suite-level `skival run --max-cost <usd>` circuit breaker that aborts the run once cumulative spend exceeds the cap.
-- [ ] Decide and document abort semantics (stop before starting the next sample vs. mid-sample) and what gets reported on abort.
-- [ ] Add tests for the dry-run matrix output, the estimate computation from a results dir, and the max-cost abort behavior.
+- [x] Add `--dry-run` that prints the resolved run matrix (evals × variants × samples) and the resolved model per variant, then exits without running.
+- [x] When `--results-dir` is provided, use prior per-eval/variant medians to produce an estimated total cost in the dry-run output.
+- [x] Add a suite-level `skival run --max-cost <usd>` circuit breaker that aborts the run once cumulative spend exceeds the cap.
+- [x] Decide and document abort semantics (stop before starting the next sample vs. mid-sample) and what gets reported on abort.
+- [x] Add tests for the dry-run matrix output, the estimate computation from a results dir, and the max-cost abort behavior.
 
 ## Acceptance Criteria
 
