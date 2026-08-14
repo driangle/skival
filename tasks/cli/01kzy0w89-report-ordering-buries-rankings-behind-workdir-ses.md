@@ -1,12 +1,13 @@
 ---
 title: "Report ordering buries rankings behind workdir/session paths"
 id: "01kzy0w89"
-status: pending
+status: completed
 priority: medium
 type: chore
 tags: ["reporting", "ux"]
 created: "2026-08-13"
 phase: phase-3
+completed_at: 2026-08-13
 ---
 
 # Report ordering buries rankings behind workdir/session paths
@@ -27,9 +28,9 @@ Two changes:
 
 ## Tasks
 
-- [ ] Reorder the report so Rankings appears immediately after Results.
-- [ ] Collapse the per-sample Workdir and Session path lists into a single pointer to the results dir instead of one line per sample.
-- [ ] Update any report tests/snapshots to reflect the new ordering and collapsed paths.
+- [x] Reorder the report so Rankings appears immediately after Results.
+- [x] Collapse the per-sample Workdir and Session path lists into a single pointer to the results dir instead of one line per sample.
+- [x] Update any report tests/snapshots to reflect the new ordering and collapsed paths.
 
 ## Acceptance Criteria
 

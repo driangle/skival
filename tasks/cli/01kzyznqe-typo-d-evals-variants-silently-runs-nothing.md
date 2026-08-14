@@ -1,12 +1,13 @@
 ---
 title: "Typo'd --evals/--variants silently runs nothing"
 id: "01kzyznqe"
-status: pending
+status: completed
 priority: high
 type: bug
 tags: ["cli", "filtering", "ux"]
 created: "2026-08-13"
 phase: phase-4
+completed_at: 2026-08-13
 ---
 
 # Typo'd --evals/--variants silently runs nothing
@@ -36,9 +37,9 @@ nothing, with no indication the filter never matched.
 
 ## Tasks
 
-- [ ] Validate `--evals` and `--variants` values against the suite's known ids before running.
-- [ ] On any unmatched id, fail with a non-zero exit and an error listing the valid ids.
-- [ ] Add tests: unmatched `--evals`/`--variants` values produce a hard error listing valid ids and a non-zero exit.
+- [x] Validate `--evals` and `--variants` values against the suite's known ids before running.
+- [x] On any unmatched id, fail with a non-zero exit and an error listing the valid ids.
+- [x] Add tests: unmatched `--evals`/`--variants` values produce a hard error listing valid ids and a non-zero exit.
 
 ## Acceptance Criteria
 
