@@ -1,4 +1,4 @@
-# golangci-lint configuration.
+# golangci-lint configuration (v2 format).
 #
 # Keeps the default linter set and adds function-length enforcement (funlen).
 # File-length limits are enforced separately by scripts/check-file-length.sh
@@ -7,20 +7,38 @@
 #
 # See README.md ("Code size limits") for the rationale and how to install the
 # pre-commit hook that runs these checks.
+version: "2"
 linters:
   enable:
     - funlen
-
-linters-settings:
-  funlen:
-    lines: 40
-    statements: 25
-    ignore-comments: true
-
-issues:
-  exclude-rules:
-    # Table-driven tests are legitimately long; they stay bounded by the
-    # 500-line file budget enforced in scripts/check-file-length.sh instead.
-    - path: _test\.go
-      linters:
-        - funlen
+  settings:
+    funlen:
+      lines: 40
+      statements: 25
+      ignore-comments: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Table-driven tests are legitimately long; they stay bounded by the
+      # 500-line file budget enforced in scripts/check-file-length.sh instead.
+      - linters:
+          - funlen
+        path: _test\.go
+    paths:
+      # examples/ holds sample "project under test" code used by the suites;
+      # it is illustrative, not production code, so it is exempt from linting.
+      - ^examples/
+      - third_party$
+      - builtin$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - ^examples/
+      - third_party$
+      - builtin$
