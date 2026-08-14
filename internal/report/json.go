@@ -10,12 +10,13 @@ import (
 
 // jsonReport is the top-level JSON output structure.
 type jsonReport struct {
-	Title       string        `json:"title,omitempty"`
-	Description string        `json:"description"`
-	StartedAt   string        `json:"started_at"`
-	FinishedAt  string        `json:"finished_at"`
-	Evals       []jsonEval    `json:"evals"`
-	Rankings    []jsonRanking `json:"rankings,omitempty"`
+	Title       string          `json:"title,omitempty"`
+	Description string          `json:"description"`
+	StartedAt   string          `json:"started_at"`
+	FinishedAt  string          `json:"finished_at"`
+	Evals       []jsonEval      `json:"evals"`
+	Rankings    []jsonRanking   `json:"rankings,omitempty"`
+	MadeWith    jsonAttribution `json:"made_with"`
 }
 
 type jsonSkipped struct {
@@ -160,6 +161,7 @@ func buildJSONReport(sr *result.SuiteResult, weights Weights) jsonReport {
 		Description: sr.Description,
 		StartedAt:   sr.StartedAt.Format("2006-01-02T15:04:05Z07:00"),
 		FinishedAt:  sr.FinishedAt.Format("2006-01-02T15:04:05Z07:00"),
+		MadeWith:    attribution(),
 	}
 
 	for _, eval := range sr.Evals {

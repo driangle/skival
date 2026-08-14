@@ -163,7 +163,7 @@ func TestWriteMarkdown_NoFooterWithoutResultsDir(t *testing.T) {
 	var buf bytes.Buffer
 	WriteMarkdown(&buf, orderingSuite(), DefaultWeights())
 	if strings.Contains(buf.String(), "**Results saved to**") {
-		t.Error("footer should be absent when ResultsDir is unset")
+		t.Error("results-saved line should be absent when ResultsDir is unset")
 	}
 }
 

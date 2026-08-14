@@ -35,14 +35,15 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	writeResultsFooter(w, sr)
 }
 
-// writeResultsFooter echoes the results-dir location at the bottom of the
-// report so a reader who redirected stderr can still find the saved artifacts.
-// It is omitted when results were not persisted to disk.
+// writeResultsFooter closes the report with a rule, the results-dir location
+// (when persisted, so a reader who redirected stderr can still find the saved
+// artifacts), and the skival attribution mark.
 func writeResultsFooter(w io.Writer, sr *result.SuiteResult) {
-	if sr.ResultsDir == "" {
-		return
+	fmt.Fprintf(w, "---\n\n")
+	if sr.ResultsDir != "" {
+		fmt.Fprintf(w, "**Results saved to** `%s`\n\n", sr.ResultsDir)
 	}
-	fmt.Fprintf(w, "---\n\n**Results saved to** `%s`\n", sr.ResultsDir)
+	fmt.Fprintf(w, "%s\n", attributionMarkdown)
 }
 
 // writeComparisonSection renders per-eval comparative quality scores, and notes

@@ -15,6 +15,8 @@ func WriteMarkdown(w io.Writer, c *Comparison) {
 	for _, eval := range c.Evals {
 		writeEvalComparison(w, eval)
 	}
+
+	fmt.Fprintf(w, "---\n\n%s\n", attributionMarkdown)
 }
 
 func writeEvalComparison(w io.Writer, eval EvalComparison) {
