@@ -25,9 +25,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.12.2
+      # golangci-lint is pinned as a `go tool` in go.mod, so CI runs the exact
+      # same version and command as the pre-commit hook (`make lint`).
+      - run: go tool golangci-lint run ./...
       - run: make lint-filesize
 
   build:

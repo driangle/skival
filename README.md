@@ -124,6 +124,11 @@ size and lint violations are caught before they land. Install it once per clone:
 make install-hooks
 ```
 
+`golangci-lint` is pinned as a [`go tool`](https://go.dev/doc/modules/managing-dependencies#tools)
+dependency in `go.mod`, so `make lint` and CI run the exact same version
+(built with the repo's Go toolchain). There is no separate install step, and a
+lint failure can no longer pass the hook but fail in CI.
+
 This points `core.hooksPath` at the tracked `.githooks/` directory.
 
 ### Dogfooding the skill
