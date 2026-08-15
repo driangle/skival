@@ -24,6 +24,9 @@ type RunResult struct {
 	Pass              *bool
 	Conversation      []json.RawMessage
 	JudgeConversation []json.RawMessage
+	// ToolCounts maps each tool name to how many times this sample invoked it,
+	// derived from Conversation. Nil/empty when the run used no tools.
+	ToolCounts map[string]int
 	WorkDir           string // resolved working directory for this sample
 	Attempt           int    // 1-indexed attempt number (0 means no retry was configured)
 	TotalAttempts     int    // total attempts made for this sample

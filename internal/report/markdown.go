@@ -26,6 +26,7 @@ func WriteMarkdown(w io.Writer, sr *result.SuiteResult, weights Weights) {
 	multiModel := hasMultipleModels(sr)
 	writeResultsTable(w, sr, multi, multiModel)
 	writeRankingTable(w, sr, multi, multiModel, weights)
+	writeToolCensusSection(w, sr, multi, multiModel, weights)
 	writeWorkdirsSection(w, sr)
 	writeSessionsSection(w, sr)
 	writeComparisonSection(w, sr)

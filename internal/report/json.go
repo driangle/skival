@@ -53,6 +53,9 @@ type jsonVariant struct {
 	IsControl bool           `json:"is_control"`
 	Runs      []jsonRun      `json:"runs"`
 	Aggregate *jsonAggregate `json:"aggregate,omitempty"`
+	// ToolCounts is the variant's tool census: each tool it invoked mapped to a
+	// total count across this variant's runs. Omitted when no tools were used.
+	ToolCounts map[string]int `json:"tool_counts,omitempty"`
 }
 
 type jsonRun struct {
@@ -128,21 +131,6 @@ type jsonUsageAgg struct {
 	MedianCacheReadTokens     int64 `json:"median_cache_read_tokens"`
 }
 
-type jsonRanking struct {
-	Rank              int      `json:"rank"`
-	Name              string   `json:"name"`
-	Runner            string   `json:"runner,omitempty"`
-	Model             string   `json:"model,omitempty"`
-	CompositeScore    float64  `json:"composite_score"`
-	PassRate          float64  `json:"pass_rate"`
-	PassRateLow       float64  `json:"pass_rate_low"`
-	PassRateHigh      float64  `json:"pass_rate_high"`
-	MedianCostUSD     float64  `json:"median_cost_usd"`
-	MedianDuration    int64    `json:"median_duration_ms"`
-	MedianTotalTokens *int64   `json:"median_total_tokens,omitempty"`
-	QualityScore      *float64 `json:"quality_score,omitempty"`
-}
-
 // WriteJSON writes a machine-readable JSON report to w.
 func WriteJSON(w io.Writer, sr *result.SuiteResult, weights Weights) error {
 	report := buildJSONReport(sr, weights)
@@ -200,10 +188,11 @@ func buildJSONEval(eval result.EvalResult) jsonEval {
 
 func buildJSONVariant(v result.VariantResult) jsonVariant {
 	jt := jsonVariant{
-		Name:      v.Name,
-		Runner:    v.Runner,
-		Model:     v.Model,
-		IsControl: v.IsControl,
+		Name:       v.Name,
+		Runner:     v.Runner,
+		Model:      v.Model,
+		IsControl:  v.IsControl,
+		ToolCounts: sumRunToolCounts(v.Runs),
 	}
 	for _, run := range v.Runs {
 		jr := jsonRun{
@@ -267,33 +256,3 @@ func jsonAggUsage(u *result.UsageAggregate) *jsonUsageAgg {
 	}
 }
 
-func buildJSONRankings(sr *result.SuiteResult, weights Weights) []jsonRanking {
-	showQuality := hasComparison(sr)
-	showTokens := weights.Tokens > 0
-	ranks := RankVariants(sr, weights)
-	var rankings []jsonRanking
-	for _, rank := range ranks {
-		jr := jsonRanking{
-			Rank:           rank.Rank,
-			Name:           rank.Name,
-			Runner:         rank.Runner,
-			Model:          rank.Model,
-			CompositeScore: rank.CompositeScore,
-			PassRate:       rank.PassRate,
-			PassRateLow:    rank.PassLow,
-			PassRateHigh:   rank.PassHigh,
-			MedianCostUSD:  rank.MedianCostUSD,
-			MedianDuration: rank.MedianDuration,
-		}
-		if showTokens {
-			t := rank.MedianTotalTokens
-			jr.MedianTotalTokens = &t
-		}
-		if showQuality {
-			q := rank.QualityScore
-			jr.QualityScore = &q
-		}
-		rankings = append(rankings, jr)
-	}
-	return rankings
-}

@@ -11,6 +11,7 @@ import (
 	agentrunner "github.com/driangle/agentrunner/go"
 	"github.com/driangle/skival/internal/result"
 	"github.com/driangle/skival/internal/suite"
+	"github.com/driangle/skival/internal/verifier"
 )
 
 func executeSingleRun(ctx context.Context, eval *suite.Eval, v *suite.Variant, sample int, runner agentrunner.Runner, isolatedDir string, timeoutOverride int) result.RunResult {
@@ -65,6 +66,7 @@ func newRunResult(sample int, res *agentrunner.Result, conversation []json.RawMe
 		Usage:        res.Usage,
 		SessionID:    res.SessionID,
 		Conversation: conversation,
+		ToolCounts:   verifier.CountToolUses(conversation),
 	}
 }
 

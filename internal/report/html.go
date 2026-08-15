@@ -36,6 +36,7 @@ func buildHTMLData(sr *result.SuiteResult, weights Weights) htmlData {
 
 	ranks := RankVariants(sr, weights)
 	d.Rankings = buildHTMLRankings(ranks, d.ShowQuality, d.ShowTokens)
+	d.ToolCensus = buildHTMLToolCensus(ranks, multi, multiModel)
 	d.Verdict = buildHTMLVerdict(ranks, d.ShowQuality)
 	d.Health = buildHTMLHealth(sr)
 	d.VariantNames = htmlVariantNames(sr)

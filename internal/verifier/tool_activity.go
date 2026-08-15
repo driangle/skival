@@ -40,41 +40,58 @@ type streamContentBlock struct {
 // empty string when there is no tool activity to report.
 func SummarizeToolActivity(conversation []json.RawMessage) string {
 	var sb strings.Builder
+	visitToolBlocks(conversation,
+		func(name string, input json.RawMessage) {
+			fmt.Fprintf(&sb, "-> tool_use %s: %s\n", name, truncate(string(input), maxToolBlockLen))
+		},
+		func(content json.RawMessage) {
+			fmt.Fprintf(&sb, "<- tool_result: %s\n", truncate(stringifyToolResult(content), maxToolBlockLen))
+		})
+	return sb.String()
+}
+
+// CountToolUses tallies how many times each tool was invoked across a
+// conversation, keyed by tool name. It walks the same two conversation shapes
+// as SummarizeToolActivity. Returns an empty map when there is no tool activity.
+func CountToolUses(conversation []json.RawMessage) map[string]int {
+	counts := make(map[string]int)
+	visitToolBlocks(conversation,
+		func(name string, _ json.RawMessage) {
+			if name != "" {
+				counts[name]++
+			}
+		},
+		func(json.RawMessage) {})
+	return counts
+}
+
+// visitToolBlocks walks a conversation once and invokes onUse for every
+// tool_use block and onResult for every tool_result block, across both the
+// nested claude-code (message.content) and flat exec-runner shapes. Messages
+// that do not parse are silently skipped.
+func visitToolBlocks(conversation []json.RawMessage, onUse func(name string, input json.RawMessage), onResult func(content json.RawMessage)) {
 	for _, raw := range conversation {
 		var env streamEnvelope
 		if err := json.Unmarshal(raw, &env); err != nil {
 			continue
 		}
 		if env.Message != nil {
-			writeNestedBlocks(&sb, env.Message.Content)
+			for _, b := range env.Message.Content {
+				switch b.Type {
+				case "tool_use":
+					onUse(b.Name, b.Input)
+				case "tool_result":
+					onResult(b.Content)
+				}
+			}
 			continue
 		}
-		writeFlatEvent(&sb, env)
-	}
-	return sb.String()
-}
-
-// writeNestedBlocks renders tool blocks nested under a claude-code
-// message.content array.
-func writeNestedBlocks(sb *strings.Builder, blocks []streamContentBlock) {
-	for _, b := range blocks {
-		switch b.Type {
+		switch env.Type {
 		case "tool_use":
-			fmt.Fprintf(sb, "-> tool_use %s: %s\n", b.Name, truncate(string(b.Input), maxToolBlockLen))
+			onUse(env.Name, env.Input)
 		case "tool_result":
-			fmt.Fprintf(sb, "<- tool_result: %s\n", truncate(stringifyToolResult(b.Content), maxToolBlockLen))
+			onResult(env.Content)
 		}
-	}
-}
-
-// writeFlatEvent renders a flat exec-runner event whose type/name/input/content
-// live at the top level of the JSON object.
-func writeFlatEvent(sb *strings.Builder, env streamEnvelope) {
-	switch env.Type {
-	case "tool_use":
-		fmt.Fprintf(sb, "-> tool_use %s: %s\n", env.Name, truncate(string(env.Input), maxToolBlockLen))
-	case "tool_result":
-		fmt.Fprintf(sb, "<- tool_result: %s\n", truncate(stringifyToolResult(env.Content), maxToolBlockLen))
 	}
 }
 

@@ -62,6 +62,16 @@ type VariantRank struct {
 	QualityScore   float64
 	CompositeScore float64
 	Rank           int
+	// Tools is the variant's tool census across the suite: every tool it
+	// invoked with a total count, sorted by count desc then name asc. Empty
+	// when the variant used no tools.
+	Tools []ToolCount
+}
+
+// ToolCount is one tool's total invocation count for a variant.
+type ToolCount struct {
+	Name  string
+	Count int
 }
 
 // hasComparison reports whether any eval produced comparative quality scores.

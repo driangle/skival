@@ -1,12 +1,13 @@
 ---
 title: "Per-variant tool census in the report"
 id: "01m036fad"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["tool-access", "observability", "report"]
 created: "2026-08-15"
 effort: medium
+completed_at: 2026-08-15
 ---
 
 # Per-variant tool census in the report
@@ -51,14 +52,26 @@ pre-flight warning [[01m030n6n-pre-flight-tool-leak-detection-from-system-init-e
 
 ## Tasks
 
-- [ ] Add a per-sample tool-count field to `RunResult` populated from the
+- [x] Add a per-sample tool-count field to `RunResult` populated from the
       conversation (single traversal shared with `tool_activity.go`)
-- [ ] Aggregate per-variant tool counts in the report accumulation
+- [x] Aggregate per-variant tool counts in the report accumulation
       (`internal/report/rankaccumulate.go`)
-- [ ] Render the per-variant tool census in markdown, JSON, and HTML reports
-- [ ] Evaluate reusing vibeview for extraction; record the decision
-- [ ] Tests: counting from both conversation shapes (nested claude-code + flat exec),
+- [x] Render the per-variant tool census in markdown, JSON, and HTML reports
+- [x] Evaluate reusing vibeview for extraction; record the decision
+- [x] Tests: counting from both conversation shapes (nested claude-code + flat exec),
       aggregation across samples, and report rendering
+
+## Decision: vibeview vs. in-repo extraction
+
+Evaluated reusing `vibeview` to extract the tool census from session JSONL.
+**Decided against it.** The extraction is a ~20-line JSON walk already
+implemented and tested for both conversation shapes in
+`internal/verifier/tool_activity.go`. Shelling out to an external binary would
+add a subprocess dependency, be harder to unit-test, and couple the report to a
+tool the CLI otherwise doesn't require — against KISS and the repo's rule to make
+no assumptions about the user's stack. We extended the existing traversal
+(`visitToolBlocks` + new `CountToolUses`) so counting and the judge summary share
+one source of truth.
 
 ## Acceptance Criteria
 

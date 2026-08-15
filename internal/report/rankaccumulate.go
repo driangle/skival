@@ -1,6 +1,8 @@
 package report
 
 import (
+	"sort"
+
 	"github.com/driangle/skival/internal/result"
 )
 
@@ -26,6 +28,39 @@ type variantAccumulator struct {
 	// double-penalized on quality — its low pass rate already reflects that.
 	qualSum   float64
 	qualCount int
+
+	// toolCounts tallies every tool the variant invoked across the whole suite,
+	// keyed by tool name. Lazily created on first tool use.
+	toolCounts map[string]int
+}
+
+// addToolCounts folds a single run's per-tool counts into the accumulator.
+func (a *variantAccumulator) addToolCounts(counts map[string]int) {
+	for name, n := range counts {
+		if a.toolCounts == nil {
+			a.toolCounts = make(map[string]int)
+		}
+		a.toolCounts[name] += n
+	}
+}
+
+// sortedTools returns the accumulated tool census sorted by count desc, then
+// name asc for stable output. Empty when no tools were used.
+func (a *variantAccumulator) sortedTools() []ToolCount {
+	if len(a.toolCounts) == 0 {
+		return nil
+	}
+	tools := make([]ToolCount, 0, len(a.toolCounts))
+	for name, n := range a.toolCounts {
+		tools = append(tools, ToolCount{Name: name, Count: n})
+	}
+	sort.Slice(tools, func(i, j int) bool {
+		if tools[i].Count != tools[j].Count {
+			return tools[i].Count > tools[j].Count
+		}
+		return tools[i].Name < tools[j].Name
+	})
+	return tools
 }
 
 func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
@@ -63,6 +98,7 @@ func (a *variantAccumulator) toRank(name string, w Weights) VariantRank {
 		QualityScore:      qualScore,
 		CompositeScore: w.Correctness*passRate + w.Cost*costNorm +
 			w.Duration*durNorm + w.Quality*qualScore + w.Tokens*tokenNorm,
+		Tools: a.sortedTools(),
 	}
 }
 
@@ -105,6 +141,7 @@ func scoreEval(eval result.EvalResult, accs map[string]*variantAccumulator) {
 					a.passed++
 				}
 			}
+			a.addToolCounts(run.ToolCounts)
 		}
 
 		agg := result.ComputeAggregate(v.Runs)

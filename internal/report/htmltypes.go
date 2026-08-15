@@ -22,6 +22,7 @@ type htmlData struct {
 
 	VariantNames []string
 	Rankings     []htmlRanking
+	ToolCensus   []htmlToolCensus
 	Evals        []htmlEval
 	Errors       []htmlError
 
@@ -136,6 +137,13 @@ type htmlRanking struct {
 	CostWidth      template.CSS
 	DurationWidth  template.CSS
 	TokenWidth     template.CSS
+}
+
+// htmlToolCensus is one variant's tool-usage row: the variant label and its
+// tools rendered compactly as "Read ×12, Grep ×4, TaskCreate ×10".
+type htmlToolCensus struct {
+	Variant string
+	Tools   string
 }
 
 type htmlError struct {

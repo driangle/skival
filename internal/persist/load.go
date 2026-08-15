@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/driangle/skival/internal/result"
+	"github.com/driangle/skival/internal/verifier"
 )
 
 // Load reads a persisted results directory and reconstructs a SuiteResult.
@@ -147,6 +148,10 @@ func loadRun(varDir, fileName string) (result.RunResult, error) {
 	if err != nil {
 		return result.RunResult{}, fmt.Errorf("loading judge conversation for %s: %w", fileName, err)
 	}
+
+	// ToolCounts is derived from the conversation rather than persisted, so a
+	// loaded run's census matches a live run's without a schema change.
+	run.ToolCounts = verifier.CountToolUses(run.Conversation)
 
 	return run, nil
 }
