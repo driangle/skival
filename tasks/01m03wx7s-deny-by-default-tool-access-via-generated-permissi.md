@@ -11,6 +11,22 @@ effort: large
 
 # Deny-by-default tool access via generated permission config
 
+## Sub-tasks
+
+This task was split into focused, sequenced slices (see each for detail):
+
+1. **[[01m03awyn-spike-decide-and-verify-claude-code-tool-deny-enfo]]** — Spike:
+   decide & verify the enforcement mechanism against a real agent (linchpin; blocks
+   the rest).
+2. **[[01m039wnp-generate-per-variant-permission-config-and-wire-in]]** — Generate
+   the per-variant permission config from `allowed_tools` and wire it into the
+   claude-code runner. *(depends on 1)*
+3. **[[01m032mr5-default-deny-baseline-and-deprecate-advisory-disal]]** —
+   Default-deny baseline (fold in "hermetic mode") + deprecate the advisory
+   `--disallowedTools` complement. *(depends on 2)*
+4. **[[01m03xmkx-end-to-end-deny-test-docs-and-examples-for-tool-ac]]** — End-to-end
+   deny test + docs/examples updates. *(depends on 2, 3)*
+
 ## Objective
 
 Make a variant's `allowed_tools` a **structural** whitelist, not an advisory hint.
