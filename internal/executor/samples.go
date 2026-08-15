@@ -30,6 +30,9 @@ func runSamplesSequential(ctx context.Context, eval *suite.Eval, label string, v
 		run := runSample(ctx, eval, label, v, i, samples, runner, prog, timeoutOverride)
 		b.add(run.CostUSD)
 		runs = append(runs, run)
+		if i == 0 {
+			preflightToolCheck(v, run, prog)
+		}
 	}
 	return runs
 }
@@ -57,7 +60,11 @@ func runSamplesParallel(ctx context.Context, eval *suite.Eval, label string, v *
 		}(i)
 	}
 	wg.Wait()
-	return compactRuns(runs)
+	out := compactRuns(runs)
+	if len(out) > 0 {
+		preflightToolCheck(v, out[0], prog)
+	}
+	return out
 }
 
 // compactRuns drops nil (un-started) entries, preserving sample order.

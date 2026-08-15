@@ -3,6 +3,7 @@ package executor
 import (
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -130,6 +131,20 @@ func (p *progress) skippedVariants(evalLabel string, skipped []result.SkippedVar
 	fmt.Fprintf(p.w, "\r\033[K[%s] %s\n",
 		color.Dim(p.elapsed()),
 		color.Yellowf("Skipping %d remaining variants for eval %q: %v", len(skipped), evalLabel, names))
+}
+
+// toolLeak warns that an agent reported more tools than the variant's declared
+// allowed_tools — a tool-access leak caught on the first sample.
+func (p *progress) toolLeak(variantName string, extras []string) {
+	if p == nil || len(extras) == 0 {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	fmt.Fprintf(p.w, "\r\033[K[%s] %s\n",
+		color.Dim(p.elapsed()),
+		color.Yellowf("⚠ variant %q: %d tools available beyond allowed_tools:", variantName, len(extras)))
+	fmt.Fprintf(p.w, "\r\033[K    %s\n", color.Yellow(strings.Join(extras, ", ")))
 }
 
 func (p *progress) finish() {
