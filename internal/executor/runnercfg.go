@@ -8,6 +8,7 @@ import (
 	"github.com/driangle/agentrunner/go/ollama"
 	execrunner "github.com/driangle/skival/internal/runners/exec"
 	"github.com/driangle/skival/internal/suite"
+	"github.com/driangle/skival/internal/toolaudit"
 )
 
 // buildRunnerSpecificOpts dispatches to per-runner option builders based on runner name.
@@ -37,7 +38,11 @@ func buildClaudeCodeOpts(config map[string]any) []agentrunner.Option {
 	var opts []agentrunner.Option
 
 	if tools := toStringSlice(config["allowed_tools"]); len(tools) > 0 {
+		// --allowedTools preserves scoped-permission semantics; --tools makes the
+		// allow list an exclusive whitelist that denies unlisted built-ins
+		// (see docs/specs/tool-deny-enforcement.md).
 		opts = append(opts, claudecode.WithAllowedTools(tools...))
+		opts = append(opts, claudecode.WithTools(toolaudit.BuiltinWhitelist(tools)...))
 	}
 	if tools := toStringSlice(config["disallowed_tools"]); len(tools) > 0 {
 		opts = append(opts, claudecode.WithDisallowedTools(tools...))

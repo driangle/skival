@@ -284,8 +284,8 @@ func TestOptionsMapping(t *testing.T) {
 	if opts.Env["FOO"] != "bar" {
 		t.Errorf("expected env FOO=bar, got %v", opts.Env)
 	}
-	if !opts.SkipPermissions {
-		t.Error("expected SkipPermissions to be true")
+	if !opts.DangerouslySkipPermissions {
+		t.Error("expected DangerouslySkipPermissions to be true")
 	}
 }
 

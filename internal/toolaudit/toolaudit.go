@@ -88,3 +88,29 @@ func baseToolName(tool string) string {
 	}
 	return tool
 }
+
+// BuiltinWhitelist derives the exclusive --tools value from a variant's
+// allowed_tools. It reduces each entry to its base name ("Bash(git:*)" ->
+// "Bash"), drops MCP entries (mcp__*, which are governed by mcp_config, not the
+// built-in --tools set), and dedupes while preserving order.
+//
+// When allowed_tools names no built-ins (e.g. only MCP tools, or an empty list),
+// it returns [""] — which the runner emits as `--tools ""` to disable every
+// built-in — so the allow list stays an exclusive whitelist rather than silently
+// leaving built-ins enabled.
+func BuiltinWhitelist(allowed []string) []string {
+	seen := make(map[string]bool, len(allowed))
+	var out []string
+	for _, entry := range allowed {
+		base := baseToolName(entry)
+		if base == "" || strings.HasPrefix(base, "mcp__") || seen[base] {
+			continue
+		}
+		seen[base] = true
+		out = append(out, base)
+	}
+	if len(out) == 0 {
+		return []string{""}
+	}
+	return out
+}

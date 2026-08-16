@@ -105,7 +105,7 @@ func buildRunOptions(eval *suite.Eval, v *suite.Variant, isolatedDir string, tim
 	}
 
 	// Always skip permissions for automated runs.
-	opts = append(opts, agentrunner.WithSkipPermissions())
+	opts = append(opts, agentrunner.WithDangerouslySkipPermissions())
 
 	return opts, nil
 }

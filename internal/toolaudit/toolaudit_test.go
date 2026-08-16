@@ -106,3 +106,26 @@ func TestLeaksResultSorted(t *testing.T) {
 		t.Fatalf("Leaks = %v, want %v", got, want)
 	}
 }
+
+func TestBuiltinWhitelist(t *testing.T) {
+	tests := []struct {
+		name    string
+		allowed []string
+		want    []string
+	}{
+		{"base names", []string{"Read", "Grep"}, []string{"Read", "Grep"}},
+		{"strips scope suffix", []string{"Bash(git:*)", "Read"}, []string{"Bash", "Read"}},
+		{"dedupes by base name", []string{"Bash(git:*)", "Bash(ls:*)", "Read"}, []string{"Bash", "Read"}},
+		{"drops mcp entries", []string{"Read", "mcp__foo__bar"}, []string{"Read"}},
+		{"only mcp disables all built-ins", []string{"mcp__foo__bar"}, []string{""}},
+		{"empty disables all built-ins", nil, []string{""}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuiltinWhitelist(tt.allowed)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("BuiltinWhitelist(%v) = %v, want %v", tt.allowed, got, tt.want)
+			}
+		})
+	}
+}

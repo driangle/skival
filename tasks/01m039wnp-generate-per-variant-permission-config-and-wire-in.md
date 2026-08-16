@@ -1,7 +1,7 @@
 ---
 id: "01m039wnp"
 title: "Generate per-variant permission config and wire into claude-code runner"
-status: pending
+status: completed
 priority: high
 effort: large
 parent: "01m03wx7s"
@@ -9,6 +9,7 @@ phase: phase-1
 dependencies: ["01m03awyn"]
 tags: ["tool-access", "runner", "security"]
 created_at: 2026-08-15
+completed_at: 2026-08-16
 ---
 
 # Generate per-variant permission config and wire into claude-code runner
@@ -41,12 +42,33 @@ advisory `--allowedTools`/`--disallowedTools` flags for built-ins.
 
 ## Tasks
 
-- [ ] Add a config generator that turns `allowed_tools` into the deny-all +
-      allow-listed permission/settings structure decided in the spike
-- [ ] Write the generated config into the per-sample working dir (respecting
-      existing isolation) and wire the runner to consume it
-- [ ] Reconcile `--dangerously-skip-permissions` with the enforcement mechanism
-- [ ] Unit tests for config generation from `allowed_tools` (including empty/unset)
+- [x] Add a config generator that turns `allowed_tools` into the deny-all +
+      allow-listed structure decided in the spike — `toolaudit.BuiltinWhitelist`
+      derives the exclusive `--tools` value from `allowed_tools` (base names,
+      MCP-excluded, deduped; empty/only-MCP → `[""]` to disable all built-ins).
+- [x] Wire the runner to consume it — `buildClaudeCodeOpts` maps `allowed_tools`
+      to `claudecode.WithTools(...)` (v0.0.2). **No file is written** into the
+      workdir: the spike chose the CLI `--tools` flag over a `.claude/settings.json`
+      (settings-file allow-lists are advisory in headless `-p` mode), so per-sample
+      isolation is unaffected.
+- [x] Reconcile `--dangerously-skip-permissions` with the enforcement mechanism —
+      `--tools` acts at tool registration, independent of the permission system, so
+      it composes with skip-permissions (v0.0.2 `buildArgs` keeps both). No change
+      needed; skip-permissions stays.
+- [x] Unit tests for config generation from `allowed_tools` (including empty/unset)
+      — `TestBuiltinWhitelist` (toolaudit) + `TestBuildClaudeCodeOptsToolsWhitelist`
+      and extended `TestBuildClaudeCodeOpts` (executor).
+
+## Notes
+
+- Depends on agentrunner **v0.0.2** (`WithTools`); `go.mod` bumped. The v0.0.2 rename
+  `WithSkipPermissions` → `WithDangerouslySkipPermissions` was applied across
+  `singlerun.go`, `verifier/judge.go`, `verifier/comparative.go`.
+- Requires `claude` CLI **≥ 2.1.0** (runner's `MinCLIVersion`, first release shipping
+  `--tools`). Called out for the e2e/docs sub-task `01m03xmkx`.
+- **MCP boundary:** `--tools` scopes built-ins only; MCP tools (`mcp__*`) are governed
+  by `mcp_config`. Empirical MCP-interaction verification is left to `01m03xmkx` (no
+  current suite mixes MCP entries into `allowed_tools`).
 
 ## Acceptance Criteria
 

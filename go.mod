@@ -3,7 +3,7 @@ module github.com/driangle/skival
 go 1.25.0
 
 require (
-	github.com/driangle/agentrunner/go v0.0.1
+	github.com/driangle/agentrunner/go v0.0.2
 	github.com/driangle/vibeview/apps/lib v0.2.0
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.42.0

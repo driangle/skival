@@ -35,6 +35,10 @@ func TestBuildClaudeCodeOpts(t *testing.T) {
 	if len(cOpts.DisallowedTools) != 1 || cOpts.DisallowedTools[0] != "Bash" {
 		t.Errorf("expected disallowed_tools [Bash], got %v", cOpts.DisallowedTools)
 	}
+	// allowed_tools also drives --tools as an exclusive built-in whitelist.
+	if len(cOpts.Tools) != 2 || cOpts.Tools[0] != "Read" || cOpts.Tools[1] != "Write" {
+		t.Errorf("expected tools whitelist [Read Write], got %v", cOpts.Tools)
+	}
 	if cOpts.MCPConfig != "/path/to/mcp.json" {
 		t.Errorf("expected mcp_config '/path/to/mcp.json', got %q", cOpts.MCPConfig)
 	}
@@ -62,6 +66,39 @@ func TestBuildClaudeCodeOptsAnySlice(t *testing.T) {
 	}
 	if len(cOpts.AllowedTools) != 2 {
 		t.Errorf("expected 2 allowed tools, got %d", len(cOpts.AllowedTools))
+	}
+}
+
+func TestBuildClaudeCodeOptsToolsWhitelist(t *testing.T) {
+	tests := []struct {
+		name    string
+		allowed []any
+		want    []string
+	}{
+		{"strips scope suffix", []any{"Bash(git:*)", "Read"}, []string{"Bash", "Read"}},
+		{"drops mcp, keeps built-in", []any{"Read", "mcp__foo__bar"}, []string{"Read"}},
+		{"only mcp disables all built-ins", []any{"mcp__foo__bar"}, []string{""}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := buildRunnerSpecificOpts("claude-code", map[string]any{"allowed_tools": tt.allowed})
+			var resolved agentrunner.Options
+			for _, o := range opts {
+				o(&resolved)
+			}
+			cOpts := claudecode.GetClaudeOptions(&resolved)
+			if cOpts == nil {
+				t.Fatal("expected claude options to be set")
+			}
+			if len(cOpts.Tools) != len(tt.want) {
+				t.Fatalf("tools = %v, want %v", cOpts.Tools, tt.want)
+			}
+			for i, w := range tt.want {
+				if cOpts.Tools[i] != w {
+					t.Fatalf("tools = %v, want %v", cOpts.Tools, tt.want)
+				}
+			}
+		})
 	}
 }
 

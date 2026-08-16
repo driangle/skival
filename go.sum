@@ -170,8 +170,8 @@ github.com/denis-tingaikin/go-header v0.5.0 h1:SRdnP5ZKvcO9KKRP1KJrhFR3RrlGuD+42
 github.com/denis-tingaikin/go-header v0.5.0/go.mod h1:mMenU5bWrok6Wl2UsZjy+1okegmwQ3UgWl4V1D8gjlY=
 github.com/dlclark/regexp2 v1.12.0 h1:0j4c5qQmnC6XOWNjP3PIXURXN2gWx76rd3KvgdPkCz8=
 github.com/dlclark/regexp2 v1.12.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
-github.com/driangle/agentrunner/go v0.0.1 h1:HMRrF1qPIeMy6KR9s/J8lCh/EY7O73rwzn7xSHr4ZFw=
-github.com/driangle/agentrunner/go v0.0.1/go.mod h1:6cqhh9h4HLbPRDceZNW1Nbul72F1s9k3g+y3QFOukIU=
+github.com/driangle/agentrunner/go v0.0.2 h1:Me8FGnuBBoEOuQquRk9nrfXmZ3De4BCHJFTfc+0L9JA=
+github.com/driangle/agentrunner/go v0.0.2/go.mod h1:6cqhh9h4HLbPRDceZNW1Nbul72F1s9k3g+y3QFOukIU=
 github.com/driangle/vibeview/apps/lib v0.2.0 h1:n4Gta4HTNNghWd5Swb0e9eHhkjod7gYBkklVe6asEMw=
 github.com/driangle/vibeview/apps/lib v0.2.0/go.mod h1:dzyU4ToIOb6FYC28ENXZkGY7356pYz7ltqQ/1v49PI4=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=

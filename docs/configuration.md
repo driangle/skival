@@ -448,6 +448,13 @@ runner_config:
   max_budget_usd: 1.0
 ```
 
+`allowed_tools` is an **exclusive built-in whitelist**: any built-in tool not listed
+(e.g. `Bash`, `Edit`) is denied for the run, including built-ins added in future CLI
+releases — you never maintain a deny list. Scoped entries like `Bash(git:*)` are
+matched by base name, and MCP tools (`mcp__*`) are governed by `mcp_config` rather
+than this list. Enforcement uses the CLI's `--tools` flag and requires the `claude`
+CLI **≥ 2.1.0**.
+
 ### ollama
 
 ```yaml

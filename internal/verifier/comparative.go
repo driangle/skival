@@ -141,7 +141,7 @@ func (j *ComparativeJudge) runJudge(ctx context.Context, prompt string) (string,
 
 	session, err := j.Runner.Start(ctx, prompt,
 		agentrunner.WithModel(model),
-		agentrunner.WithSkipPermissions(),
+		agentrunner.WithDangerouslySkipPermissions(),
 	)
 	if err != nil {
 		return "", nil, fmt.Errorf("comparative judge invocation failed: %w", err)

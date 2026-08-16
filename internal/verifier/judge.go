@@ -84,7 +84,7 @@ func (v *JudgeVerifier) runJudge(ctx context.Context, prompt string) (string, []
 
 	session, err := v.Runner.Start(ctx, prompt,
 		agentrunner.WithModel(model),
-		agentrunner.WithSkipPermissions(),
+		agentrunner.WithDangerouslySkipPermissions(),
 	)
 	if err != nil {
 		return "", nil, err
