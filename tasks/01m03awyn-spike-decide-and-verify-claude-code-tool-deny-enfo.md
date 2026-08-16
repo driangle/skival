@@ -1,7 +1,7 @@
 ---
 id: "01m03awyn"
 title: "Spike: decide and verify claude-code tool-deny enforcement mechanism"
-status: pending
+status: completed
 priority: high
 effort: medium
 parent: "01m03wx7s"
@@ -9,6 +9,7 @@ phase: phase-1
 dependencies: []
 tags: ["tool-access", "runner", "security"]
 created_at: 2026-08-15
+completed_at: 2026-08-16
 ---
 
 # Spike: decide and verify claude-code tool-deny enforcement mechanism
@@ -46,17 +47,38 @@ implementation sub-task can follow.
 
 ## Tasks
 
-- [ ] Reproduce the leak: run a real agent with `allowed_tools: [Read, Grep]` and
+- [x] Reproduce the leak: run a real agent with `allowed_tools: [Read, Grep]` and
       confirm an unlisted built-in (e.g. `Bash`) currently executes
-- [ ] Establish how `--dangerously-skip-permissions` interacts with settings-based
+      — Experiment 2: with `--allowedTools Read Grep` (even without skip-permissions)
+      Bash still executed. The allow-list is not exclusive for built-ins.
+- [x] Establish how `--dangerously-skip-permissions` interacts with settings-based
       permission rules; decide whether it must be dropped/replaced for restricted
-      variants
-- [ ] Prototype the deny-all + allow-listed settings config and confirm it actually
-      blocks the unlisted built-in end-to-end against a real agent
-- [ ] If the workdir-`.claude/settings.json` approach is insufficient, document the
-      exact upstream `agentrunner` change required (`--settings` / `--permission-mode`)
-- [ ] Write up the chosen mechanism (format of the generated config, where it is
+      variants — tool **removal** (`--disallowedTools` / `--tools`) is independent of
+      the permission system and survives skip-permissions (Experiment 4), so
+      skip-permissions can stay. Settings-file allow-lists are advisory in headless
+      `-p` mode and are the wrong lever.
+- [x] Prototype the deny-all + allow-listed settings config and confirm it actually
+      blocks the unlisted built-in end-to-end against a real agent — Experiment 7:
+      `--tools "Read,Grep"` yields `init.tools == ["Grep","Read"]` and rejects a
+      Write call with *"No such tool available"*; `x.txt` never created.
+- [x] If the workdir-`.claude/settings.json` approach is insufficient, document the
+      exact upstream `agentrunner` change required — it is insufficient; the chosen
+      lever is the `--tools` CLI flag, which the runner does not emit. Required:
+      add `claudecode.WithTools(...)` → `--tools "<comma-joined>"`. See spec.
+- [x] Write up the chosen mechanism (format of the generated config, where it is
       written, flags/env involved) as the design the implementation sub-task follows
+      — see [tool-deny-enforcement spec](../docs/specs/tool-deny-enforcement.md).
+
+## Decision (summary)
+
+**Mechanism:** generate the claude CLI `--tools "<allow list>"` flag from the
+variant's `allowed_tools` — an exclusive built-in whitelist (deny-by-default, no
+complement to maintain, future built-ins auto-denied). **Upstream change required:**
+add `claudecode.WithTools(...)` to the agentrunner claude-code runner (it emits only
+`--allowedTools`/`--disallowedTools` today). `--dangerously-skip-permissions` may
+stay — `--tools` acts at tool registration, independent of permissions. Full record,
+evidence table, and implementer notes:
+[`docs/specs/tool-deny-enforcement.md`](../docs/specs/tool-deny-enforcement.md).
 
 ## Acceptance Criteria
 
