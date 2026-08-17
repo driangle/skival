@@ -177,17 +177,77 @@ func TestBuildOllamaOptsIntFromYAML(t *testing.T) {
 	}
 }
 
-func TestBuildRunnerSpecificOptsNilConfig(t *testing.T) {
-	opts := buildRunnerSpecificOpts("claude-code", nil)
-	if len(opts) != 0 {
-		t.Errorf("expected no options for nil config, got %d", len(opts))
+// resolveClaudeOpts applies a set of options and returns the resolved claude
+// options, failing the test if none were produced.
+func resolveClaudeOpts(t *testing.T, opts []agentrunner.Option) *claudecode.ClaudeOptions {
+	t.Helper()
+	var resolved agentrunner.Options
+	for _, o := range opts {
+		o(&resolved)
+	}
+	cOpts := claudecode.GetClaudeOptions(&resolved)
+	if cOpts == nil {
+		t.Fatal("expected claude options to be set")
+	}
+	return cOpts
+}
+
+// assertHermeticTools asserts the deny-all built-in posture: --tools "" and no
+// advisory allow/deny flags.
+func assertHermeticTools(t *testing.T, cOpts *claudecode.ClaudeOptions) {
+	t.Helper()
+	if len(cOpts.Tools) != 1 || cOpts.Tools[0] != "" {
+		t.Errorf("expected hermetic tools [\"\"], got %v", cOpts.Tools)
+	}
+	if len(cOpts.AllowedTools) != 0 {
+		t.Errorf("expected no allowed_tools for hermetic default, got %v", cOpts.AllowedTools)
+	}
+	if len(cOpts.DisallowedTools) != 0 {
+		t.Errorf("expected no disallowed_tools for hermetic default, got %v", cOpts.DisallowedTools)
 	}
 }
 
+// claude-code applies the hermetic default-deny baseline even with nil/empty
+// runner_config: an undeclared allow list denies every built-in via --tools "".
+func TestBuildRunnerSpecificOptsNilConfig(t *testing.T) {
+	assertHermeticTools(t, resolveClaudeOpts(t, buildRunnerSpecificOpts("claude-code", nil)))
+}
+
 func TestBuildRunnerSpecificOptsEmptyConfig(t *testing.T) {
-	opts := buildRunnerSpecificOpts("claude-code", map[string]any{})
-	if len(opts) != 0 {
-		t.Errorf("expected no options for empty config, got %d", len(opts))
+	assertHermeticTools(t, resolveClaudeOpts(t, buildRunnerSpecificOpts("claude-code", map[string]any{})))
+}
+
+// A claude-code variant that sets runner_config but omits allowed_tools still
+// gets the hermetic default: the unset posture is enforced, not silently permissive.
+func TestBuildClaudeCodeOptsHermeticDefault(t *testing.T) {
+	config := map[string]any{"max_budget_usd": 1.0}
+	cOpts := resolveClaudeOpts(t, buildRunnerSpecificOpts("claude-code", config))
+	assertHermeticTools(t, cOpts)
+}
+
+// allowed_tools: [default] is the escape hatch back to the CLI's full built-in
+// set (--tools default).
+func TestBuildClaudeCodeOptsDefaultEscapeHatch(t *testing.T) {
+	config := map[string]any{"allowed_tools": []any{"default"}}
+	cOpts := resolveClaudeOpts(t, buildRunnerSpecificOpts("claude-code", config))
+	if len(cOpts.Tools) != 1 || cOpts.Tools[0] != "default" {
+		t.Errorf("expected tools [default], got %v", cOpts.Tools)
+	}
+}
+
+// disallowed_tools remains a best-effort fallback flag even though --tools is the
+// enforcement lever: it is still passed through alongside the whitelist.
+func TestBuildClaudeCodeOptsDisallowedFallbackRetained(t *testing.T) {
+	config := map[string]any{
+		"allowed_tools":    []any{"Read"},
+		"disallowed_tools": []any{"Bash"},
+	}
+	cOpts := resolveClaudeOpts(t, buildRunnerSpecificOpts("claude-code", config))
+	if len(cOpts.Tools) != 1 || cOpts.Tools[0] != "Read" {
+		t.Errorf("expected tools whitelist [Read], got %v", cOpts.Tools)
+	}
+	if len(cOpts.DisallowedTools) != 1 || cOpts.DisallowedTools[0] != "Bash" {
+		t.Errorf("expected disallowed_tools fallback [Bash], got %v", cOpts.DisallowedTools)
 	}
 }
 func TestVariantPromptOverridesEval(t *testing.T) {

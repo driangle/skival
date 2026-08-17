@@ -1,7 +1,7 @@
 ---
 id: "01m032mr5"
 title: "Default-deny baseline and deprecate advisory disallowed_tools complement"
-status: pending
+status: completed
 priority: high
 effort: medium
 parent: "01m03wx7s"
@@ -9,6 +9,7 @@ phase: phase-1
 dependencies: ["01m039wnp"]
 tags: ["tool-access", "runner", "security"]
 created_at: 2026-08-15
+completed_at: 2026-08-17
 ---
 
 # Default-deny baseline and deprecate advisory disallowed_tools complement
@@ -34,12 +35,12 @@ working for runners that lack a permission-config mechanism.
 
 ## Tasks
 
-- [ ] Define and implement the default posture when `allowed_tools` is unset
+- [x] Define and implement the default posture when `allowed_tools` is unset
       (default-deny baseline / hermetic-by-default)
-- [ ] Deprecate reliance on the advisory `--disallowedTools` complement for
+- [x] Deprecate reliance on the advisory `--disallowedTools` complement for
       enforcement; keep the flag path working for runners without a permission-config
       mechanism
-- [ ] Tests covering the unset-`allowed_tools` default posture and the retained
+- [x] Tests covering the unset-`allowed_tools` default posture and the retained
       fallback flag path
 
 ## Acceptance Criteria

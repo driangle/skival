@@ -119,6 +119,7 @@ func TestBuiltinWhitelist(t *testing.T) {
 		{"drops mcp entries", []string{"Read", "mcp__foo__bar"}, []string{"Read"}},
 		{"only mcp disables all built-ins", []string{"mcp__foo__bar"}, []string{""}},
 		{"empty disables all built-ins", nil, []string{""}},
+		{"default keyword passes through as escape hatch", []string{"default"}, []string{"default"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -12,17 +12,25 @@ import (
 )
 
 // buildRunnerSpecificOpts dispatches to per-runner option builders based on runner name.
+//
+// claude-code is always dispatched, even with no runner_config: it applies the
+// hermetic default-deny tool baseline (see buildClaudeCodeOpts), so a variant that
+// declares no allowed_tools denies every built-in rather than silently inheriting
+// the CLI's full tool set. Other runners have no such baseline and no-op on empty
+// config.
 func buildRunnerSpecificOpts(runner string, config map[string]any) []agentrunner.Option {
-	if len(config) == 0 {
-		return nil
-	}
-
 	switch runner {
 	case "claude-code":
 		return buildClaudeCodeOpts(config)
 	case "ollama":
+		if len(config) == 0 {
+			return nil
+		}
 		return buildOllamaOpts(config)
 	case "exec":
+		if len(config) == 0 {
+			return nil
+		}
 		return buildExecOpts(config)
 	default:
 		for key := range config {
@@ -32,19 +40,31 @@ func buildRunnerSpecificOpts(runner string, config map[string]any) []agentrunner
 	}
 }
 
-// buildClaudeCodeOpts maps runner_config keys to claude-code options.
+// buildClaudeCodeOpts maps runner_config keys to claude-code options. It always
+// emits the exclusive --tools whitelist derived from allowed_tools, so the tool
+// posture is deny-by-default: with allowed_tools unset, BuiltinWhitelist returns
+// [""] and the runner emits --tools "" to deny every built-in (the hermetic
+// baseline). Declare allowed_tools: [default] to opt back into the CLI's full
+// built-in set. See docs/specs/tool-deny-enforcement.md.
 func buildClaudeCodeOpts(config map[string]any) []agentrunner.Option {
 	known := map[string]bool{"allowed_tools": true, "disallowed_tools": true, "mcp_config": true, "max_budget_usd": true}
 	var opts []agentrunner.Option
 
-	if tools := toStringSlice(config["allowed_tools"]); len(tools) > 0 {
-		// --allowedTools preserves scoped-permission semantics; --tools makes the
-		// allow list an exclusive whitelist that denies unlisted built-ins
-		// (see docs/specs/tool-deny-enforcement.md).
-		opts = append(opts, claudecode.WithAllowedTools(tools...))
-		opts = append(opts, claudecode.WithTools(toolaudit.BuiltinWhitelist(tools)...))
+	allowed := toStringSlice(config["allowed_tools"])
+	// --tools is the enforcement lever and is always emitted (empty allow list ->
+	// --tools "" -> deny all built-ins), so new built-ins never leak past an unset
+	// allow list.
+	opts = append(opts, claudecode.WithTools(toolaudit.BuiltinWhitelist(allowed)...))
+	if len(allowed) > 0 {
+		// --allowedTools preserves scoped-permission semantics for declared tools
+		// and is a best-effort fallback for runners/CLI versions that ignore
+		// --tools; it is not the enforcement mechanism.
+		opts = append(opts, claudecode.WithAllowedTools(allowed...))
 	}
 	if tools := toStringSlice(config["disallowed_tools"]); len(tools) > 0 {
+		// Advisory only: retained as a best-effort narrowing/fallback flag, never
+		// relied on for enforcement. skival keeps no hardcoded complement of
+		// built-ins, so nothing goes stale as new built-ins ship.
 		opts = append(opts, claudecode.WithDisallowedTools(tools...))
 	}
 	if path, ok := config["mcp_config"].(string); ok && path != "" {

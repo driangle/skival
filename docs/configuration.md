@@ -455,6 +455,24 @@ matched by base name, and MCP tools (`mcp__*`) are governed by `mcp_config` rath
 than this list. Enforcement uses the CLI's `--tools` flag and requires the `claude`
 CLI **≥ 2.1.0**.
 
+**Default posture — hermetic (deny-by-default).** The claude-code runner is
+hermetic by default: when `allowed_tools` is **omitted**, *every* built-in tool is
+denied (skival emits `--tools ""`). An undeclared allow list is never silently
+permissive. To run with the full built-in set, opt in explicitly:
+
+```yaml
+runner_config:
+  allowed_tools: [default]   # re-enable all built-in tools (--tools default)
+```
+
+This posture applies to the claude-code runner only — it's the runner with a
+`--tools` enforcement mechanism. Other runners (`ollama`, `exec`) are unaffected.
+
+`disallowed_tools` is **advisory only** — a best-effort narrowing/fallback flag,
+never the enforcement lever. The exclusive `allowed_tools` whitelist is what actually
+denies built-ins; skival keeps no hardcoded deny list, so nothing goes stale as new
+built-ins ship.
+
 ### ollama
 
 ```yaml
