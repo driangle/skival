@@ -1,12 +1,13 @@
 ---
 title: "Deny-by-default tool access via generated permission config"
 id: "01m03wx7s"
-status: pending
+status: completed
 priority: high
 type: feature
 tags: ["tool-access", "runner", "security"]
 created: "2026-08-15"
 effort: large
+completed_at: 2026-08-21
 ---
 
 # Deny-by-default tool access via generated permission config
@@ -68,19 +69,19 @@ advisory flags — ~$75 spent before anyone noticed. See the case study task
 
 ## Tasks
 
-- [ ] Decide the enforcement mechanism for the claude-code runner (generated
+- [x] Decide the enforcement mechanism for the claude-code runner (generated
       settings/permissions file with deny-all default + allow-listed entries) and
       confirm it actually blocks built-ins, not just MCP/custom tools
-- [ ] Generate the permission config from a variant's `allowed_tools` at run time
+- [x] Generate the permission config from a variant's `allowed_tools` at run time
       and pass it to the runner (new option in `buildClaudeCodeOpts`,
       `internal/executor/runnercfg.go`)
-- [ ] Make default-deny the baseline (fold in "hermetic mode"): with no
+- [x] Make default-deny the baseline (fold in "hermetic mode"): with no
       `allowed_tools`, define and document the default posture
-- [ ] Deprecate reliance on the advisory `--disallowedTools` complement; keep the
+- [x] Deprecate reliance on the advisory `--disallowedTools` complement; keep the
       flag path working for runners without a permission-config mechanism
-- [ ] Add tests: config generation from `allowed_tools`, and an end-to-end check
+- [x] Add tests: config generation from `allowed_tools`, and an end-to-end check
       that an unlisted built-in is actually denied
-- [ ] Update `docs/configuration.md` (tool-access section, ~line 441) and the
+- [x] Update `docs/configuration.md` (tool-access section, ~line 441) and the
       `examples/runner-config` + `evals/prompts/tool-access.md` examples
 
 ## Acceptance Criteria
