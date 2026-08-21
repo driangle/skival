@@ -19,5 +19,9 @@ compares tool-access levels on a single task:
 - Check correctness by confirming the agent process exits successfully and by
   making an HTTP request to the running endpoint and asserting the response.
 
+Reference: skival's tool-access model (deny-by-default enforcement, the pre-flight
+leak warning, the per-variant tool census, and the `tool_not_used` backstop verifier)
+is documented under "Tool Access Control" in `docs/configuration.md`.
+
 Write only the `suite.yaml` file. Do not create any other files. When you are
 finished, the file must be a valid skival suite.

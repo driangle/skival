@@ -6,6 +6,10 @@
 # is denied for the run — you never maintain a deny list. Omitting `allowed_tools`
 # entirely denies every built-in; use `allowed_tools: [default]` to opt back into
 # the full built-in set. See docs/configuration.md ("Runner Configuration").
+#
+# To confirm a restriction actually held — the pre-flight leak warning, the
+# per-variant tool census in the report, and the `tool_not_used` backstop verifier
+# that fails a run on leakage — see docs/configuration.md ("Tool Access Control").
 version: 1
 description: "Demonstrates runner_config override precedence"
 

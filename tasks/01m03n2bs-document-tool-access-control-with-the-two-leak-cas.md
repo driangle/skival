@@ -1,13 +1,14 @@
 ---
 id: "01m03n2bs"
 title: "Document tool-access control with the two-leak case study"
-status: pending
+status: completed
 priority: medium
 type: docs
 effort: small
 dependencies: ["01m036fad", "01m030n6n", "01m037pwn"]
 tags: ["tool-access", "docs"]
 created: 2026-08-15
+completed_at: 2026-08-21
 ---
 
 # Document tool-access control with the two-leak case study
@@ -41,14 +42,14 @@ tool-access section.
 
 ## Tasks
 
-- [ ] Write the case study: what was configured (4 variants), what actually ran (1),
+- [x] Write the case study: what was configured (4 variants), what actually ran (1),
       why the advisory flags didn't enforce, and why it was invisible in the report
-- [ ] Document the enforcement model (deny-by-default / generated permission config)
+- [x] Document the enforcement model (deny-by-default / generated permission config)
       and when to rely on it
-- [ ] Document the observability tools: pre-flight leak warning + per-variant tool
+- [x] Document the observability tools: pre-flight leak warning + per-variant tool
       census, with example output; note vibeview for manual session inspection
-- [ ] Document the `tool_not_used` backstop verifier and when to use warn vs. fail
-- [ ] Link the new content from `docs/configuration.md`, `docs/verifiers.md`, and the
+- [x] Document the `tool_not_used` backstop verifier and when to use warn vs. fail
+- [x] Link the new content from `docs/configuration.md`, `docs/verifiers.md`, and the
       tool-access example(s)
 
 ## Acceptance Criteria

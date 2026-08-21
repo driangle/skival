@@ -191,7 +191,9 @@ verify:
 |-------|----------|-------------|
 | `tools` | Yes | Tool names that must **not** be used. A base name like `Bash` also matches a scoped invocation such as `Bash(git:*)`. |
 
-This is the **hard backstop** for tool-access restrictions. On the claude-code runner, `allowed_tools` already denies unlisted built-ins outright (see [Runner Configuration](configuration.md#claude-code)), and skival warns pre-flight when an agent reports more tools than were declared. `tool_not_used` turns leakage into a *failed run* rather than a warning — use it when a suite must **prove** a restriction held, e.g. asserting a "read-only" variant never touched `Bash`, or a "no-skill" variant never called `Skill`. The failure reason names each offending tool and how many times it was called (e.g. `forbidden tool(s) used: TaskCreate ×2`).
+This is the **hard backstop** for tool-access restrictions. On the claude-code runner, `allowed_tools` already denies unlisted built-ins outright, and skival warns pre-flight when an agent reports more tools than were declared. `tool_not_used` turns leakage into a *failed run* rather than a warning — use it when a suite must **prove** a restriction held, e.g. asserting a "read-only" variant never touched `Bash`, or a "no-skill" variant never called `Skill`. The failure reason names each offending tool and how many times it was called (e.g. `forbidden tool(s) used: TaskCreate ×2`).
+
+For the full picture — how tool access is enforced, how to confirm what each variant actually had and used, and how these pieces fit together — see [Tool Access Control](configuration.md#tool-access-control). That section also covers the **warn vs. fail** choice: the pre-flight warning is an always-on tripwire that lets a leaky run continue, while `tool_not_used` fails the run when a restriction is part of the experiment's definition.
 
 ## Combining Verifiers
 

@@ -495,6 +495,124 @@ runner_config:
   think: true
 ```
 
+## Tool Access Control
+
+Restricting an agent's tools is only meaningful if you can **trust** that the
+restriction held. The organizing principle for this section:
+
+> A benchmark that can't show you what the agent had access to can't be trusted,
+> however correct its enforcement is.
+
+skival addresses that with three complementary pieces — **enforcement** (make
+leaks impossible), **observability** (make what ran visible), and a **backstop
+verifier** (make a leak fail the run). The case study below is why all three exist.
+
+### Case study: the suite that measured one configuration four times
+
+A real skillset comparison declared **four variants** — `no-skill`, `with-skill`,
+and two skill combinations — meant to differ in what the agent could reach. Each was
+run several times. The report showed four tidy columns of pass rate, cost, and
+tokens. The variants looked distinct. They weren't: the suite had **silently measured
+one configuration four times**, and it took ~$75 of spend and hand-grepping the raw
+session JSONL to notice. Two separate leaks, both invisible in skival's own output:
+
+1. **Advisory flags didn't actually deny built-ins.** `allowed_tools` was treated as
+   a best-effort narrowing hint, not an exclusive whitelist. A built-in that wasn't
+   listed — `Skill` — stayed available, so the `no-skill` variant could still invoke
+   skills. The knob that was supposed to define the experiment didn't enforce it.
+2. **Meta-tools were never in anyone's allow list yet were usable.** `TaskCreate`,
+   `ToolSearch`, and similar were available and used across every variant even though
+   no allow list mentioned them.
+
+The result: all four variants had effectively identical access. And **nothing in the
+report revealed it** — skival emitted correctness, cost, and tokens, but never *which
+tools each variant could reach or actually used*. The measurement was untrustworthy
+not because enforcement was wrong, but because the benchmark couldn't show you the one
+thing you needed to check.
+
+Each piece below closes one part of that gap.
+
+### Enforcement: deny-by-default
+
+On the **claude-code** runner, `allowed_tools` is an **exclusive, deny-by-default
+whitelist** — any built-in not listed is denied via the CLI's `--tools` flag, and
+omitting it denies *every* built-in. This is the enforcement half of the fix: leak 1
+above is impossible under it, because an unlisted `Skill` is genuinely denied rather
+than advisory. See [claude-code runner configuration](#claude-code) for the full
+mechanics (scoped entries, `[default]` opt-in, the `≥ 2.1.0` requirement, and the
+`make test-e2e` guarantee check).
+
+**When to rely on it:** it's the primary control for any claude-code suite whose
+result depends on tool access. Enforcement applies to the claude-code runner only —
+it's the runner with a `--tools` mechanism. For runners without one (`exec`,
+`ollama`), enforcement isn't available, so lean on observability and the backstop
+verifier below.
+
+### Observability: confirm what each variant had and used
+
+Enforcement makes leaks rare; observability makes them **visible** — so you never
+again take a restriction on faith.
+
+**Pre-flight leak warning.** When an agent starts, its `system/init` event enumerates
+the tools it actually has. skival diffs that against the variant's declared
+`allowed_tools` on the **first sample** and warns immediately, before the rest of the
+budget is spent:
+
+```
+⚠ variant "no-skill": 6 tools available beyond allowed_tools:
+    Skill, TaskCreate, ToolSearch, …
+```
+
+It reads the ground truth the agent reports about itself, so it needs no maintained
+tool list. It fires once per variant, and stays quiet when a runner reports no tool
+list or the variant declared no `allowed_tools`. In the case study it would have
+fired at sample 1 instead of after ~$75.
+
+**Per-variant tool census.** The report shows every tool each variant actually
+invoked, with counts — the reporting half of observability. `TaskCreate ×10` sitting
+next to a variant named `no-skill` is diagnostic at a glance:
+
+```
+## Tool Usage
+
+VARIANT    TOOLS
+---------  -----
+no-skill   Read ×12, Grep ×4, TaskCreate ×10
+with-skill Read ×9, Skill ×3, Grep ×2
+```
+
+The same data appears as a `tool_counts` object per variant in the JSON report and a
+Tool Usage block in the HTML report. It's derived from the recorded conversation, so
+any runner whose stream reports tool activity gets a census.
+
+**vibeview for manual inspection.** Beyond the built-in census, skival (or you) can
+run [vibeview](https://github.com/driangle/vibeview) over a session's JSONL to inspect
+exactly which tools were available and used in a single run — a manual counterpart to
+the census, handy for one-off deep dives or confirming a surprising census entry.
+
+### Backstop: make a leak fail the run
+
+Enforcement and observability make leakage rare and visible; the `tool_not_used`
+verifier makes it **fail**. Declare the tools a variant must not touch, and any use
+turns the sample red:
+
+```yaml
+verify:
+  - type: tool_not_used
+    tools: [Skill, TaskCreate]
+```
+
+Use it when a suite must *prove* a restriction held — e.g. asserting `no-skill`
+genuinely never called `Skill`. It reads the same recorded conversation as the census,
+so it works for every runner, including those without `--tools` enforcement.
+
+**Warn vs. fail — which to use.** The pre-flight warning is *advisory*: it flags a
+leak but the run continues, so you learn about it without losing the sample. The
+`tool_not_used` verifier is a *hard assertion*: a leak fails the run. Reach for the
+warning as an always-on tripwire during exploration; add the verifier when the
+restriction is part of the experiment's definition and a leak should invalidate the
+result. See [`tool_not_used`](verifiers.md#tool_not_used) for details.
+
 ## File References
 
 Evals can be split into separate files:
