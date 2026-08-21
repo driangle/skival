@@ -112,6 +112,8 @@ func buildStepVerifier(step suite.VerifyStep, i int, dirs stepDirs, cfg pipeline
 		return named(step.Type, step.Name, "check_output", &CheckOutputVerifier{Command: cmd, Dir: dirs.work}), true
 	case "output_contains":
 		return named(step.Type, step.Name, "output_contains", &OutputVerifier{ExpectedSubstrings: step.Values}), true
+	case "tool_not_used":
+		return named(step.Type, step.Name, "tool_not_used", &ToolNotUsedVerifier{Forbidden: step.Tools}), true
 	case "judge":
 		return buildJudgeVerifier(step, cfg)
 	default:

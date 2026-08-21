@@ -1,13 +1,14 @@
 ---
 title: "tool_not_used verifier as a leakage backstop"
 id: "01m037pwn"
-status: pending
+status: completed
 priority: low
 type: feature
 tags: ["tool-access", "verifier"]
 created: "2026-08-15"
 dependencies: ["01m03wx7s", "01m030n6n", "01m036fad"]
 effort: medium
+completed_at: 2026-08-21
 ---
 
 # tool_not_used verifier as a leakage backstop
@@ -48,13 +49,13 @@ what this verifier provides.
 
 ## Tasks
 
-- [ ] Add a `VerifyStep` field for the forbidden tool list and register
+- [x] Add a `VerifyStep` field for the forbidden tool list and register
       `tool_not_used` in `internal/suite/verify.go` (all three maps/branches)
-- [ ] Implement the verifier (new file in `internal/verifier/`, modeled on
+- [x] Implement the verifier (new file in `internal/verifier/`, modeled on
       `tool_activity.go`) and dispatch it in `pipeline.go`'s `buildStepVerifier`
-- [ ] Tests: pass when no forbidden tool used, fail when one is, across both
+- [x] Tests: pass when no forbidden tool used, fail when one is, across both
       conversation shapes
-- [ ] Document the verifier in `docs/verifiers.md`
+- [x] Document the verifier in `docs/verifiers.md`
 
 ## Acceptance Criteria
 

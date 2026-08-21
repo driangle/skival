@@ -119,6 +119,9 @@ type VerifyStep struct {
 	// judge
 	Criteria []string `yaml:"criteria,omitempty"`
 	Model    string   `yaml:"model,omitempty"`
+
+	// tool_not_used
+	Tools []string `yaml:"tools,omitempty"`
 }
 
 // Setup defines lifecycle hooks for an eval.

@@ -5,7 +5,7 @@ status: pending
 priority: medium
 type: docs
 effort: small
-dependencies: ["01m036fad", "01m030n6n"]
+dependencies: ["01m036fad", "01m030n6n", "01m037pwn"]
 tags: ["tool-access", "docs"]
 created: 2026-08-15
 ---

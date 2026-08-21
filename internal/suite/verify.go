@@ -12,6 +12,7 @@ var validVerifyTypes = map[string]bool{
 	"http_check":      true,
 	"tcp_check":       true,
 	"judge":           true,
+	"tool_not_used":   true,
 }
 
 // verifyTypeFields lists the type-specific YAML fields each verify type accepts.
@@ -27,6 +28,7 @@ var verifyTypeFields = map[string]map[string]bool{
 	"http_check":      {"url": true, "method": true, "status": true, "body_contains": true},
 	"tcp_check":       {"host": true, "port": true},
 	"judge":           {"criteria": true, "model": true},
+	"tool_not_used":   {"tools": true},
 }
 
 // setVerifyFields returns the YAML names of the type-specific fields that are
@@ -52,6 +54,7 @@ func setVerifyFields(step VerifyStep) []string {
 		{"port", step.Port != 0},
 		{"criteria", len(step.Criteria) > 0},
 		{"model", step.Model != ""},
+		{"tools", len(step.Tools) > 0},
 	}
 	var set []string
 	for _, c := range checks {
@@ -83,33 +86,31 @@ func validateVerifySteps(steps []VerifyStep, prefix string) []string {
 }
 
 // validateVerifyStepRequired checks that a step of a known type has the fields
-// its type requires.
+// its type requires. Each row applies only to a matching step type; a missing
+// required field yields one error.
 func validateVerifyStepRequired(step VerifyStep, sp string) []string {
-	var errs []string
-	req := func(missing bool, msg string) {
-		if missing {
-			errs = append(errs, fmt.Sprintf("%s: %s", sp, msg))
-		}
+	reqs := []struct {
+		typ     string
+		missing bool
+		msg     string
+	}{
+		{"check", step.Run == "", "check requires run"},
+		{"check", step.Run == "true" || step.Run == "false", "check run must be a shell command, not a boolean"},
+		{"check_output", step.Run == "", "check_output requires run"},
+		{"output_contains", len(step.Values) == 0, "output_contains requires values"},
+		{"command", step.Run == "", "command requires run"},
+		{"file_contains", step.Path == "", "file_contains requires path"},
+		{"http_check", step.URL == "", "http_check requires url"},
+		{"tcp_check", step.Host == "", "tcp_check requires host"},
+		{"tcp_check", step.Port == 0, "tcp_check requires port"},
+		{"judge", len(step.Criteria) == 0, "judge requires criteria"},
+		{"tool_not_used", len(step.Tools) == 0, "tool_not_used requires tools"},
 	}
-	switch step.Type {
-	case "check":
-		req(step.Run == "", "check requires run")
-		req(step.Run == "true" || step.Run == "false", "check run must be a shell command, not a boolean")
-	case "check_output":
-		req(step.Run == "", "check_output requires run")
-	case "output_contains":
-		req(len(step.Values) == 0, "output_contains requires values")
-	case "command":
-		req(step.Run == "", "command requires run")
-	case "file_contains":
-		req(step.Path == "", "file_contains requires path")
-	case "http_check":
-		req(step.URL == "", "http_check requires url")
-	case "tcp_check":
-		req(step.Host == "", "tcp_check requires host")
-		req(step.Port == 0, "tcp_check requires port")
-	case "judge":
-		req(len(step.Criteria) == 0, "judge requires criteria")
+	var errs []string
+	for _, r := range reqs {
+		if r.typ == step.Type && r.missing {
+			errs = append(errs, fmt.Sprintf("%s: %s", sp, r.msg))
+		}
 	}
 	return errs
 }

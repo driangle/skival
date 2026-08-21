@@ -74,6 +74,14 @@ func TestValidate_JudgeMissingCriteria(t *testing.T) {
 	requireValidationError(t, err, "judge requires criteria")
 }
 
+func TestValidate_ToolNotUsedMissingTools(t *testing.T) {
+	s := validSuiteWith(func(e *Eval) {
+		e.Verify = []VerifyStep{{Type: "tool_not_used"}}
+	})
+	err := validate(s)
+	requireValidationError(t, err, "tool_not_used requires tools")
+}
+
 func TestValidate_VerifyStepWrongFieldForType(t *testing.T) {
 	cases := []struct {
 		name string
@@ -99,6 +107,11 @@ func TestValidate_VerifyStepWrongFieldForType(t *testing.T) {
 			name: "values on http_check",
 			step: VerifyStep{Type: "http_check", URL: "http://localhost", Values: []string{"x"}},
 			want: `field "values" is not valid for type "http_check"`,
+		},
+		{
+			name: "tools on check",
+			step: VerifyStep{Type: "check", Run: "go build ./...", Tools: []string{"Bash"}},
+			want: `field "tools" is not valid for type "check"`,
 		},
 	}
 	for _, tc := range cases {
@@ -127,6 +140,7 @@ func TestValidate_ValidVerifySteps(t *testing.T) {
 			{Type: "command", Run: "echo hi", Exits: &exitZero},
 			{Type: "tcp_check", Host: "localhost", Port: 8080},
 			{Type: "judge", Criteria: []string{"is correct"}},
+			{Type: "tool_not_used", Tools: []string{"Bash"}},
 		}
 	})
 	if err := validate(s); err != nil {

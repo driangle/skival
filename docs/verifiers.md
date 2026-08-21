@@ -9,7 +9,7 @@ verify:
     run: "go build ./..."
 ```
 
-The available step types are `agent_exits_ok`, `check`, `check_output`, `output_contains`, `command`, `file_contains`, `http_check`, `tcp_check`, and `judge`.
+The available step types are `agent_exits_ok`, `check`, `check_output`, `output_contains`, `command`, `file_contains`, `http_check`, `tcp_check`, `judge`, and `tool_not_used`.
 
 ## Path variables
 
@@ -174,6 +174,24 @@ verify:
 `defaults.judge_model` applies to any judge step that doesn't set its own `model` (see [Configuration](configuration.md)).
 
 The `judge` step grades each run in isolation (pass/fail). To instead compare the outputs of the variants that *passed* an eval and rank them by relative quality, see [Comparative Judging](configuration.md#comparative-judging).
+
+## `tool_not_used`
+
+Fails the sample if the agent invoked any of the listed tools. It inspects the recorded session — no new plumbing — so it works for any runner whose stream reports tool activity.
+
+```yaml
+verify:
+  - type: tool_not_used
+    tools:
+      - Bash
+      - TaskCreate
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `tools` | Yes | Tool names that must **not** be used. A base name like `Bash` also matches a scoped invocation such as `Bash(git:*)`. |
+
+This is the **hard backstop** for tool-access restrictions. On the claude-code runner, `allowed_tools` already denies unlisted built-ins outright (see [Runner Configuration](configuration.md#claude-code)), and skival warns pre-flight when an agent reports more tools than were declared. `tool_not_used` turns leakage into a *failed run* rather than a warning — use it when a suite must **prove** a restriction held, e.g. asserting a "read-only" variant never touched `Bash`, or a "no-skill" variant never called `Skill`. The failure reason names each offending tool and how many times it was called (e.g. `forbidden tool(s) used: TaskCreate ×2`).
 
 ## Combining Verifiers
 

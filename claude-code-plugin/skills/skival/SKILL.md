@@ -165,6 +165,11 @@ verify:
       - "Code is well-documented"
       - "Solution is idiomatic"
     model: "claude-haiku-4-5-20251001"  # Optional judge model (defaults to judge_model).
+
+  - type: tool_not_used             # Fail if the agent invoked any of these tools.
+    tools:                          #   Backstop for tool-access restrictions.
+      - Bash
+      - TaskCreate
 ```
 
 Setting a field that doesn't belong to a step's `type` is a validation error — the schema is strict.
