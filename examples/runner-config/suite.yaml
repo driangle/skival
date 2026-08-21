@@ -1,5 +1,11 @@
 # Runner and runner_config at defaults, eval, and variant levels.
 # Shows override precedence: variant > eval > defaults.
+#
+# claude-code is deny-by-default: `allowed_tools` is an EXCLUSIVE whitelist of
+# built-in tools. Any built-in not listed (and any added by future CLI releases)
+# is denied for the run — you never maintain a deny list. Omitting `allowed_tools`
+# entirely denies every built-in; use `allowed_tools: [default]` to opt back into
+# the full built-in set. See docs/configuration.md ("Runner Configuration").
 version: 1
 description: "Demonstrates runner_config override precedence"
 
@@ -9,7 +15,7 @@ defaults:
   runner: claude-code
   runner_config:
     max_turns: 20
-    allowed_tools:
+    allowed_tools:        # exclusive whitelist: only these built-ins are usable
       - Read
       - Write
       - Bash
@@ -30,6 +36,9 @@ evals:
           allowed_tools:
             - Read
             - Write
+      - name: full-access      # opt back into the entire built-in set
+        runner_config:
+          allowed_tools: [default]
 
   # Eval-level overrides merge with defaults
   - id: eval-override

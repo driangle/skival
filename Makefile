@@ -1,4 +1,4 @@
-.PHONY: build install lint lint-filesize vet test check-lite check install-hooks
+.PHONY: build install lint lint-filesize vet test test-e2e check-lite check install-hooks
 
 # ── Build ────────────────────────────────────────────────────────────
 COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
@@ -28,6 +28,12 @@ lint-filesize:
 # ── Tests ────────────────────────────────────────────────────────────
 test:
 	go test ./...
+
+# Real-agent enforcement checks (build tag `e2e`). These invoke the actual
+# `claude` CLI and consume API credits, so they are excluded from `make test`
+# and `check-lite`. They skip automatically when `claude` is not on PATH.
+test-e2e:
+	go test -tags e2e -run E2E -count=1 ./internal/executor
 
 # ── Validation ──────────────────────────────────────────────────────
 validate-examples: build

@@ -1,7 +1,7 @@
 ---
 id: "01m03xmkx"
 title: "End-to-end deny test, docs, and examples for tool-access enforcement"
-status: pending
+status: completed
 priority: high
 effort: medium
 parent: "01m03wx7s"
@@ -9,6 +9,7 @@ phase: phase-1
 dependencies: ["01m039wnp", "01m032mr5"]
 tags: ["tool-access", "runner", "security", "docs"]
 created_at: 2026-08-15
+completed_at: 2026-08-21
 ---
 
 # End-to-end deny test, docs, and examples for tool-access enforcement
@@ -25,12 +26,12 @@ line with the new default-deny posture.
 
 ## Tasks
 
-- [ ] Add an end-to-end check that a variant with `allowed_tools: [Read, Grep]`
+- [x] Add an end-to-end check that a variant with `allowed_tools: [Read, Grep]`
       cannot use an unlisted built-in (e.g. `Bash`) against a real agent invocation
-- [ ] Update `docs/configuration.md` tool-access section (~line 441) to describe
+- [x] Update `docs/configuration.md` tool-access section (~line 441) to describe
       generated deny-by-default enforcement and the unset-`allowed_tools` posture
-- [ ] Update `examples/runner-config` to reflect the new behaviour
-- [ ] Update `evals/prompts/tool-access.md` example
+- [x] Update `examples/runner-config` to reflect the new behaviour
+- [x] Update `evals/prompts/tool-access.md` example
 
 ## Acceptance Criteria
 

@@ -473,6 +473,13 @@ never the enforcement lever. The exclusive `allowed_tools` whitelist is what act
 denies built-ins; skival keeps no hardcoded deny list, so nothing goes stale as new
 built-ins ship.
 
+**Verifying enforcement.** A real-agent end-to-end check confirms the guarantee against
+a live `claude` run rather than only unit tests: `make test-e2e` runs a variant with
+`allowed_tools: [Read, Grep]` (and one with `allowed_tools` unset) and asserts that an
+unlisted built-in such as `Bash` is absent from the agent's own reported tool set (the
+stream's `system/init` `tools` array). It is gated behind the `e2e` build tag, consumes
+API credits, and skips automatically when the `claude` CLI is not installed.
+
 ### ollama
 
 ```yaml

@@ -10,6 +10,11 @@ compares tool-access levels on a single task:
 - Compare three configurations of the same model (`claude-sonnet-4-6`):
   one with full tool access, one restricted to read-only tools, and one that is
   not allowed to use the shell.
+  - For claude-code, `allowed_tools` is an **exclusive deny-by-default whitelist**:
+    any built-in not listed is denied. Express *full tool access* as
+    `allowed_tools: [default]` (omitting it denies every built-in), the *read-only*
+    config as `allowed_tools: [Read, Grep, Glob]`, and *no shell* as an allow list
+    that simply omits `Bash`.
 - Run each configuration 3 times.
 - Check correctness by confirming the agent process exits successfully and by
   making an HTTP request to the running endpoint and asserting the response.
